@@ -1,6 +1,9 @@
 (tpm
  (unique_hash 0
   (unique_hash-1 nil 3535917891 ("" (postpone) nil nil) nil shostak))
+ (IMP_StateMonad_TCC1 0
+  (IMP_StateMonad_TCC1-1 nil 3548528282 ("" (existence-tcc) nil nil)
+   nil nil))
  (tpmPower_TCC1 0
   (tpmPower_TCC1-1 nil 3535902101 ("" (tcc) nil nil)
    ((ekVal const-decl "KEY" tpm nil)) nil))
@@ -10,6 +13,9 @@
  (changeLocalityState_TCC1 0
   (changeLocalityState_TCC1-1 nil 3548522044 ("" (subtype-tcc) nil nil)
    nil nil))
+ (locality_monotonicity 0
+  (locality_monotonicity-1 nil 3548528282 ("" (grind) nil nil)
+   ((changeLocalityState const-decl "tpmAbsState" tpm nil)) shostak))
  (antisymmetryMonad 0
   (antisymmetryMonad-1 nil 3531432082
    ("" (grind)

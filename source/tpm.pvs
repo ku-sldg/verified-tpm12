@@ -12,6 +12,7 @@
 %%
 %% Todo: (key - => pending, + => done)
 %% + Added updates to locality following sinit measurement
+%% + Added monotonicity proof for locality changes
 %% - Add regressions and theorems for key installation
 %% - outBlob should be outKey and only output keys
 %% - Add PCR composite to wrapped keys
@@ -116,6 +117,11 @@ tpm [ B:TYPE+, % BLOB
   %% Decrease locality value
   changeLocalityState(s:tpmAbsState) : tpmAbsState =
     s WITH [`locality := locality(s) - 1];
+  
+  %% Locality must be monotonically decreasing
+  %% proved - Tue Jun 12 17:18:32 CDT 2012
+  locality_monotonicity : LEMMA (FORALL (s:tpmAbsState) :
+    locality(s) > locality(changeLocalityState(s)));
 
   %% Install key operation on TPM state.
   installKeyState(s:tpmAbsState,k:(wrapKey?)) : tpmAbsState =
