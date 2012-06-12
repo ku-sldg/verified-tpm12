@@ -112,6 +112,10 @@ tpm [ B:TYPE+, % BLOB
   extendState(s:tpmAbsState,n:PCRINDEX,h:HV) : tpmAbsState =
     s WITH [`pcrs := pcrsExtend(pcrs(s),n,h)];
 
+  %% Decrease locality value
+  changeLocalityState(s:tpmAbsState) : tpmAbsState =
+    s WITH [`locality := locality(s) - 1];
+
   %% Install key operation on TPM state.
   installKeyState(s:tpmAbsState,k:(wrapKey?)) : tpmAbsState =
     s WITH [`keys := addKey(k,add(srk(s),keys(s)))];
@@ -157,6 +161,10 @@ tpm [ B:TYPE+, % BLOB
   %% Extend PCR n with hash value h.
   extendTPM(h:HV,n:PCRINDEX):State =
     modify(outNothing,(LAMBDA (s:tpmAbsState): extendState(s,n,h)));
+
+  %% Decrease locality value
+  changeLocalityTPM : State =
+    modify(outNothing,(LAMBDA (s:tpmAbsState): changeLocalityState(s)));
 
   %% Install key k in a TPM.
   installKeyTPM(k:(wrapKey?)):State =
@@ -229,15 +237,17 @@ tpm [ B:TYPE+, % BLOB
 
   %% Prove that senter after power up results in reset PCRs followed by sinit
   %% measurement
+  %% proved - Tue Jun 12 15:31:12 CDT 2012
   resetMonad: THEOREM (FORALL (hv:HV) :
     runState(
       powerTPM
       >> senterResetTPM
       >> senterHashSinitTPM
+      >> changeLocalityTPM
       >>= unit)
       (tpmUnknown)
     =
-    (outNothing,extendState(tpmReset,0,hash(sinit))))
+    (outNothing,changeLocalityState(extendState(tpmReset,0,hash(sinit)))))
 
   %% Prove that quote generation returns the correct PCR
   quoteMonad: THEOREM (FORALL (hv:HV) :
