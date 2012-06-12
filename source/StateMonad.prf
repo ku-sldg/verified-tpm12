@@ -1,0 +1,43 @@
+(StateMonad
+ (left_identity 0
+  (left_identity-1 nil 3531064620
+   ("" (grind)
+    (("" (apply-extensionality) (("" (apply-extensionality) nil nil))
+      nil))
+    nil)
+   ((State_state_extensionality formula-decl nil StateMonad nil)
+    (State type-decl nil StateMonad nil)
+    (boolean nonempty-type-decl nil booleans nil)
+    (state? adt-recognizer-decl "[State -> boolean]" StateMonad nil)
+    (runState adt-accessor-decl "[State -> [S -> [A, S]]]" StateMonad
+     nil)
+    (state adt-constructor-decl "[[S -> [A, S]] -> (state?)]"
+     StateMonad nil)
+    (A formal-nonempty-type-decl nil StateMonad nil)
+    (S formal-nonempty-type-decl nil StateMonad nil)
+    (>>= const-decl "State" StateMonad nil)
+    (unit const-decl "State" StateMonad nil))
+   shostak))
+ (right_identity 0
+  (right_identity-1 nil 3531064607
+   ("" (grind)
+    (("" (apply-extensionality)
+      (("" (grind) (("" (apply-extensionality) nil nil)) nil)) nil))
+    nil)
+   ((State_state_extensionality formula-decl nil StateMonad nil)
+    (State type-decl nil StateMonad nil)
+    (boolean nonempty-type-decl nil booleans nil)
+    (state? adt-recognizer-decl "[State -> boolean]" StateMonad nil)
+    (runState adt-accessor-decl "[State -> [S -> [A, S]]]" StateMonad
+     nil)
+    (state adt-constructor-decl "[[S -> [A, S]] -> (state?)]"
+     StateMonad nil)
+    (A formal-nonempty-type-decl nil StateMonad nil)
+    (S formal-nonempty-type-decl nil StateMonad nil)
+    (>>= const-decl "State" StateMonad nil)
+    (unit const-decl "State" StateMonad nil))
+   shostak))
+ (assocativity 0
+  (assocativity-1 nil 3531064601 ("" (grind) nil nil)
+   ((>>= const-decl "State" StateMonad nil)) shostak)))
+

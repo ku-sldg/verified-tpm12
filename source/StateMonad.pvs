@@ -1,0 +1,78 @@
+StateMonad[A,S:TYPE+] : THEORY
+BEGIN
+
+ State : DATATYPE
+ BEGIN
+   state(runState:[S->[A,S]]):state?
+ END State
+
+ %% unit :: a -> M a -- Nothing special here
+ %%
+ %% x - output produced in the state
+ %% s - the state being associated with x
+ %% 
+ %% 1. x is bound to a new output of type A
+ %% 2. state encapsulates a function of type S->[A,S]
+ %% 3. the value for A in runState is x, the input to unit
+ %% 4. the value for S is held abstract until runState is applied
+ %% 5. whatever state is input to runState, the output will be the value
+ %% bound to x in unit(x)
+ unit(x:A):State = state(LAMBDA (s:S) : (x,s));
+
+ %% bind :: M a -> (a -> M b) -> M b -- For our purposes a=b making this
+ %% bind :: M a -> (a -> M a) -> M a
+ %%
+ %% m - State[A,S] - a runState function
+ %% f - [A->State[A,S]] - takes an A to a State[A,S]
+ %%
+ %% 1. LET cases the runState function to be extracted from m and calls it on
+ %% s0 resulting in a value of type [A,S].  s0 is the input state
+ %% 2. a is bound to the A element and s1 to the S element.  Thus, a is the
+ %% resulting output and s1 is the resulting state
+ %% 3. f transforms A into a State[A,S] containing a function of type S->[A,S]
+ %% 4. runState extracts the function and applies it to s1, the state resulting
+ %% from the invocation caused by the LET binding.
+ %%
+
+ >>= (m:State,f:[A->State]):State =
+   state(LAMBDA(s0:S):
+          LET (a,s1) = runState(m)(s0) IN 
+	    runState(f(a))(s1));
+
+>> (m:State,f:State):State =
+   state(LAMBDA(s0:S):
+          LET (a,s1) = runState(m)(s0) IN
+            runState(f)(s1));
+
+ %% Defined bind0 over two states for use later
+
+ %% Monad laws -- might as well, we're in a prover
+ 
+ % Left identity -- bind(unit(a),f) = f(a)
+
+ left_identity: LAW FORALL (a:A,f:[A->State]) : unit(a) >>= f = f(a)
+
+ % Right identity -- bind(m,unit) = m
+
+ right_identity: LAW FORALL (m:State) : m >>= unit = m
+
+ % Associativity -- bind(bind(m,f),g) = bind(m,bind(\x->f(x),g))
+
+ assocativity: LAW FORALL (m:State,f,g:[A->State]) :
+   m >>= f >>= g = m >>= (lambda(x:A): f(x) >>= g)
+
+ %% Predefined, useful values for f.  
+
+ % Get the state
+ get(s:S) : [S,S] = (s,s)
+
+ % Replace state
+ put(a:A,s1:S) : State = state(LAMBDA(s0:S):(a,s1))
+
+ % Modify state
+ modify(a:A,f:[S->S]) : State = state(LAMBDA(s0:S):(a,f(s0)))
+
+ % Generate output
+ output(f:[S->[A,S]]) : State = state(LAMBDA(s0:S):f(s0))
+
+END StateMonad

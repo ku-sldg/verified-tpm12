@@ -1,0 +1,115 @@
+\documentclass[10pt]{article}
+
+%\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage{fancyhdr}
+\usepackage{trust}
+\pagestyle{fancy}
+
+\lhead{}
+\rhead{}
+%%\chead{\bfseries U.S. Government Proprietary, For Official Use Only}
+\lfoot{\copyright The University of Kansas, 2012}
+\cfoot{\thepage}
+
+
+\newtheorem{conjecture}{Conjecture}
+\newtheorem{obligation}{Obligation}
+\newtheorem{definition}{Definition}
+
+
+\usepackage{ifthen}
+\newboolean{submission}  %%set to true for the submission version
+\setboolean{submission}{false}
+%\setboolean{submission}{true}
+\ifthenelse
+{\boolean{submission}}
+{ \newcommand{\todo}[1]{ } } % hide todo
+{ \newcommand{\todo}[1]{ % show todo
+   \marginpar{\raggedright\footnotesize{#1}}
+               }}
+
+\parskip=\medskipamount
+\parindent=0pt
+
+\bibliographystyle{abbrvnat}
+
+\title{TPM Specification Design}
+\author{Perry Alexander \and Brigid Halling}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\listoffigures
+\listoftables
+
+\begin{abstract}
+  The abstract goes here...
+\end{abstract}
+
+\section{Introduction}
+
+\section{Modeling Approach}
+
+\section{Verification Approach}
+
+The approach taken for verification is establishing a \emph{weak
+  bisimulation}~\citep{Sangiorgi:12:Introduction-to} relation between
+an abstract requirements model and a model derived from the TPM
+specification as shown in figure~\ref{fig:bisimulation}.
+
+\begin{figure}[hbtp]
+  \centering
+  \includegraphics[width=0.75\textwidth]{figures/bisimulation.pdf}
+  \caption{Weak bisimulation relation between an abstract transition
+    system $A=(S,\Sigma,\Delta)$ and a concrete transition system
+    $C=(s,\sigma,\delta)$.}
+  \label{fig:bisimulation} 
+\end{figure}
+
+We say that $A=(S,\Sigma,\Delta)$ is an \emph{abstract model} where
+$S$ is a set of abstract states, $\Sigma$ is a set of actions on
+states and input, and $\Delta : S\times\Sigma\rightarrow\Sigma$ is a
+transitions on state and action.  Similarly, we say that
+$C=(s,\sigma,\delta)$ is a \emph{concrete state } where $s$ is a set
+of concrete states, $\sigma$ is a set of actions on states and input,
+and $\delta : s\times\sigma\rightarrow\sigma$ is a transition
+function.
+
+We relate the abstract and concrete models through an \emph{abstraction
+function}, $\alpha:s\rightarrow S$, and \emph{concretization
+function}, $\gamma:S\rightarrow 2^s$.  The abstraction and
+concretization functions must form a Galois Connection such that:
+
+\[s\in\gamma(\alpha(s))\]
+
+\noindent Specifically, when making the result of an abstraction
+concrete, the original state must be in the resulting set.  Note that
+the concretization function may result in multiple states due to the
+necessity of specifying unknown detail.
+
+We say that $A$ and $C$ are weakly bisimilar ($A\sim C$) if when
+$\alpha(s)=S$ then $\alpha(\delta^*(s))=\Delta(S)$ for all inputs to
+$s$.
+
+\begin{definition} 
+  \[A\sim C \equiv \forall s_0:s \cdot \exists S_0:S \cdot
+  \alpha(s_0)=S_0 \Rightarrow \alpha(\delta^*(s_0))=\Delta(S_0)\]
+  \label{def:bisimulation}
+\end{definition}
+
+In the formal TPM model \texttt{tpmAbsState} defines $S$ while
+\texttt{tpmConcState} defines $s$.
+
+\appendix
+
+\input{glossary}
+
+%%\nocite{}
+
+\bibliography{tpm-spec-design}
+
+\end{document}

@@ -1,0 +1,51 @@
+%% ----
+%%
+%% PCR Theory
+%%
+%% Author: Perry Alexander
+%% Date: Sat Jan 14 23:30:02 CST 2012
+%%
+%% Description: Basic model of a TPM register file
+%% 
+%% Dependencies:
+%%  StateMonad.pvs
+%%
+%% Todo: (key - => pending, + => done)
+%%
+%% ----
+
+pcr [HV: TYPE+] : THEORY
+  BEGIN
+
+  %% Basic PCR datatype
+  PCR : datatype
+  begin
+    reset : reset?
+    resetOne : resetOne?
+    extend(pcr:PCR,hash:HV) : extend?
+  end PCR;
+
+  %% PCR array index type - check with spec
+  PCRINDEX : TYPE = {n:nat | n <=23};
+
+  %% PCR array
+  PCRS : TYPE = ARRAY[PCRINDEX->PCR];
+
+  %% Some common PCR sets
+  pcrsPower : PCRS = (LAMBDA (i:PCRINDEX) : resetOne);
+
+  pcrsReset : PCRS = (LAMBDA (i:PCRINDEX) : reset);
+
+  %% PCR extension operator
+  pcrsExtend(pcrs:PCRS,i:PCRINDEX,hv:HV) : PCRS = 
+     (pcrs WITH [(i) := extend(pcrs(i),hv)])
+
+  %% Theorems
+
+  %% Extension is antisymmetric  
+  antisym : THEOREM FORALL (h1,h2:HV, p:PCR) :
+    h1/=h2 => extend(p,h1) /= extend(p,h2)
+
+  END pcr
+
+

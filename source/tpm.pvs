@@ -1,0 +1,408 @@
+%% ----
+%%
+%% TPM Theory
+%%
+%% Author: Perry Alexander
+%% Date: Mon Nov 28 01:09:39 CST 2011
+%%
+%% Description: Basic model of a TPM using a monadic state model
+%% 
+%% Dependencies:
+%%  StateMonad.pvs
+%%
+%% Todo: (key - => pending, + => done)
+%% - Add regressions and theorems for key installation
+%% - outBlob should be outKey and only output keys
+%% - Add PCR composite to wrapped keys
+%% - Add commands for sealing small data to state
+%% ----
+
+tpm [ B:TYPE+, % BLOB
+      HV:TYPE+,% Hash value
+      hash:[B->HV], % Hash function
+      K:TYPE+ % Key
+     ] : THEORY
+
+  BEGIN
+
+  ASSUMING
+    % Assume that different blobs always have different hashes
+    unique_hash: ASSUMPTION
+      FORALL (b0,b1:B) : hash(b0)=hash(b1) iff b0=b1;
+  ENDASSUMING
+
+  IMPORTING pcr[HV];
+  IMPORTING key[B,K,HV];
+
+  %% State monad input type - currently unused
+  tpmInput : DATATYPE
+  BEGIN
+    inNothing : inNothing?
+    inError : inError?
+    inNat(n:nat) : inNat?
+    inHV(h:HV) : inHV?
+  END tpmInput;
+
+  %% State monad output type
+  tpmOutput : DATATYPE
+  BEGIN
+    outNothing : outNothing?
+    outError(s:string) : outError?
+    outNat(n:nat) : outNat?
+    outQuote(h:PCRS) : outQuote?
+    outBlob(k:BLOB) : outBlob?
+    outKey(k:KEY) : outKey?
+  END tpmOutput;
+
+  %% sinit blob instance for measurement
+  sinit : B;
+
+  %% Locality type - check with spec
+  LOCALITY : TYPE = {n:nat | n<=4};
+
+  %% Uninterpreted Key values.
+  ekKeyVal : K;
+  srkKeyVal : K;
+
+  %% Key definitions that make ek and srk values asymmetric keys.
+  ekVal : KEY = asymKey(ekKeyVal);
+  srkVal : KEY = asymKey(srkKeyVal);
+
+  %% Abstract TPM State with keys, PCR array and locality
+  tpmAbsState : TYPE = [#
+                       srk : (asymKey?),
+		       ek : (asymKey?),
+		       keys : KEYSET,
+                       pcrs : PCRS,
+		       locality : LOCALITY
+		    #];
+
+  IMPORTING StateMonad[tpmOutput,tpmAbsState];
+
+  %% Define some common TPM states and state operations
+  
+  %% Unknown state
+  tpmUnknown : tpmAbsState
+
+  %% Power on state
+  tpmPower : tpmAbsState = (#
+                         pcrs:=pcrsPower
+                         , locality:=4
+			 , keys:=emptyset
+			 , srk:=inverse(srkVal)
+			 , ek:=inverse(ekVal)
+			 #);
+
+  %% Standard initial state following reset
+  tpmReset : tpmAbsState = (#
+                         pcrs:=pcrsReset
+			 , locality:=4
+			 , keys:=emptyset
+			 , srk:=inverse(srkVal)
+			 , ek:=inverse(ekVal)
+			 #);
+
+  %% Standard operations on TPM state definition above.  All such
+  %% functions end with State to indicate they operate on the state
+  %% value rather than on the TPM moand.  Note that key set and pcr
+  %% manipulation functions are defined externally in key.pvs and
+  %% pcr.pvs respectively
+
+  %% Extend operation on TPM state
+  extendState(s:tpmAbsState,n:PCRINDEX,h:HV) : tpmAbsState =
+    s WITH [`pcrs := pcrsExtend(pcrs(s),n,h)];
+
+  %% Install key operation on TPM state.
+  installKeyState(s:tpmAbsState,k:(wrapKey?)) : tpmAbsState =
+    s WITH [`keys := addKey(k,add(srk(s),keys(s)))];
+
+  %% Revoke key operation on TPM state
+  revokeKeyState(s:tpmAbsState,k:(wrapKey?)) : tpmAbsState =
+    s WITH [`keys := removeKey(k,keys(s))];
+
+  %% Decrypt a secret encrypted with a wrapped key
+  decryptKeyState(s:tpmAbsState,d:(encrypt?)) : BLOB =
+    CASES key(d) OF
+      wrapKey(w,k) : IF member(inverse(w),add(srk(s),keys(s)))
+                        THEN blob(d)
+			ELSE nothing ENDIF
+      ELSE nothing
+    ENDCASES;
+
+  %% Unseal a secret sealed with an asymetric key and PCRs
+  unsealState(s:tpmAbsState,d:(seal?),k:(asymKey?)) : BLOB = unseal(d,pcrs(s),k);
+
+  %% Minor Support Lemmas
+
+  %% Extend is antisymmetric if the hash values used for extension are
+  %% not equal.  In this example we use the LET form to define
+  %% commands directly with monad functions defined in StateMonad.pvs
+  antisymmetryMonad: THEOREM (FORALL (hv0,hv1:HV):
+    LET f1:State =
+          modify(outNothing,
+                 (LAMBDA (s:tpmAbsState):s WITH [`pcrs:=pcrsExtend(pcrs(s),0,hv0)])),
+      	f2:State =
+          modify(outNothing,
+                 (LAMBDA (s:tpmAbsState):s WITH [`pcrs:=pcrsExtend(pcrs(s),0,hv1)])) IN
+      hv0/=hv1 =>
+        runState(
+          f2 >>= (LAMBDA (x:tpmOutput): f1 >>= unit))(tpmReset)
+        /=
+        runState(
+          f1 >>= (LAMBDA (x:tpmOutput): f2 >>= unit))(tpmReset))
+
+  %%%% TPM Command Definitions - Note that all commands used by the TPM
+  %%%% have the TPM suffix to distinguish from operations on tpm state
+
+  %% Extend PCR n with hash value h.
+  extendTPM(h:HV,n:PCRINDEX):State =
+    modify(outNothing,(LAMBDA (s:tpmAbsState): extendState(s,n,h)));
+
+  %% Install key k in a TPM.
+  installKeyTPM(k:(wrapKey?)):State =
+    modify(outNothing,(LAMBDA (s:tpmAbsState): installKeyState(s,k)));
+
+  %% Revoke key k from a TPM.
+  revokeKeyTPM(k:(wrapKey?)):State =
+    modify(outNothing,(LAMBDA (s:tpmAbsState): revokeKeyState(s,k)));
+
+  %% No-op
+  noop : [tpmOutput -> State] =
+    (LAMBDA (a:tpmOutput): state((LAMBDA(s:tpmAbsState) : (a,s))));
+
+  %% TPM is off
+  offTPM : State = put(outNothing,tpmUnknown);
+
+  %% Power up the TPM
+  
+  powerTPM : State = put(outNothing,tpmPower);
+
+  %% Reset the TPM by senter call
+  senterResetTPM : State = put(outNothing,tpmReset);
+
+  %% Measure sinit by senter call
+  senterHashSinitTPM : State = extendTPM(hash(sinit),0);
+
+  %% Call sinit for initial measurements - currently undefined
+  sinitTPM : State
+
+  %% Generate and output a quote
+  quotePCR : State = output((LAMBDA (s:tpmAbsState):(outQuote(pcrs(s)),s)));
+
+  %% Decrypt and output a blob (should be a key)
+  decryptTPM(d:(encrypt?)) : State =
+     output((LAMBDA (s:tpmAbsState):(outBlob(decryptKeyState(s,d)),s)));
+
+  %% Unseal and output a blon (should be binary or data)
+  unsealTPM(d:(seal?),k:(asymKey?)) : State = 
+     output((LAMBDA (s:tpmAbsState):(outBlob(unsealState(s,d,k)),s)));
+
+  %% Extending a reset PCR is antisymmetric if the two values are not equal
+  %% Let form used to defined commands for bind.  Will use command forms
+  %% later in antisymmetryMonad3
+  antisymmetryMonad2: THEOREM (FORALL (hv0,hv1:HV) :
+    LET 
+        f1:State = extendTPM(hv0,0),
+      	f2:State = extendTPM(hv1,0) IN
+      (hv0/=hv1 =>
+        runState(f2 >> f1 >>= unit)(tpmReset)
+        /=
+        runState(f1 >> f2 >>= unit)(tpmReset)))
+
+
+  %% Extending a reset PCR is antisymmetric if the two values are not equal.
+  %% No let form - commands appear directly in bind
+  %% Theorem is now false when PCRs other than PCR0 are included.
+  antisymmetryMonad3: THEOREM (FORALL (hv0,hv1:HV) :
+    hv0/=hv1 =>
+       runState(
+         extendTPM(hv1,0)
+	 >> extendTPM(hv0,0)
+	 >>= unit)
+	 (tpmReset)
+       /=
+       runState(
+         extendTPM(hv0,0)
+	 >> extendTPM(hv1,0)
+	 >>= unit)
+	 (tpmReset))
+
+  %% Prove that senter after power up results in reset PCRs followed by sinit
+  %% measurement
+  resetMonad: THEOREM (FORALL (hv:HV) :
+    runState(
+      powerTPM
+      >> senterResetTPM
+      >> senterHashSinitTPM
+      >>= unit)
+      (tpmUnknown)
+    =
+    (outNothing,extendState(tpmReset,0,hash(sinit))))
+
+  %% Prove that quote generation returns the correct PCR
+  quoteMonad: THEOREM (FORALL (hv:HV) :
+    runState(
+      powerTPM
+      >> senterResetTPM
+      >> senterHashSinitTPM
+      >> extendTPM(hv,0)
+      >> quotePCR
+      >>= unit)
+      (tpmUnknown)
+    =
+    (outQuote(pcrsExtend(pcrsExtend(pcrsReset,0,hash(sinit)),0,hv)),
+      extendState(extendState(tpmReset,0,hash(sinit)),0,hv)))
+
+  %% Prove that skipping SENTER is detectable by showing the quote following
+  %% a command differs when SENTER is excluded.
+  noSenter: THEOREM (FORALL (hv:HV) :
+    runState(
+      powerTPM
+      >> senterResetTPM
+      >> senterHashSinitTPM
+      >> extendTPM(hv,0)
+      >> quotePCR
+      >>= unit)
+      (tpmUnknown)
+    /=
+    runState(
+      powerTPM
+      >> extendTPM(hv,0)
+      >> quotePCR
+      >>= unit)
+      (tpmUnknown))
+
+  % Replay is detectable via a quote.  d is data, asp is program that
+  % generated d, and n0,n1 are nonces that are going to be different
+  replay_detection_monad: THEOREM forall (d:B, asp:B, n0,n1:B) :
+      LET (q0,s0) = runState( 
+                    extendTPM(hash(asp),0) 
+       		     >> extendTPM(hash(n0),0)
+       		     >> extendTPM(hash(d),0)
+       		     >> quotePCR
+       		     >>= unit)
+       		     (tpmReset),
+          (q1,s1) = runState(
+       	             extendTPM(hash(asp),0)
+		     >> extendTPM(hash(n1),0)
+       		     >> extendTPM(hash(d),0)
+       		     >> quotePCR
+       		     >>= unit)
+       		     (tpmReset) IN
+         n0/=n1 => q0/=q1;
+
+  % Bad measurement ASP is detectable via a quote.  d is data, asp0 and asp1
+  % are programs that generated d, and n is the nonce identifying the response
+  bad_asp_monad: THEOREM forall (d:B, asp0,asp1:B, n:B) :
+      LET (q0,s0) = runState(
+                     extendTPM(hash(asp0),0) 
+       		     >> extendTPM(hash(n),0)
+       		     >> extendTPM(hash(d),0)
+       		     >> quotePCR
+       		     >>= unit)
+       		     (tpmReset),
+          (q1,s1) = runState(
+       	             extendTPM(hash(asp1),0)
+		     >> extendTPM(hash(n),0)
+       		     >> extendTPM(hash(d),0)
+       		     >> quotePCR
+       		     >>= unit)
+       		     (tpmReset) IN
+         asp0/=asp1 => q0/=q1;
+
+  % Decryption will fail if no keys are installed
+  % Now proved.  Problem was with grind, not pvs generally.
+  decrypt_key_fail: THEOREM FORALL (k:(wrapKey?),b:BLOB) :
+    LET (out,s) = runState(
+                  powerTPM
+                  >> senterResetTPM
+                  >> senterHashSinitTPM
+                  >> decryptTPM(encrypt(k,b))
+                  >>= unit)
+                  (tpmUnknown) IN
+      inverse(wrappingKey(k))/=inverse(srkVal) => out = outBlob(nothing);
+
+  % Key chaining theorem.  If k is wrapped with srk and encrypts b,
+  % b will decrypt if k is installed
+  decrypt_key_success: THEOREM FORALL (k:(wrapKey?),b:BLOB):
+    LET (out,s) = runState(
+                  powerTPM
+	  	  >> senterResetTPM
+		  >> senterHashSinitTPM
+		  >> installKeyTPM(k)
+		  >> decryptTPM(encrypt(k,b))
+		  >>= unit)
+		  (tpmPower) IN
+        inverse(wrappingKey(k))=srk(s) => out=outBlob(b)
+
+  % A key is installed if it is wrapped with SRK
+  install_key_success: THEOREM FORALL (k:(wrapKey?)) :
+    LET (out,s) = runState(
+                  powerTPM
+		  >> senterResetTPM
+		  >> senterHashSinitTPM
+		  >> installKeyTPM(k)
+		  >>= unit)
+		  (tpmUnknown) IN
+      wrappingKey(k) = srk(s) => member(key(k),keys(s));
+
+  % A key is installed if it is wrapped with an installed key
+  install_key_success2: THEOREM FORALL (j,k:(wrapKey?)) :
+    LET (out,s) = runState(
+                  powerTPM
+		  >> senterResetTPM
+		  >> senterHashSinitTPM
+		  >> installKeyTPM(k)
+		  >> installKeyTPM(j)
+		  >>= unit)
+		  (tpmUnknown) IN
+      wrappingKey(j) = key(k) AND wrappingKey(k) = srk(s) =>
+         member(key(j),keys(s));
+
+ %% Unseal a secret successfully - This is not right yet 
+ unseal_secret_success: THEOREM FORALL (j,k:(asymKey?),hv:HV,b:BLOB,pcrs:PCRS) :
+    LET (out,s) = runState(
+                  powerTPM
+		  >> senterResetTPM
+		  >> senterHashSinitTPM
+		  >> extendTPM(hv,0)
+		  >> unsealTPM(seal(k,pcrs,b),j)
+		  >>= unit)
+		  (tpmUnknown) IN
+      IF j=inverse(k) AND pcrs=pcrs(s)
+         THEN out=outBlob(b)
+         ELSE out=outBlob(nothing)
+      ENDIF;
+
+  %% Regression theorems for testing only
+
+  test1a: THEOREM (unit(outNat(3))) =
+           (state(LAMBDA (s:tpmAbsState) : (outNat(3),s)))
+  test1b: THEOREM (runState(unit(outNat(3)))) =
+           (runState(state(LAMBDA (s:tpmAbsState) : (outNat(3),s))))
+  test1c: THEOREM (runState(unit(outNat(3))))(tpmReset) =
+           (runState(state(LAMBDA (s:tpmAbsState) : (outNat(3),s))))(tpmReset)
+
+  test2:  THEOREM (runState(unit(outNat(3))))(tpmReset) = (outNat(3),tpmReset)
+
+  % Random hash values
+  hv0, hv1, hv2 : HV
+
+  % reset followed by a copy
+  test3: THEOREM
+    runState(modify(outNat(0),(LAMBDA (s:tpmAbsState):s)) >>= unit)(tpmReset)
+    =
+    (outNat(0),tpmReset)
+
+  % reset followed by two copies
+  test4: THEOREM
+    runState(
+       modify(outNat(0),(LAMBDA (s:tpmAbsState):s)) >>=
+       (LAMBDA (x:tpmOutput):
+         modify(outNat(1),(LAMBDA (s:tpmAbsState):s)) >>= unit))(tpmReset)
+     =
+    (outNat(1),tpmReset)
+
+END tpm
+
+
