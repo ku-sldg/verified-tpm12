@@ -129,11 +129,6 @@ tpm [ B:TYPE+, % BLOB
   changeLocalityState(s:tpmAbsState) : tpmAbsState =
     s WITH [`locality := IF locality(s) > 0 THEN locality(s) - 1 ELSE 0 ENDIF];
   
-  %% Locality must be monotonically decreasing
-  %% proved - Tue Jun 12 17:18:32 CDT 2012
-  locality_monotonicity : LEMMA (FORALL (s:tpmAbsState) :
-    locality(s) > locality(changeLocalityState(s)));
-
   %% Install key operation on TPM state.
   installKeyState(s:tpmAbsState,k:(wrapKey?)) : tpmAbsState =
     s WITH [`keys := addKey(k,add(srk(s),keys(s)))];
@@ -172,12 +167,13 @@ tpm [ B:TYPE+, % BLOB
       ELSE s
   ENDCASES;
   
-  %% Monotonicity of locality 2
+  %% Monotonicity of locality
   %% Assuming that we're not resetting or powering on, locality goes down
   %% or remains the same
   %% proved - Wed Jun 13 14:01:55 CDT 2012
-  monotonic_locality2: THEOREM (FORALL (s:tpmAbsState,c:tpmInput) :
-    not(offCom?(c) or powerCom?(c)) => locality(s) >= locality(executeCom(s,c)));
+  monotonic_locality: THEOREM (FORALL (s:tpmAbsState,c:tpmInput) :
+    not(offCom?(c) or powerCom?(c)) =>
+      locality(s) >= locality(executeCom(s,c)));
 
 
   %% Minor Support Lemmas
