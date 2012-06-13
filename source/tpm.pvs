@@ -39,10 +39,18 @@ tpm [ B:TYPE+, % BLOB
   %% State monad input type - currently unused
   tpmInput : DATATYPE
   BEGIN
-    inNothing : inNothing?
-    inError : inError?
-    inNat(n:nat) : inNat?
-    inHV(h:HV) : inHV?
+    extendCom(h:HV,n:PCRINDEX) : extendCom?
+    installKeyCom(k:(wrapKey?)): installKeyCom?
+    revokeKeyCom(k:(wrapKey?)): revokeKeyCom?
+    noopCom : noopCom?
+    offCom : offCom?
+    powerCom : powerCom?
+    senterCom : senterCom? % All senter actions in one command
+    sinitCom : sinitCom?
+    quotePCR : quotePCR? % Restricted to return all	
+    decryptCom(d:(encrypt?)) : decryptCom?
+    encryptCom(b:BLOB) : encryptCom? % unimplemented
+    unsealCom(d:(seal?),k:(asymKey?)) : unsealCom?   
   END tpmInput;
 
   %% State monad output type
@@ -58,6 +66,9 @@ tpm [ B:TYPE+, % BLOB
 
   %% sinit blob instance for measurement
   sinit : B;
+
+  %% mle blob instance for measurement
+  mle : B;
 
   %% Locality type - check with spec
   LOCALITY : TYPE = {n:nat | n<=4};
@@ -116,7 +127,7 @@ tpm [ B:TYPE+, % BLOB
 
   %% Decrease locality value
   changeLocalityState(s:tpmAbsState) : tpmAbsState =
-    s WITH [`locality := locality(s) - 1];
+    s WITH [`locality := IF locality(s) > 0 THEN locality(s) - 1 ELSE 0 ENDIF];
   
   %% Locality must be monotonically decreasing
   %% proved - Tue Jun 12 17:18:32 CDT 2012
@@ -143,6 +154,32 @@ tpm [ B:TYPE+, % BLOB
   %% Unseal a secret sealed with an asymetric key and PCRs
   unsealState(s:tpmAbsState,d:(seal?),k:(asymKey?)) : BLOB = unseal(d,pcrs(s),k);
 
+  %% Execute a command on state
+  executeCom(s:tpmAbsState,c:tpmInput) : tpmAbsState = 
+    CASES c OF
+      extendCom(h,n) : extendState(s,n,h),
+      installKeyCom(k): installKeyState(s,k),
+      revokeKeyCom(k): revokeKeyState(s,k),
+      noopCom : s,
+      offCom : tpmReset,
+      powerCom : tpmPower,
+      senterCom : s, % This is not right for now
+      sinitCom : s, % This is not right for now
+      quotePCR : s
+%      decryptCom(d) : decryptState(s,d),
+%      encryptCom(b) : encryptState(s,b), % unimplemented
+%      unsealCom(d,k) : unsealState(s,d)
+      ELSE s
+  ENDCASES;
+  
+  %% Monotonicity of locality 2
+  %% Assuming that we're not resetting or powering on, locality goes down
+  %% or remains the same
+  %% proved - Wed Jun 13 14:01:55 CDT 2012
+  monotonic_locality2: THEOREM (FORALL (s:tpmAbsState,c:tpmInput) :
+    not(offCom?(c) or powerCom?(c)) => locality(s) >= locality(executeCom(s,c)));
+
+
   %% Minor Support Lemmas
 
   %% Extend is antisymmetric if the hash values used for extension are
@@ -167,19 +204,22 @@ tpm [ B:TYPE+, % BLOB
 
   %% Extend PCR n with hash value h.
   extendTPM(h:HV,n:PCRINDEX):State =
-    modify(outNothing,(LAMBDA (s:tpmAbsState): extendState(s,n,h)));
+    modify(outNothing,(LAMBDA (s:tpmAbsState):
+      executeCom(s,extendCom(h,n))));
 
   %% Decrease locality value
   changeLocalityTPM : State =
-    modify(outNothing,(LAMBDA (s:tpmAbsState): changeLocalityState(s)));
+    modify(outNothing,(LAMBDA (s:tpmAbsState):changeLocalityState(s)));
 
   %% Install key k in a TPM.
   installKeyTPM(k:(wrapKey?)):State =
-    modify(outNothing,(LAMBDA (s:tpmAbsState): installKeyState(s,k)));
+    modify(outNothing,(LAMBDA (s:tpmAbsState):
+      executeCom(s,installKeyCom(k))));
 
   %% Revoke key k from a TPM.
   revokeKeyTPM(k:(wrapKey?)):State =
-    modify(outNothing,(LAMBDA (s:tpmAbsState): revokeKeyState(s,k)));
+    modify(outNothing,(LAMBDA (s:tpmAbsState):
+      executeCom(s,revokeKeyCom(k))));
 
   %% No-op
   noop : [tpmOutput -> State] =
@@ -198,11 +238,12 @@ tpm [ B:TYPE+, % BLOB
   %% Measure sinit by senter call
   senterHashSinitTPM : State = extendTPM(hash(sinit),0);
 
-  %% Call sinit for initial measurements - currently undefined
-  sinitTPM : State
+  %% Call sinit for initial measurements - currently unused
+  sinitTPM : State = extendTPM(hash(mle),0);
 
   %% Generate and output a quote
-  quotePCR : State = output((LAMBDA (s:tpmAbsState):(outQuote(pcrs(s)),s)));
+  quotePCR : State =
+     output((LAMBDA (s:tpmAbsState) : (outQuote(pcrs(s)),s)));
 
   %% Decrypt and output a blob (should be a key)
   decryptTPM(d:(encrypt?)) : State =
