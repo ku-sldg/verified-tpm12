@@ -121,18 +121,21 @@ tpm [ B:TYPE+, % BLOB
   %% manipulation functions are defined externally in key.pvs and
   %% pcr.pvs respectively
 
-  %% Reset PCRs as performed by SENTER
-  resetPCRsState(s:tpmAbsState) : tpmAbsState =
+  %% Reset PCRs as performed by SENTER.
+  pcrsResetSenterState(s:tpmAbsState) : tpmAbsState =
     s WITH [`pcrs := pcrsReset];
 
+  %% Decrease locality value
+  changeLocalityState(s:tpmAbsState) : tpmAbsState =
+    s WITH [`locality := IF locality(s) > 0
+                         THEN locality(s) - 1
+			 ELSE 0
+			 ENDIF];
+  
   %% Extend operation on TPM state
   extendState(s:tpmAbsState,n:PCRINDEX,h:HV) : tpmAbsState =
     s WITH [`pcrs := pcrsExtend(pcrs(s),n,h)];
 
-  %% Decrease locality value
-  changeLocalityState(s:tpmAbsState) : tpmAbsState =
-    s WITH [`locality := IF locality(s) > 0 THEN locality(s) - 1 ELSE 0 ENDIF];
-  
   %% Install key operation on TPM state.
   installKeyState(s:tpmAbsState,k:(wrapKey?)) : tpmAbsState =
     s WITH [`keys := addKey(k,add(srk(s),keys(s)))];
@@ -162,7 +165,9 @@ tpm [ B:TYPE+, % BLOB
       noopCom : s,
       offCom : tpmUnknown,
       powerCom : tpmPower,
-      senterCom : changeLocalityState(extendState(tpmReset,0,hash(sinit))),
+% Old version for demonstration
+%      senterCom : changeLocalityState(extendState(tpmReset,0,hash(sinit))),
+      senterCom : changeLocalityState(extendState(pcrsResetSenterState(s),0,hash(sinit))),
       sinitCom : changeLocalityState(extendState(s,0,hash(mle))),
       quotePCR : s
 %      decryptKeyCom(d) : decryptKeyState(s,d)

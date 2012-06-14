@@ -1,48 +1,6 @@
 (tpm
  (unique_hash 0
   (unique_hash-1 nil 3535917891 ("" (postpone) nil nil) nil shostak))
- (IMP_StateMonad_TCC1 0
-  (IMP_StateMonad_TCC1-1 nil 3548612397
-   (""
-    (inst 1 "(#
-                         pcrs:=pcrsPower
-                         , locality:=4
-			 , keys:=emptyset
-			 , srk:=inverse(srkVal)
-			 , ek:=inverse(ekVal)
-			 #)")
-    (("1" (grind) nil nil) ("2" (grind) nil nil)) nil)
-   ((ekVal const-decl "KEY" tpm nil) (srkVal const-decl "KEY" tpm nil)
-    (inverse const-decl "(asymKey?)" key nil)
-    (emptyset const-decl "set" sets nil)
-    (set type-eq-decl nil sets nil)
-    (pcrsPower const-decl "PCRS" pcr nil) (PCR type-decl nil pcr nil)
-    (PCRINDEX type-eq-decl nil pcr nil)
-    (<= const-decl "bool" reals nil)
-    (nat nonempty-type-eq-decl nil naturalnumbers nil)
-    (>= const-decl "bool" reals nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (int nonempty-type-eq-decl nil integers nil)
-    (integer_pred const-decl "[rational -> boolean]" integers nil)
-    (rational nonempty-type-from-decl nil rationals nil)
-    (rational_pred const-decl "[real -> boolean]" rationals nil)
-    (real nonempty-type-from-decl nil reals nil)
-    (real_pred const-decl "[number_field -> boolean]" reals nil)
-    (number_field nonempty-type-from-decl nil number_fields nil)
-    (number_field_pred const-decl "[number -> boolean]" number_fields
-     nil)
-    (number nonempty-type-decl nil numbers nil)
-    (tpmAbsState type-eq-decl nil tpm nil)
-    (PCRS type-eq-decl nil pcr nil) (LOCALITY type-eq-decl nil tpm nil)
-    (KEYSET type-eq-decl nil key nil)
-    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
-    (boolean nonempty-type-decl nil booleans nil)
-    (KEY type-decl nil key nil)
-    (HV formal-nonempty-type-decl nil tpm nil)
-    (K formal-nonempty-type-decl nil tpm nil)
-    (B formal-nonempty-type-decl nil tpm nil)
-    (finite_emptyset name-judgement "finite_set" finite_sets nil))
-   nil))
  (tpmPower_TCC1 0
   (tpmPower_TCC1-1 nil 3535902101 ("" (tcc) nil nil)
    ((ekVal const-decl "KEY" tpm nil)) nil))
@@ -58,32 +16,11 @@
      "(strict_total_order?[real])" real_props nil))
    nil))
  (monotonic_locality 0
-  (monotonic_locality-1 nil 3548612399
-   ("" (skosimp*)
-    (("" (expand "executeCom")
-      (("" (ground)
-        (("" (lift-if)
-          (("" (split)
-            (("1" (grind) nil nil)
-             ("2" (prop)
-              (("1" (grind) nil nil) ("2" (grind) nil nil)
-               ("3" (grind) nil nil)
-               ("4" (expand "extendState")
-                (("4" (simplify)
-                  (("4" (expand "tpmReset")
-                    (("4" (expand "changeLocalityState")
-                      (("4" (postpone) nil nil)) nil))
-                    nil))
-                  nil))
-                nil)
-               ("5" (postpone) nil nil) ("6" (postpone) nil nil))
-              nil))
-            nil))
-          nil))
-        nil))
-      nil))
-    nil)
-   ((revokeKeyState const-decl "tpmAbsState" tpm nil)
+  (monotonic_locality-1 nil 3548612399 ("" (grind) nil nil)
+   ((changeLocalityState const-decl "tpmAbsState" tpm nil)
+    (pcrsReset const-decl "PCRS" pcr nil)
+    (pcrsResetSenterState const-decl "tpmAbsState" tpm nil)
+    (revokeKeyState const-decl "tpmAbsState" tpm nil)
     (removeKey const-decl "KEYSET" key nil)
     (installKeyState const-decl "tpmAbsState" tpm nil)
     (addKey const-decl "KEYSET" key nil)
@@ -94,6 +31,10 @@
     (extendState const-decl "tpmAbsState" tpm nil)
     (pcrsExtend const-decl "PCRS" pcr nil)
     (HV formal-nonempty-type-decl nil tpm nil)
+    (real_ge_is_total_order name-judgement "(total_order?[real])"
+     real_props nil)
+    (real_gt_is_strict_total_order name-judgement
+     "(strict_total_order?[real])" real_props nil)
     (executeCom const-decl "tpmAbsState" tpm nil))
    shostak))
  (antisymmetryMonad 0
@@ -530,6 +471,9 @@
     (HV formal-nonempty-type-decl nil tpm nil)
     (PCR type-decl nil pcr nil))
    shostak))
+ (decrypt_key_fail_TCC1 0
+  (decrypt_key_fail_TCC1-1 nil 3548678332 ("" (subtype-tcc) nil nil)
+   nil nil))
  (decrypt_key_fail 0
   (decrypt_key_fail-1 nil 3535901403
    ("" (skosimp*)
