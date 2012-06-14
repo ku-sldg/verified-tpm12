@@ -227,22 +227,23 @@ tpm [ B:TYPE+, % BLOB
 
   %% Extend PCR n with hash value h.
   extendTPM(h:HV,n:PCRINDEX):State =
-    modify(outNothing,(LAMBDA (s:tpmAbsState):
-      executeCom(s,extendCom(h,n))));
+    modify(outNothing,
+           (LAMBDA (s:tpmAbsState):executeCom(s,extendCom(h,n))));
 
   %% Decrease locality value
   changeLocalityTPM : State =
-    modify(outNothing,(LAMBDA (s:tpmAbsState):changeLocalityState(s)));
+    modify(outNothing,
+           (LAMBDA (s:tpmAbsState):changeLocalityState(s)));
 
   %% Install key k in a TPM.
   installKeyTPM(k:(wrapKey?)):State =
-    modify(outNothing,(LAMBDA (s:tpmAbsState):
-      executeCom(s,installKeyCom(k))));
+    modify(outNothing,
+           (LAMBDA (s:tpmAbsState):executeCom(s,installKeyCom(k))));
 
   %% Revoke key k from a TPM.
   revokeKeyTPM(k:(wrapKey?)):State =
-    modify(outNothing,(LAMBDA (s:tpmAbsState):
-      executeCom(s,revokeKeyCom(k))));
+    modify(outNothing,
+           (LAMBDA (s:tpmAbsState):executeCom(s,revokeKeyCom(k))));
 
   %% No-op
   noop : [tpmAbsOutput -> State] =

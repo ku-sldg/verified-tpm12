@@ -75,4 +75,7 @@ BEGIN
  % Generate output
  output(f:[S->[A,S]]) : State = state(LAMBDA(s0:S):f(s0))
 
+ % Generate output better
+ output2(a:A,f:[S->A]) : State = state(LAMBDA(s0:S):(f(s0),s0))
+
 END StateMonad
