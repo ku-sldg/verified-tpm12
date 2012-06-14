@@ -46,7 +46,7 @@ tpm [ B:TYPE+, % BLOB
     noopCom : noopCom?
     offCom : offCom?
     powerCom : powerCom?
-    quotePCR : quotePCR? % partially implemented
+    quoteCom : quoteCom? % partially implemented
     revokeKeyCom(k:(wrapKey?)): revokeKeyCom?
     senterCom : senterCom? % implemented all actions as one senter
     sinitCom : sinitCom? % partially implemented
@@ -171,13 +171,17 @@ tpm [ B:TYPE+, % BLOB
       senterCom : 
                    changeLocalityState(extendState(pcrsResetSenterState(s),0,hash(sinit))),
       sinitCom : changeLocalityState(extendState(s,0,hash(mle))),
-      quotePCR : s
+      quoteCom : s
 %      decryptKeyCom(d) : decryptKeyState(s,d)
 %      encryptCom(b) : encryptState(s,b), % unimplemented
 %      unsealCom(d,k) : unsealState(s,d)
       ELSE s
   ENDCASES;
   
+  % Output PCRs as quote
+  quoteOut(s:tpmAbsState) : tpmAbsOutput = outQuote(pcrs(s));
+
+  % Generage output from a command
   outputCom(s:tpmAbsState,c:tpmInput) : tpmAbsOutput = 
     CASES c OF
       extendCom(h,n) : outNothing,
@@ -188,7 +192,8 @@ tpm [ B:TYPE+, % BLOB
       powerCom : outNothing,
       senterCom : outNothing,
       sinitCom : outNothing,
-      quotePCR : outNothing
+      quoteCom : quoteOut(s)
+
 %      decryptKeyCom(d) : decryptKeyState(s,d)
 %      encryptCom(b) : encryptState(s,b), % unimplemented
 %      unsealCom(d,k) : unsealState(s,d)
@@ -266,8 +271,9 @@ tpm [ B:TYPE+, % BLOB
   sinitTPM : State = extendTPM(hash(mle),0);
 
   %% Generate and output a quote
-  quotePCR : State =
-     output((LAMBDA (s:tpmAbsState) : (outQuote(pcrs(s)),s)));
+
+  quoteTPM : State = 
+     output2(outNothing,(LAMBDA (s:tpmAbsState) : outputCom(s,quoteCom)));
 
   %% Decrypt and output a blob (should be a key)
   decryptTPM(d:(encrypt?)) : State =
@@ -330,7 +336,7 @@ tpm [ B:TYPE+, % BLOB
       >> senterHashSinitTPM
       >> changeLocalityTPM
       >> extendTPM(hv,0)
-      >> quotePCR
+      >> quoteTPM
       >>= unit)
       (tpmUnknown)
     =
@@ -347,14 +353,14 @@ tpm [ B:TYPE+, % BLOB
       >> senterHashSinitTPM
       >> changeLocalityTPM
       >> extendTPM(hv,0)
-      >> quotePCR
+      >> quoteTPM
       >>= unit)
       (tpmUnknown)
     /=
     runState(
       powerTPM
       >> extendTPM(hv,0)
-      >> quotePCR
+      >> quoteTPM
       >>= unit)
       (tpmUnknown))
 
@@ -366,14 +372,14 @@ tpm [ B:TYPE+, % BLOB
                     extendTPM(hash(asp),0) 
        		     >> extendTPM(hash(n0),0)
        		     >> extendTPM(hash(d),0)
-       		     >> quotePCR
+       		     >> quoteTPM
        		     >>= unit)
        		     (tpmReset),
           (q1,s1) = runState(
        	             extendTPM(hash(asp),0)
 		     >> extendTPM(hash(n1),0)
        		     >> extendTPM(hash(d),0)
-       		     >> quotePCR
+       		     >> quoteTPM
        		     >>= unit)
        		     (tpmReset) IN
          n0/=n1 => q0/=q1;
@@ -386,14 +392,14 @@ tpm [ B:TYPE+, % BLOB
                      extendTPM(hash(asp0),0) 
        		     >> extendTPM(hash(n),0)
        		     >> extendTPM(hash(d),0)
-       		     >> quotePCR
+       		     >> quoteTPM
        		     >>= unit)
        		     (tpmReset),
           (q1,s1) = runState(
        	             extendTPM(hash(asp1),0)
 		     >> extendTPM(hash(n),0)
        		     >> extendTPM(hash(d),0)
-       		     >> quotePCR
+       		     >> quoteTPM
        		     >>= unit)
        		     (tpmReset) IN
          asp0/=asp1 => q0/=q1;
