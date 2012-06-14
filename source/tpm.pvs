@@ -171,15 +171,24 @@ tpm [ B:TYPE+, % BLOB
       senterCom : 
                    changeLocalityState(extendState(pcrsResetSenterState(s),0,hash(sinit))),
       sinitCom : changeLocalityState(extendState(s,0,hash(mle))),
-      quoteCom : s
-%      decryptKeyCom(d) : decryptKeyState(s,d)
+      quoteCom : s,
+      decryptKeyCom(d) : s,
+      unsealCom(d,k) : s
 %      encryptCom(b) : encryptState(s,b), % unimplemented
-%      unsealCom(d,k) : unsealState(s,d)
       ELSE s
   ENDCASES;
   
   % Output PCRs as quote
-  quoteOut(s:tpmAbsState) : tpmAbsOutput = outQuote(pcrs(s));
+  quoteOut(s:tpmAbsState) : tpmAbsOutput =
+    outQuote(pcrs(s));
+
+  % Output decypted key
+  decryptKeyOut(s:tpmAbsState,d:(encrypt?)) : tpmAbsOutput = 
+    outBlob(decryptKeyState(s,d));
+
+  % Output decypted key
+  unsealOut(s:tpmAbsState,d:(seal?),k:(asymKey?)) : tpmAbsOutput = 
+    outBlob(unsealState(s,d,k));
 
   % Generage output from a command
   outputCom(s:tpmAbsState,c:tpmInput) : tpmAbsOutput = 
@@ -192,11 +201,10 @@ tpm [ B:TYPE+, % BLOB
       powerCom : outNothing,
       senterCom : outNothing,
       sinitCom : outNothing,
-      quoteCom : quoteOut(s)
-
-%      decryptKeyCom(d) : decryptKeyState(s,d)
+      quoteCom : quoteOut(s),
+      decryptKeyCom(d) : decryptKeyOut(s,d),
+      unsealCom(d,k) : unsealOut(s,d,k)
 %      encryptCom(b) : encryptState(s,b), % unimplemented
-%      unsealCom(d,k) : unsealState(s,d)
       ELSE outNothing
   ENDCASES;
 
@@ -271,17 +279,19 @@ tpm [ B:TYPE+, % BLOB
   sinitTPM : State = extendTPM(hash(mle),0);
 
   %% Generate and output a quote
-
   quoteTPM : State = 
-     output2(outNothing,(LAMBDA (s:tpmAbsState) : outputCom(s,quoteCom)));
+     output(outNothing,
+            (LAMBDA (s:tpmAbsState) : outputCom(s,quoteCom)));
 
   %% Decrypt and output a blob (should be a key)
   decryptTPM(d:(encrypt?)) : State =
-     output((LAMBDA (s:tpmAbsState):(outBlob(decryptKeyState(s,d)),s)));
+     output(outNothing,
+            (LAMBDA (s:tpmAbsState) : outputCom(s,decryptKeyCom(d))));
 
   %% Unseal and output a blon (should be binary or data)
   unsealTPM(d:(seal?),k:(asymKey?)) : State = 
-     output((LAMBDA (s:tpmAbsState):(outBlob(unsealState(s,d,k)),s)));
+     output(outNothing,
+            (LAMBDA (s:tpmAbsState): outputCom(s,unsealCom(d,k))));
 
   %% Extending a reset PCR is antisymmetric if the two values are not equal
   %% Let form used to defined commands for bind.  Will use command forms
