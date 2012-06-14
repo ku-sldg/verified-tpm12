@@ -178,6 +178,23 @@ tpm [ B:TYPE+, % BLOB
       ELSE s
   ENDCASES;
   
+  outputCom(s:tpmAbsState,c:tpmInput) : tpmAbsOutput = 
+    CASES c OF
+      extendCom(h,n) : outNothing,
+      installKeyCom(k): outNothing,
+      revokeKeyCom(k): outNothing,
+      noopCom : outNothing,
+      offCom : outNothing,
+      powerCom : outNothing,
+      senterCom : outNothing,
+      sinitCom : outNothing,
+      quotePCR : outNothing
+%      decryptKeyCom(d) : decryptKeyState(s,d)
+%      encryptCom(b) : encryptState(s,b), % unimplemented
+%      unsealCom(d,k) : unsealState(s,d)
+      ELSE outNothing
+  ENDCASES;
+
   %% Monotonicity of locality
   %% Assuming that we're not resetting or powering on, locality goes down
   %% or remains the same
