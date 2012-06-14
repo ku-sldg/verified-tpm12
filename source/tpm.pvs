@@ -121,6 +121,10 @@ tpm [ B:TYPE+, % BLOB
   %% manipulation functions are defined externally in key.pvs and
   %% pcr.pvs respectively
 
+  %% Reset PCRs as performed by SENTER
+  resetPCRsState(s:tpmAbsState) : tpmAbsState =
+    s WITH [`pcrs := pcrsReset];
+
   %% Extend operation on TPM state
   extendState(s:tpmAbsState,n:PCRINDEX,h:HV) : tpmAbsState =
     s WITH [`pcrs := pcrsExtend(pcrs(s),n,h)];
@@ -170,7 +174,7 @@ tpm [ B:TYPE+, % BLOB
   %% Monotonicity of locality
   %% Assuming that we're not resetting or powering on, locality goes down
   %% or remains the same
-  %% proved - Wed Jun 13 14:01:55 CDT 2012
+  %% unproven - Wed Jun 13 23:15:36 CDT 2012
   monotonic_locality: THEOREM (FORALL (s:tpmAbsState,c:tpmInput) :
     not(offCom?(c) or powerCom?(c)) =>
       locality(s) >= locality(executeCom(s,c)));
