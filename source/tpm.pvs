@@ -47,8 +47,8 @@ tpm [ B:TYPE+, % BLOB
     powerCom : powerCom?
     senterCom : senterCom? % All senter actions in one command
     sinitCom : sinitCom?
-    quotePCR : quotePCR? % Restricted to return all	
-    decryptCom(d:(encrypt?)) : decryptCom?
+    quotePCR : quotePCR? % Restricted
+    decryptKeyCom(d:(encrypt?)) : decryptKeyCom?
     encryptCom(b:BLOB) : encryptCom? % unimplemented
     unsealCom(d:(seal?),k:(asymKey?)) : unsealCom?   
   END tpmInput;
@@ -159,9 +159,9 @@ tpm [ B:TYPE+, % BLOB
       offCom : tpmUnknown,
       powerCom : tpmPower,
       senterCom : changeLocalityState(extendState(tpmReset,0,hash(sinit))),
-      sinitCom : s, % This is not right for now
+      sinitCom : changeLocalityState(extendState(s,0,hash(mle))),
       quotePCR : s
-%      decryptCom(d) : decryptState(s,d),
+%      decryptKeyCom(d) : decryptKeyState(s,d)
 %      encryptCom(b) : encryptState(s,b), % unimplemented
 %      unsealCom(d,k) : unsealState(s,d)
       ELSE s
