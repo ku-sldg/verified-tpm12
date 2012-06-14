@@ -156,9 +156,9 @@ tpm [ B:TYPE+, % BLOB
       installKeyCom(k): installKeyState(s,k),
       revokeKeyCom(k): revokeKeyState(s,k),
       noopCom : s,
-      offCom : tpmReset,
+      offCom : tpmUnknown,
       powerCom : tpmPower,
-      senterCom : s, % This is not right for now
+      senterCom : changeLocalityState(extendState(tpmReset,0,hash(sinit))),
       sinitCom : s, % This is not right for now
       quotePCR : s
 %      decryptCom(d) : decryptState(s,d),
