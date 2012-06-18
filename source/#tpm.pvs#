@@ -241,9 +241,7 @@ tpm [ B:TYPE+, % BLOB
 
   %getPCRs(s:tpmAbsState,pcrMask:PCRMASK) : PCRS = 
   %   LET i:PCRINDEX = {n:nat | n <= 23} IN
-  %   (s`pcrs WITH [(i):= { reset | pcrMask(i) = FALSE}]);
-
-     
+  %   (s`pcrs WITH [(i):= { reset | pcrMask(i) = FALSE}]);     
   getPCRs(s:tpmAbsState,pcrMask:PCRMASK) : tpmAbsState = 
      s WITH [pcrs := (LAMBDA (i:PCRINDEX) :
        	    	     	     IF nth(pcrMask,i) 
@@ -251,11 +249,46 @@ tpm [ B:TYPE+, % BLOB
 			     ELSE reset
 		 	     ENDIF)]
   
+  %% 
+  getPCRsCheck : THEOREM (FORALL (hv:HV,n:BLOB,m:PCRMASK) : 
+    LET (a,s1) = 
+      runState(
+        powerTPM
+      	>> senterResetTPM
+      	>> senterHashSinitTPM
+      	>> changeLocalityTPM
+      	>> extendTPM(hv,0)
+      	>> quotePCR(n,pcrMask)
+      	>>= unit)
+      	(tpmUnknown) IN
+	
+  ) 
+runState(
+      powerTPM
+      >> senterResetTPM
+      >> senterHashSinitTPM
+      >> changeLocalityTPM
+      >> extendTPM(hv,0)
+      >> quotePCR(n,pcrMask)
+      >>= unit)
+      (tpmUnknown)
+    =
+    (outQuote(inverse(ekVal),n,pcrsExtend(pcrsExtend(pcrsReset,0,hash(sinit)),0,hv)),
+      changeLocalityState(extendState(extendState(tpmReset,0,hash(sinit)),0,hv))))
+ 
+
   %% Generate and output a quote
   %% Input: nonce, pcrMask
   %% Output: pcr array - zero out pcrs don't care about
   quotePCR(nonce:BLOB,pcrMask:PCRMASK) : State =
      output((LAMBDA (s:tpmAbsState):(outQuote(inverse(ekVal),nonce,getPCRs(s,pcrMask)`pcrs),s)));
+
+  %% 
+  quoteCorrectness: THEOREM (FORALL (n:BLOB,m:PCRMASK):
+     quotePCR(n,m)
+  )
+
+  %% do proof that says if signature is not right, don't return pcrs?
 
   %% Decrypt and output a blob (should be a key)
   decryptTPM(d:(encrypt?)) : State =

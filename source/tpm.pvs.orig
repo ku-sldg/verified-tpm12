@@ -59,7 +59,7 @@ tpm [ B:TYPE+, % BLOB
     outNothing : outNothing?
     outError(s:string) : outError?
     outNat(n:nat) : outNat?
-    outQuote(k:KEY,n:BLOB,pcrs:PCRS) : outQuote?
+    outQuote(k:KEY,n:BLOB,p:PCRS) : outQuote?
     outBlob(k:BLOB) : outBlob?
     outKey(k:KEY) : outKey?
   END tpmOutput;
@@ -237,26 +237,21 @@ tpm [ B:TYPE+, % BLOB
   %% Call sinit for initial measurements - currently unused
   sinitTPM : State = extendTPM(hash(mle),0);
 
-  PCRMASK : TYPE = list[bool];
-
-  %getPCRs(s:tpmAbsState,pcrMask:PCRMASK) : PCRS = 
-  %   LET i:PCRINDEX = {n:nat | n <= 23} IN
-  %   (s`pcrs WITH [(i):= { reset | pcrMask(i) = FALSE}]);
-
-     
-  getPCRs(s:tpmAbsState,pcrMask:PCRMASK) : tpmAbsState = 
-     s WITH [pcrs := (LAMBDA (i:PCRINDEX) :
-       	    	     	     IF nth(pcrMask,i) 
-     		 	     THEN s`pcrs(i)
-			     ELSE reset
-		 	     ENDIF)]
-  
   %% Generate and output a quote
+<<<<<<< Updated upstream
+  quotePCR : State =
+     output((LAMBDA (s:tpmAbsState) : (outQuote(pcrs(s)),s)));
+
+=======
   %% Input: nonce, pcrMask
   %% Output: pcr array - zero out pcrs don't care about
-  quotePCR(nonce:BLOB,pcrMask:PCRMASK) : State =
-     output((LAMBDA (s:tpmAbsState):(outQuote(inverse(ekVal),nonce,getPCRs(s,pcrMask)`pcrs),s)));
+  quotePCR(nonce:BLOB,pcrMask:set[PCRINDEX]) : State =
+     output((LAMBDA (s:tpmAbsState):(outQuote(inverse(ekVal),nonce,pcrs(s)),s)));
 
+  getPCRs(pcrMask:setof[PCRINDEX]) : PCRS = 
+     (pcrs WITH [`pcrs(y) := {y:PCR | member(x,pcrMask)}])
+     
+>>>>>>> Stashed changes
   %% Decrypt and output a blob (should be a key)
   decryptTPM(d:(encrypt?)) : State =
      output((LAMBDA (s:tpmAbsState):(outBlob(decryptKeyState(s,d)),s)));
@@ -311,57 +306,57 @@ tpm [ B:TYPE+, % BLOB
 
   %% Prove that quote generation returns the correct PCR
   %% proved - Tue Jun 12 15:33:33 CDT 2012
-  quoteMonad: THEOREM (FORALL (hv:HV,n:BLOB,pcrMask:PCRMASK) :
+  quoteMonad: THEOREM (FORALL (hv:HV) :
     runState(
       powerTPM
       >> senterResetTPM
       >> senterHashSinitTPM
       >> changeLocalityTPM
       >> extendTPM(hv,0)
-      >> quotePCR(n,pcrMask)
+      >> quotePCR
       >>= unit)
       (tpmUnknown)
     =
-    (outQuote(inverse(ekVal),n,pcrsExtend(pcrsExtend(pcrsReset,0,hash(sinit)),0,hv)),
+    (outQuote(pcrsExtend(pcrsExtend(pcrsReset,0,hash(sinit)),0,hv)),
       changeLocalityState(extendState(extendState(tpmReset,0,hash(sinit)),0,hv))))
 
   %% Prove that skipping SENTER is detectable by showing the quote following
   %% a command differs when SENTER is excluded.
   %% proved - Tue Jun 12 15:34:24 CDT 2012
-  noSenter: THEOREM (FORALL (hv:HV,n:BLOB,pcrMask:PCRMASK) :
+  noSenter: THEOREM (FORALL (hv:HV) :
     runState(
       powerTPM
       >> senterResetTPM
       >> senterHashSinitTPM
       >> changeLocalityTPM
       >> extendTPM(hv,0)
-      >> quotePCR(n,pcrMask)
+      >> quotePCR
       >>= unit)
       (tpmUnknown)
     /=
     runState(
       powerTPM
       >> extendTPM(hv,0)
-      >> quotePCR(n,pcrMask)
+      >> quotePCR
       >>= unit)
       (tpmUnknown))
 
   %% Replay is detectable via a quote.  d is data, asp is program that
   %% generated d, and n0,n1 are nonces that are going to be different
   %% proved - Tue Jun 12 15:35:05 CDT 2012
-  replay_detection_monad: THEOREM forall (d:B, asp:B, n0,n1:B, n2:BLOB, pcrMask:PCRMASK) :
+  replay_detection_monad: THEOREM forall (d:B, asp:B, n0,n1:B) :
       LET (q0,s0) = runState( 
                     extendTPM(hash(asp),0) 
        		     >> extendTPM(hash(n0),0)
        		     >> extendTPM(hash(d),0)
-       		     >> quotePCR(n2,pcrMask)
+       		     >> quotePCR
        		     >>= unit)
        		     (tpmReset),
           (q1,s1) = runState(
        	             extendTPM(hash(asp),0)
 		     >> extendTPM(hash(n1),0)
        		     >> extendTPM(hash(d),0)
-       		     >> quotePCR(n2,pcrMask)
+       		     >> quotePCR
        		     >>= unit)
        		     (tpmReset) IN
          n0/=n1 => q0/=q1;
@@ -369,19 +364,19 @@ tpm [ B:TYPE+, % BLOB
   %% Bad measurement ASP is detectable via a quote.  d is data, asp0 and asp1
   %% are programs that generated d, and n is the nonce identifying the response
   %% proved - Tue Jun 12 15:35:39 CDT 2012
-  bad_asp_monad: THEOREM forall (d:B, asp0,asp1:B, n:B, n1:BLOB, pcrMask:PCRMASK) :
+  bad_asp_monad: THEOREM forall (d:B, asp0,asp1:B, n:B) :
       LET (q0,s0) = runState(
                      extendTPM(hash(asp0),0) 
        		     >> extendTPM(hash(n),0)
        		     >> extendTPM(hash(d),0)
-       		     >> quotePCR(n1,pcrMask)
+       		     >> quotePCR
        		     >>= unit)
        		     (tpmReset),
           (q1,s1) = runState(
        	             extendTPM(hash(asp1),0)
 		     >> extendTPM(hash(n),0)
        		     >> extendTPM(hash(d),0)
-       		     >> quotePCR(n1,pcrMask)
+       		     >> quotePCR
        		     >>= unit)
        		     (tpmReset) IN
          asp0/=asp1 => q0/=q1;
