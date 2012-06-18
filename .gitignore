@@ -1,2 +1,9 @@
 *~
 source/.pvscontext
+*.aux
+*.bbl
+*.lof
+*.log
+*.lot
+*.out
+*.toc
