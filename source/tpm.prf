@@ -83,27 +83,8 @@
     (pcrsExtend const-decl "PCRS" pcr nil)
     (HV formal-nonempty-type-decl nil tpm nil))
    shostak))
- (getPCRsTest 0
-  (getPCRsTest-1 nil 3549040987
-   ("" (grind)
-    (("" (expand every)
-      (("" (lift-if)
-        (("" (grind)
-          (("" (expand length)
-            (("" (lift-if)
-              (("" (grind)
-                (("" (expand length)
-                  (("" (expand every)
-                    (("" (grind) (("" (postpone) nil nil)) nil)) nil))
-                  nil))
-                nil))
-              nil))
-            nil))
-          nil))
-        nil))
-      nil))
-    nil)
-   nil shostak))
+ (testGetPCRs 0
+  (testGetPCRs-1 nil 3549126682 ("" (grind) nil nil) nil shostak))
  (antisymmetryMonad2 0
   (antisymmetryMonad2-1 nil 3531432087
    ("" (grind)

@@ -1,7 +1,10 @@
 (pcr
- (equiv_TCC1 0
-  (equiv_TCC1-1 nil 3531195818 ("" (termination-tcc) nil nil)
-   ((<< adt-def-decl "(well_founded?[PCR])" pcr nil)) nil))
+ (testGetPCRs_TCC1 0
+  (testGetPCRs_TCC1-1 nil 3549129890 ("" (subtype-tcc) nil nil) nil
+   nil))
+ (testGetPCRs 0
+  (testGetPCRs-1 nil 3549130103
+   ("" (grind) (("" (postpone) nil nil)) nil) nil shostak))
  (antisym 0
   (antisym-1 nil 3529126590
    ("" (grind) (("" (decompose-equality) nil nil)) nil)
@@ -16,41 +19,5 @@
     (extend adt-constructor-decl "[[PCR, HV] -> (extend?)]" pcr nil)
     (hash adt-accessor-decl "[(extend?) -> HV]" pcr nil)
     (/= const-decl "boolean" notequal nil))
-   shostak))
- (antysym_ext1 0
-  (antysym_ext1-1 nil 3531349002
-   ("" (grind)
-    (("" (apply-eta "extend(p!1,h1!1)")
-      (("" (grind) (("" (decompose-equality) nil nil)) nil)) nil))
-    nil)
-   ((PCR_extend_eta formula-decl nil pcr nil)
-    (extend adt-constructor-decl "[[PCR, HV] -> (extend?)]" pcr nil)
-    (extend? adt-recognizer-decl "[PCR -> boolean]" pcr nil)
-    (PCR type-decl nil pcr nil)
-    (AND const-decl "[bool, bool -> bool]" booleans nil)
-    (= const-decl "[T, T -> boolean]" equalities nil)
-    (pcr adt-accessor-decl "[(extend?) -> PCR]" pcr nil)
-    (hash adt-accessor-decl "[(extend?) -> HV]" pcr nil)
-    (real_ge_is_total_order name-judgement "(total_order?[real])"
-     real_props nil)
-    (boolean nonempty-type-decl nil booleans nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (NOT const-decl "[bool -> bool]" booleans nil)
-    (number nonempty-type-decl nil numbers nil)
-    (number_field_pred const-decl "[number -> boolean]" number_fields
-     nil)
-    (number_field nonempty-type-from-decl nil number_fields nil)
-    (real_pred const-decl "[number_field -> boolean]" reals nil)
-    (real nonempty-type-from-decl nil reals nil)
-    (>= const-decl "bool" reals nil)
-    (rational_pred const-decl "[real -> boolean]" rationals nil)
-    (rational nonempty-type-from-decl nil rationals nil)
-    (integer_pred const-decl "[rational -> boolean]" integers nil)
-    (int nonempty-type-eq-decl nil integers nil)
-    (nat nonempty-type-eq-decl nil naturalnumbers nil)
-    (/= const-decl "boolean" notequal nil))
-   shostak))
- (antysym_ext2 0
-  (antysym_ext2-1 nil 3531347085 ("" (grind) nil nil)
-   ((/= const-decl "boolean" notequal nil)) shostak)))
+   shostak)))
 

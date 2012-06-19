@@ -235,23 +235,15 @@ tpm [ B:TYPE+, % BLOB
   senterHashSinitTPM : State = extendTPM(hash(sinit),0);
 
   %% Call sinit for initial measurements - currently unused
-  sinitTPM : State = extendTPM(hash(mle),0);
+%   sinitTPM : State = extendTPM(hash(mle),0);
 
-  %PCRMASK : TYPE = list[bool];
-  PCRMASK : TYPE = list[PCRINDEX];
-
-  getPCRs(s:tpmAbsState,pcrMask:PCRMASK) : list[PCR] =
-     map(LAMBDA(i:PCRINDEX):s`pcrs(i))(pcrMask)
-
-  %% Test/Prove getPCRs
-  getPCRsTest: THEOREM (FORALL (m:PCRMASK,s:tpmAbsState) : 
-     length(getPCRs(s,m)) = length(m));
   
   %% Generate and output a quote
   %% Input: nonce, pcrMask
   %% Output: list of pcr values
   quotePCR(nonce:BLOB,pcrMask:PCRMASK) : State =
-     output((LAMBDA (s:tpmAbsState):(outQuote(inverse(ekVal),nonce,getPCRs(s,pcrMask)),s)));
+     output((LAMBDA (s:tpmAbsState):
+     		    (outQuote(inverse(ekVal),nonce,getPCRs(s`pcrs,pcrMask)),s)));
 
   %% If signature isn't right, don't show quotes?
   
@@ -310,7 +302,7 @@ tpm [ B:TYPE+, % BLOB
 
   %% Prove that quote generation returns the correct PCR
   %% proved - Tue Jun 12 15:33:33 CDT 2012
-  quoteMonad: THEOREM (FORALL (hv:HV,n:BLOB,pcrMask:PCRMASK) :
+  quoteMonad: THEOREM (FORALL (hv:HV,n:BLOB) :
     LET (a,s) =
     runState(
       powerTPM
@@ -318,12 +310,12 @@ tpm [ B:TYPE+, % BLOB
       >> senterHashSinitTPM
       >> changeLocalityTPM
       >> extendTPM(hv,0)
-      >> quotePCR(n,pcrMask)
+      >> quotePCR(n,cons(1,cons(0,cons(3,cons(26,null))))) % IS THE 26 AN ISSUE HERE?
       >>= unit)
       (tpmUnknown) IN
     (a,s)
     =
-    (outQuote(inverse(ekVal),n,getPCRs(s,pcrMask)),%pcrsExtend(pcrsExtend(pcrsReset,0,hash(sinit)),0,hv)),
+    (outQuote(inverse(ekVal),n,null),%pcrsExtend(pcrsExtend(pcrsReset,0,hash(sinit)),0,hv)),
       changeLocalityState(extendState(extendState(tpmReset,0,hash(sinit)),0,hv))))
 
   %% Prove that skipping SENTER is detectable by showing the quote following
