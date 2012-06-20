@@ -46,9 +46,10 @@ pcr [HV: TYPE+] : THEORY
   getPCRs(pcrs:PCRS,pcrMask:PCRMASK) : list[PCR] =
      map(pcrs,pcrMask);
   
-  testGetPCRs: THEOREM (FORALL(hv:HV):
-     getPCRs(pcrsExtend(pcrsPower,3,hv),
-             cons(0,cons(3,cons(5,null)))) = null);
+  testGetPCRs: THEOREM (FORALL(i:PCRINDEX,p:PCRS,hv:HV,pm:PCRMASK):
+     getPCRs(pcrsExtend(p,i,hv),cons(i,pm)) 
+     = 
+     cons(extend(p(i),hv),map(p WITH [i:= extend(p(i),hv)],pm)));
 
   %% Theorems
 

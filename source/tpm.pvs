@@ -245,8 +245,41 @@ tpm [ B:TYPE+, % BLOB
      output((LAMBDA (s:tpmAbsState):
      		    (outQuote(inverse(ekVal),nonce,getPCRs(s`pcrs,pcrMask)),s)));
 
-  %% If signature isn't right, don't show quotes?
-  
+  %% If nonces don't match, quotes don't match
+  badNonceQuote: THEOREM (FORALL(n1,n2:BLOB, pm:PCRMASK) :
+     n1/=n2 =>
+       runState(
+         quotePCR(n1,pm))
+	 (tpmReset)
+       /=
+       runState(
+	 quotePCR(n2,pm))
+	 (tpmReset));
+
+  % Bad Signing Key
+  badSigningKey: THEOREM (FORALL(n:BLOB, pm:PCRMASK) :
+     runState(
+	quotePCR(n,pm))
+	(tpmUnknown)
+     =
+     (outQuote(inverse(asymKey(ekKeyVal)),n,map(tpmUnknown`pcrs,pm)),tpmUnknown));
+
+  % After gone through tpm commands, output you get is same as if you'd just grabbed the pcrs
+  checkPCRS: THEOREM (FORALL(hv:HV,pm:PCRMASK,n:BLOB) :
+    LET (a,s) =
+    runState(
+      powerTPM
+      >> senterResetTPM
+      >> senterHashSinitTPM
+      >> changeLocalityTPM
+      >> extendTPM(hv,0)
+      >> quotePCR(n,pm)
+      >>= unit)
+      (tpmUnknown) IN
+    (a,s)
+    =
+    (outQuote(inverse(ekVal),n,map(s`pcrs,pm)),
+     changeLocalityState(extendState(extendState(tpmReset,0,hash(sinit)),0,hv))))
 
   %% Decrypt and output a blob (should be a key)
   decryptTPM(d:(encrypt?)) : State =
@@ -310,7 +343,8 @@ tpm [ B:TYPE+, % BLOB
       >> senterHashSinitTPM
       >> changeLocalityTPM
       >> extendTPM(hv,0)
-      >> quotePCR(n,cons(1,cons(0,cons(3,cons(26,null))))) % IS THE 26 AN ISSUE HERE?
+      >> quotePCR(n,cons(1,cons(0,cons(3.3,cons(126,null))))) % IS THE 26 or 3.3 AN ISSUE HERE?
+      %>> quotePCR(n,null)
       >>= unit)
       (tpmUnknown) IN
     (a,s)
@@ -342,19 +376,19 @@ tpm [ B:TYPE+, % BLOB
   %% Replay is detectable via a quote.  d is data, asp is program that
   %% generated d, and n0,n1 are nonces that are going to be different
   %% proved - Tue Jun 12 15:35:05 CDT 2012
-  replay_detection_monad: THEOREM forall (d:B, asp:B, n0,n1:B, n2:BLOB, pcrMask:PCRMASK) :
+  replay_detection_monad: THEOREM forall (d:B, asp:B, n0,n1:B) :
       LET (q0,s0) = runState( 
                     extendTPM(hash(asp),0) 
        		     >> extendTPM(hash(n0),0)
        		     >> extendTPM(hash(d),0)
-       		     >> quotePCR(n2,pcrMask)
+       		     >> quotePCR(nothing,null)
        		     >>= unit)
        		     (tpmReset),
           (q1,s1) = runState(
        	             extendTPM(hash(asp),0)
 		     >> extendTPM(hash(n1),0)
        		     >> extendTPM(hash(d),0)
-       		     >> quotePCR(n2,pcrMask)
+       		     >> quotePCR(nothing,null)
        		     >>= unit)
        		     (tpmReset) IN
          n0/=n1 => q0/=q1;
@@ -362,19 +396,19 @@ tpm [ B:TYPE+, % BLOB
   %% Bad measurement ASP is detectable via a quote.  d is data, asp0 and asp1
   %% are programs that generated d, and n is the nonce identifying the response
   %% proved - Tue Jun 12 15:35:39 CDT 2012
-  bad_asp_monad: THEOREM forall (d:B, asp0,asp1:B, n:B, n1:BLOB, pcrMask:PCRMASK) :
+  bad_asp_monad: THEOREM forall (d:B, asp0,asp1:B, n:B) :
       LET (q0,s0) = runState(
                      extendTPM(hash(asp0),0) 
        		     >> extendTPM(hash(n),0)
        		     >> extendTPM(hash(d),0)
-       		     >> quotePCR(n1,pcrMask)
+       		     >> quotePCR(nothing,null)
        		     >>= unit)
        		     (tpmReset),
           (q1,s1) = runState(
        	             extendTPM(hash(asp1),0)
 		     >> extendTPM(hash(n),0)
        		     >> extendTPM(hash(d),0)
-       		     >> quotePCR(n1,pcrMask)
+       		     >> quotePCR(nothing,null)
        		     >>= unit)
        		     (tpmReset) IN
          asp0/=asp1 => q0/=q1;
