@@ -225,7 +225,6 @@ tpm [ B:TYPE+, % BLOB
   offTPM : State = put(outNothing,tpmUnknown);
 
   %% Power up the TPM
-  
   powerTPM : State = put(outNothing,tpmPower);
 
   %% Reset the TPM by senter call
@@ -235,35 +234,34 @@ tpm [ B:TYPE+, % BLOB
   senterHashSinitTPM : State = extendTPM(hash(sinit),0);
 
   %% Call sinit for initial measurements - currently unused
-%   sinitTPM : State = extendTPM(hash(mle),0);
-
+  sinitTPM : State = extendTPM(hash(mle),0);
   
   %% Generate and output a quote
-  %% Input: nonce, pcrMask
-  %% Output: list of pcr values
   quoteTPM(nonce:BLOB,pcrMask:PCRMASK) : State =
      output((LAMBDA (s:tpmAbsState):
      		    (outQuote(inverse(ekVal),nonce,getPCRs(s`pcrs,pcrMask)),s)));
 
   %% If nonces don't match, quotes don't match
-  badNonceQuote: THEOREM (FORALL(n1,n2:BLOB, pm:PCRMASK) :
+  badNonceQuote: THEOREM (FORALL(n1,n2:BLOB, pm:PCRMASK, s:tpmAbsState) :
      n1/=n2 =>
        runState(
          quoteTPM(n1,pm))
-	 (tpmReset)
+	 (s)
        /=
        runState(
 	 quoteTPM(n2,pm))
-	 (tpmReset));
+	 (s));
 
   % Bad Signing Key
-  badSigningKey: THEOREM (FORALL(n:BLOB, pm:PCRMASK) :
-     runState(
-	quoteTPM(n,pm))
-	(tpmUnknown)
-     =
-     (outQuote(inverse(asymKey(ekKeyVal)),n,map(tpmUnknown`pcrs,pm)),tpmUnknown));
-
+  badSigningKey: THEOREM (FORALL(n:BLOB, pm:PCRMASK, k:(asymKey?), s:tpmAbsState) :
+     LET(a,s) = runState(quoteTPM(n,pm))(s) IN
+     inverse(k) /= inverse(ekVal) % k /= ekVal
+     % should there be lemma that says if private keys are not equal, then public keys are not equal?
+     =>
+     outQuote(inverse(k),n,getPCRs(s`pcrs,pm))
+     /=
+     a);
+     
   % After gone through tpm commands, output you get is same as if you'd just grabbed the pcrs
   checkPCRS: THEOREM (FORALL(hv:HV,pm:PCRMASK,n:BLOB) :
     LET (a,s) =
@@ -276,10 +274,9 @@ tpm [ B:TYPE+, % BLOB
       >> quoteTPM(n,pm)
       >>= unit)
       (tpmUnknown) IN
-    (a,s)
+    a
     =
-    (outQuote(inverse(ekVal),n,map(s`pcrs,pm)),
-     changeLocalityState(extendState(extendState(tpmReset,0,hash(sinit)),0,hv))))
+    outQuote(inverse(ekVal),n,map(s`pcrs,pm)));
 
   %% Decrypt and output a blob (should be a key)
   decryptTPM(d:(encrypt?)) : State =
@@ -335,21 +332,19 @@ tpm [ B:TYPE+, % BLOB
 
   %% Prove that quote generation returns the correct PCR
   %% proved - Tue Jun 12 15:33:33 CDT 2012
-  quoteMonad: THEOREM (FORALL (hv:HV,n:BLOB) :
-    LET (a,s) =
+  quoteMonad: THEOREM (FORALL (hv:HV,n:BLOB,pm:PCRMASK) :
     runState(
       powerTPM
       >> senterResetTPM
       >> senterHashSinitTPM
       >> changeLocalityTPM
       >> extendTPM(hv,0)
-      >> quoteTPM(n,cons(1,cons(0,cons(3.3,cons(126,null))))) % IS THE 26 or 3.3 AN ISSUE HERE?
-      %>> quoteTPM(n,null)
+      %>> quoteTPM(n,cons(1,cons(0,cons(3,cons(23,null)))))
+      >> quoteTPM(n,pm)
       >>= unit)
-      (tpmUnknown) IN
-    (a,s)
+      (tpmUnknown)
     =
-    (outQuote(inverse(ekVal),n,null),%pcrsExtend(pcrsExtend(pcrsReset,0,hash(sinit)),0,hv)),
+    (outQuote(inverse(ekVal),n,null),
       changeLocalityState(extendState(extendState(tpmReset,0,hash(sinit)),0,hv))))
 
   %% Prove that skipping SENTER is detectable by showing the quote following

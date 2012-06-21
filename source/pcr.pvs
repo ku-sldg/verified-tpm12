@@ -46,11 +46,11 @@ pcr [HV: TYPE+] : THEORY
   getPCRs(pcrs:PCRS,pcrMask:PCRMASK) : list[PCR] =
      map(pcrs,pcrMask);
   
-  testGetPCRs: THEOREM (FORALL(i:PCRINDEX,p:PCRS,hv:HV,pm:PCRMASK):
-     getPCRs(pcrsExtend(p,i,hv),cons(i,pm)) 
-     = 
-     cons(extend(p(i),hv),map(p WITH [i:= extend(p(i),hv)],pm)));
-
+  getPCRsCorrectness: THEOREM (FORALL (pm:PCRMASK, i:PCRINDEX, pcrs:PCRS) :
+     member(i,pm)
+     =>
+     member(pcrs(i),getPCRs(pcrs,pm)));
+     
   %% Theorems
 
   %% Extension is antisymmetric  

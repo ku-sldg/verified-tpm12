@@ -1,10 +1,15 @@
 (pcr
- (testGetPCRs 0
-  (testGetPCRs-1 nil 3549130103 ("" (grind) nil nil)
-   ((pcrsExtend const-decl "PCRS" pcr nil)
-    (map adt-def-decl "list[T1]" list_adt_map nil)
-    (getPCRs const-decl "list[PCR]" pcr nil))
-   shostak))
+ (getPCRsCorrectness 0
+  (getPCRsCorrectness-1 nil 3549218303
+   ("" (skolem!)
+    (("" (flatten)
+      (("" (expand getPCRs)
+        (("" (expand map) (("" (grind) (("" (postpone) nil nil)) nil))
+          nil))
+        nil))
+      nil))
+    nil)
+   nil shostak))
  (antisym 0
   (antisym-1 nil 3529126590
    ("" (grind) (("" (decompose-equality) nil nil)) nil)
