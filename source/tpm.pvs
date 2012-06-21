@@ -242,7 +242,7 @@ tpm [ B:TYPE+, % BLOB
      		    (outQuote(inverse(ekVal),nonce,getPCRs(s`pcrs,pcrMask)),s)));
 
   %% If nonces don't match, quotes don't match
-  badNonceQuote: THEOREM (FORALL(n1,n2:BLOB, pm:PCRMASK, s:tpmAbsState) :
+  badNonce: THEOREM (FORALL(n1,n2:BLOB, pm:PCRMASK, s:tpmAbsState) :
      n1/=n2 =>
        runState(
          quoteTPM(n1,pm))
@@ -251,18 +251,17 @@ tpm [ B:TYPE+, % BLOB
        runState(
 	 quoteTPM(n2,pm))
 	 (s));
-
-  % Bad Signing Key
+  
+  %% Bad Signing Key - Man in the Middle Attack
   badSigningKey: THEOREM (FORALL(n:BLOB, pm:PCRMASK, k:(asymKey?), s:tpmAbsState) :
      LET(a,s) = runState(quoteTPM(n,pm))(s) IN
-     inverse(k) /= inverse(ekVal) % k /= ekVal
-     % should there be lemma that says if private keys are not equal, then public keys are not equal?
+     inverse(k) /= inverse(ekVal) 
      =>
      outQuote(inverse(k),n,getPCRs(s`pcrs,pm))
      /=
      a);
      
-  % After gone through tpm commands, output you get is same as if you'd just grabbed the pcrs
+  %% Output after going through tpm commands is same as grabbing pcrs
   checkPCRS: THEOREM (FORALL(hv:HV,pm:PCRMASK,n:BLOB) :
     LET (a,s) =
     runState(
@@ -277,6 +276,9 @@ tpm [ B:TYPE+, % BLOB
     a
     =
     outQuote(inverse(ekVal),n,map(s`pcrs,pm)));
+
+  %% Checks three parts of outQuote (key, nonce, pcrs)
+  %checkQuote: THEOREM(badNonce AND badSigningKey AND checkPCRS);
 
   %% Decrypt and output a blob (should be a key)
   decryptTPM(d:(encrypt?)) : State =
@@ -339,7 +341,6 @@ tpm [ B:TYPE+, % BLOB
       >> senterHashSinitTPM
       >> changeLocalityTPM
       >> extendTPM(hv,0)
-      %>> quoteTPM(n,cons(1,cons(0,cons(3,cons(23,null)))))
       >> quoteTPM(n,pm)
       >>= unit)
       (tpmUnknown)
