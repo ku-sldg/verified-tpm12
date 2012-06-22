@@ -47,7 +47,7 @@ tpm [ B:TYPE+, % BLOB
     noopCom : noopCom?
     offCom : offCom?
     powerCom : powerCom?
-    quoteCom : quoteCom? % partially implemented
+    quoteCom(n:BLOB,pm:PCRMASK) : quoteCom? % partially implemented
     revokeKeyCom(k:(wrapKey?)): revokeKeyCom?
     senterCom : senterCom? % implemented all actions as one senter
     sinitCom : sinitCom? % partially implemented
@@ -178,7 +178,7 @@ tpm [ B:TYPE+, % BLOB
       senterCom : 
         changeLocalityState(extendState(pcrsResetSenterState(s),0,hash(sinit))),
       sinitCom : changeLocalityState(extendState(s,0,hash(mle))),
-      quoteCom : s,
+      quoteCom(n,pm) : s,
       decryptKeyCom(d) : s,
       unsealCom(d,k) : s
 %      encryptCom(b) : encryptState(s,b), % unimplemented
@@ -186,8 +186,8 @@ tpm [ B:TYPE+, % BLOB
   ENDCASES;
   
   % Output PCRs from a state as quote
-  quoteOut(s:tpmAbsState) : tpmAbsOutput =
-    outQuote(pcrs(s));
+  quoteOut(s:tpmAbsState,n:BLOB,pm:PCRMASK) : tpmAbsOutput =
+    outQuote(inverse(ekVal),n,getPCRs(s`pcrs,pm));
 
   % Output decypted key
   decryptKeyOut(s:tpmAbsState,d:(encrypt?)) : tpmAbsOutput = 
@@ -208,7 +208,7 @@ tpm [ B:TYPE+, % BLOB
       powerCom : outNothing,
       senterCom : outNothing,
       sinitCom : outNothing,
-      quoteCom : quoteOut(s),
+      quoteCom(n,pm) : quoteOut(s,n,pm),
       decryptKeyCom(d) : decryptKeyOut(s,d),
       unsealCom(d,k) : unsealOut(s,d,k)
 %      encryptCom(b) : encryptState(s,b), % unimplemented
@@ -287,51 +287,13 @@ tpm [ B:TYPE+, % BLOB
   sinitTPM : State = extendTPM(hash(mle),0);
   
   %% Generate and output a quote
-  quoteTPM(nonce:BLOB,pcrMask:PCRMASK) : State =
-     output((LAMBDA (s:tpmAbsState):
-     		    (outQuote(inverse(ekVal),nonce,getPCRs(s`pcrs,pcrMask)),s)));
-  quoteTPM : State = 
+%   quoteTPM(nonce:BLOB,pcrMask:PCRMASK) : State =
+%      output((LAMBDA (s:tpmAbsState):
+%      		    (outQuote(inverse(ekVal),nonce,getPCRs(s`pcrs,pcrMask)),s)));
+  quoteTPM(n:BLOB,pm:PCRMASK) : State = 
      output(outNothing,
-            (LAMBDA (s:tpmAbsState) : outputCom(s,quoteCom)));
+            (LAMBDA (s:tpmAbsState) : outputCom(s,quoteCom(n,pm))));
 
-  %% If nonces don't match, quotes don't match
-  badNonce: THEOREM (FORALL(n1,n2:BLOB, pm:PCRMASK, s:tpmAbsState) :
-     n1/=n2 =>
-       runState(
-         quoteTPM(n1,pm))
-	 (s)
-       /=
-       runState(
-	 quoteTPM(n2,pm))
-	 (s));
-  
-  %% Bad Signing Key - Man in the Middle Attack
-  badSigningKey: THEOREM (FORALL(n:BLOB, pm:PCRMASK, k:(asymKey?), s:tpmAbsState) :
-     LET(a,s) = runState(quoteTPM(n,pm))(s) IN
-     inverse(k) /= inverse(ekVal) 
-     =>
-     outQuote(inverse(k),n,getPCRs(s`pcrs,pm))
-     /=
-     a);
-     
-  %% Output after going through tpm commands is same as grabbing pcrs
-  checkPCRS: THEOREM (FORALL(hv:HV,pm:PCRMASK,n:BLOB) :
-    LET (a,s) =
-    runState(
-      powerTPM
-      >> senterResetTPM
-      >> senterHashSinitTPM
-      >> changeLocalityTPM
-      >> extendTPM(hv,0)
-      >> quoteTPM(n,pm)
-      >>= unit)
-      (tpmUnknown) IN
-    a
-    =
-    outQuote(inverse(ekVal),n,map(s`pcrs,pm)));
-
-  %% Checks three parts of outQuote (key, nonce, pcrs)
-  %checkQuote: THEOREM(badNonce AND badSigningKey AND checkPCRS);
 
   %% Decrypt and output a blob (should be a key)
   decryptTPM(d:(encrypt?)) : State =
@@ -389,7 +351,44 @@ tpm [ B:TYPE+, % BLOB
 
   %% Prove that quote generation returns the correct PCR
   %% proved - Tue Jun 12 15:33:33 CDT 2012
-  quoteMonad: THEOREM (FORALL (hv:HV,n:BLOB,pm:PCRMASK) :
+  quoteMonad: THEOREM (FORALL (hv:HV,n:BLOB) :
+    runState(
+      powerTPM
+      >> senterResetTPM
+      >> senterHashSinitTPM
+      >> changeLocalityTPM
+      >> extendTPM(hv,0)
+      >> quoteTPM(n,cons(0,null))
+      >>= unit)
+      (tpmUnknown)
+    =
+    (outQuote(inverse(ekVal),n,cons(extend(extend(reset,hash(sinit)),hv),null)),
+      changeLocalityState(extendState(extendState(tpmReset,0,hash(sinit)),0,hv))))
+
+ 
+  %% If nonces don't match, quotes don't match
+  badNonce: THEOREM (FORALL(n1,n2:BLOB, pm:PCRMASK, s:tpmAbsState) :
+     n1/=n2 =>
+       runState(
+         quoteTPM(n1,pm))
+	 (s)
+       /=
+       runState(
+	 quoteTPM(n2,pm))
+	 (s));
+  
+  %% Bad Signing Key - Man in the Middle Attack
+  badSigningKey: THEOREM (FORALL(n:BLOB, pm:PCRMASK, k:(asymKey?), s:tpmAbsState) :
+     LET(a,s) = runState(quoteTPM(n,pm))(s) IN
+     inverse(k) /= inverse(ekVal) 
+     =>
+     outQuote(inverse(k),n,getPCRs(s`pcrs,pm))
+     /=
+     a);
+     
+  %% Output after going through tpm commands is same as grabbing pcrs
+  checkPCRS: THEOREM (FORALL(hv:HV,pm:PCRMASK,n:BLOB) :
+    LET (a,s) =
     runState(
       powerTPM
       >> senterResetTPM
@@ -398,10 +397,13 @@ tpm [ B:TYPE+, % BLOB
       >> extendTPM(hv,0)
       >> quoteTPM(n,pm)
       >>= unit)
-      (tpmUnknown)
+      (tpmUnknown) IN
+    a
     =
-    (outQuote(inverse(ekVal),n,null),
-      changeLocalityState(extendState(extendState(tpmReset,0,hash(sinit)),0,hv))))
+    outQuote(inverse(ekVal),n,map(s`pcrs,pm)));
+
+  %% Checks three parts of outQuote (key, nonce, pcrs)
+  %checkQuote: THEOREM(badNonce AND badSigningKey AND checkPCRS);
 
   %% Prove that skipping SENTER is detectable by showing the quote following
   %% a command differs when SENTER is excluded.
