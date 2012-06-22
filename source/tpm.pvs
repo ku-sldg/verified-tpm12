@@ -429,21 +429,15 @@ tpm [ B:TYPE+, % BLOB
   %% Replay is detectable via a quote.  d is data, asp is program that
   %% generated d, and n0,n1 are nonces that are going to be different
   %% proved - Tue Jun 12 15:35:05 CDT 2012
-  replay_detection_monad: THEOREM forall (d:B, asp:B, n0,n1:B) :
+  replay_detection_monad: THEOREM forall (s:tpmAbsState, n0,n1:BLOB) :
       LET (q0,s0) = runState( 
-                    extendTPM(hash(asp),0) 
-       		     >> extendTPM(hash(n0),0)
-       		     >> extendTPM(hash(d),0)
-       		     >> quoteTPM(nothing,null)
+       		     quoteTPM(n0,null)
        		     >>= unit)
-       		     (tpmReset),
+       		     (s),
           (q1,s1) = runState(
-       	             extendTPM(hash(asp),0)
-		     >> extendTPM(hash(n1),0)
-       		     >> extendTPM(hash(d),0)
-       		     >> quoteTPM(nothing,null)
+       		     quoteTPM(n1,null)
        		     >>= unit)
-       		     (tpmReset) IN
+       		     (s) IN
          n0/=n1 => q0/=q1;
 
   %% Bad measurement ASP is detectable via a quote.  d is data, asp0 and asp1
