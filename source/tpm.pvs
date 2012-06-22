@@ -367,6 +367,7 @@ tpm [ B:TYPE+, % BLOB
 
  
   %% If nonces don't match, quotes don't match
+  %% proved - Fri Jun 22 16:55:16 CDT 2012
   badNonce: THEOREM (FORALL(n1,n2:BLOB, pm:PCRMASK, s:tpmAbsState) :
      n1/=n2 =>
        runState(
@@ -378,6 +379,7 @@ tpm [ B:TYPE+, % BLOB
 	 (s));
   
   %% Bad Signing Key - Man in the Middle Attack
+  %% proved - Fri Jun 22 16:55:56 CDT 2012
   badSigningKey: THEOREM (FORALL(n:BLOB, pm:PCRMASK, k:(asymKey?), s:tpmAbsState) :
      LET(a,s) = runState(quoteTPM(n,pm))(s) IN
      inverse(k) /= inverse(ekVal) 
@@ -387,6 +389,7 @@ tpm [ B:TYPE+, % BLOB
      a);
      
   %% Output after going through tpm commands is same as grabbing pcrs
+  %% proved - Fri Jun 22 16:56:08 CDT 2012
   checkPCRS: THEOREM (FORALL(hv:HV,pm:PCRMASK,n:BLOB) :
     LET (a,s) =
     runState(
