@@ -426,40 +426,6 @@ tpm [ B:TYPE+, % BLOB
       >>= unit)
       (tpmUnknown))
 
-  %% Replay is detectable via a quote.  d is data, asp is program that
-  %% generated d, and n0,n1 are nonces that are going to be different
-  %% proved - Tue Jun 12 15:35:05 CDT 2012
-  replay_detection_monad: THEOREM forall (s:tpmAbsState, n0,n1:BLOB) :
-      LET (q0,s0) = runState( 
-       		     quoteTPM(n0,null)
-       		     >>= unit)
-       		     (s),
-          (q1,s1) = runState(
-       		     quoteTPM(n1,null)
-       		     >>= unit)
-       		     (s) IN
-         n0/=n1 => q0/=q1;
-
-  %% Bad measurement ASP is detectable via a quote.  d is data, asp0 and asp1
-  %% are programs that generated d, and n is the nonce identifying the response
-  %% proved - Tue Jun 12 15:35:39 CDT 2012
-  bad_asp_monad: THEOREM forall (d:B, asp0,asp1:B, n:B) :
-      LET (q0,s0) = runState(
-                     extendTPM(hash(asp0),0) 
-       		     >> extendTPM(hash(n),0)
-       		     >> extendTPM(hash(d),0)
-       		     >> quoteTPM(nothing,null)
-       		     >>= unit)
-       		     (tpmReset),
-          (q1,s1) = runState(
-       	             extendTPM(hash(asp1),0)
-		     >> extendTPM(hash(n),0)
-       		     >> extendTPM(hash(d),0)
-       		     >> quoteTPM(nothing,null)
-       		     >>= unit)
-       		     (tpmReset) IN
-         asp0/=asp1 => q0/=q1;
-
   %% Decryption will fail if no keys are installed
   %% Now proved.  Problem was with grind, not pvs generally.
   %% proved - Tue Jun 12 15:36:53 CDT 2012  
