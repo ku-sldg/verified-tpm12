@@ -73,6 +73,6 @@ BEGIN
  modify(a:A,f:[S->S]) : State = state(LAMBDA(s0:S):(a,f(s0)))
 
  % Generate output
- output(f:[S->[A,S]]) : State = state(LAMBDA(s0:S):f(s0))
+ output(a:A,f:[S->A]) : State = state(LAMBDA(s0:S):(f(s0),s0))
 
 END StateMonad

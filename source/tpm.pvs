@@ -36,25 +36,26 @@ tpm [ B:TYPE+, % BLOB
   IMPORTING pcr[HV];
   IMPORTING key[B,K,HV];
 
-  %% State monad input type - currently unused
+  %% State monad input type.  All inputs are in the form of a command with
+  %% parameters.
   tpmInput : DATATYPE
   BEGIN
+    decryptKeyCom(d:(encrypt?)) : decryptKeyCom?
+    encryptCom(b:BLOB) : encryptCom? % unimplemented
     extendCom(h:HV,n:PCRINDEX) : extendCom?
     installKeyCom(k:(wrapKey?)): installKeyCom?
-    revokeKeyCom(k:(wrapKey?)): revokeKeyCom?
     noopCom : noopCom?
     offCom : offCom?
     powerCom : powerCom?
-    senterCom : senterCom? % All senter actions in one command
-    sinitCom : sinitCom?
-    quotePCR : quotePCR? % Restricted to return all	
-    decryptCom(d:(encrypt?)) : decryptCom?
-    encryptCom(b:BLOB) : encryptCom? % unimplemented
+    quoteCom : quoteCom? % partially implemented
+    revokeKeyCom(k:(wrapKey?)): revokeKeyCom?
+    senterCom : senterCom? % implemented all actions as one senter
+    sinitCom : sinitCom? % partially implemented
     unsealCom(d:(seal?),k:(asymKey?)) : unsealCom?   
   END tpmInput;
 
   %% State monad output type
-  tpmOutput : DATATYPE
+  tpmAbsOutput : DATATYPE
   BEGIN
     outNothing : outNothing?
     outError(s:string) : outError?
@@ -62,7 +63,7 @@ tpm [ B:TYPE+, % BLOB
     outQuote(k:KEY,n:BLOB,pcrs:list[PCR]) : outQuote?
     outBlob(k:BLOB) : outBlob?
     outKey(k:KEY) : outKey?
-  END tpmOutput;
+  END tpmAbsOutput;
 
   %% sinit blob instance for measurement
   sinit : B;
@@ -90,7 +91,7 @@ tpm [ B:TYPE+, % BLOB
 		       locality : LOCALITY
 		    #];
 
-  IMPORTING StateMonad[tpmOutput,tpmAbsState];
+  IMPORTING StateMonad[tpmAbsOutput,tpmAbsState];
 
   %% Define some common TPM states and state operations
   
@@ -121,14 +122,21 @@ tpm [ B:TYPE+, % BLOB
   %% manipulation functions are defined externally in key.pvs and
   %% pcr.pvs respectively
 
+  %% Reset PCRs as performed by SENTER.
+  pcrsResetSenterState(s:tpmAbsState) : tpmAbsState =
+    s WITH [`pcrs := pcrsReset];
+
+  %% Decrease locality value
+  changeLocalityState(s:tpmAbsState) : tpmAbsState =
+    s WITH [`locality := IF locality(s) > 0
+                         THEN locality(s) - 1
+			 ELSE 0
+			 ENDIF];
+  
   %% Extend operation on TPM state
   extendState(s:tpmAbsState,n:PCRINDEX,h:HV) : tpmAbsState =
     s WITH [`pcrs := pcrsExtend(pcrs(s),n,h)];
 
-  %% Decrease locality value
-  changeLocalityState(s:tpmAbsState) : tpmAbsState =
-    s WITH [`locality := IF locality(s) > 0 THEN locality(s) - 1 ELSE 0 ENDIF];
-  
   %% Install key operation on TPM state.
   installKeyState(s:tpmAbsState,k:(wrapKey?)) : tpmAbsState =
     s WITH [`keys := addKey(k,add(srk(s),keys(s)))];
@@ -147,34 +155,73 @@ tpm [ B:TYPE+, % BLOB
     ENDCASES;
 
   %% Unseal a secret sealed with an asymetric key and PCRs
-  unsealState(s:tpmAbsState,d:(seal?),k:(asymKey?)) : BLOB = unseal(d,pcrs(s),k);
+  unsealState(s:tpmAbsState,d:(seal?),k:(asymKey?)) : BLOB = 
+    unseal(d,pcrs(s),k);
 
-  %% Execute a command on state
+  %% What we want to generate with each command is a pair of type
+  %% [tpmAbsOut,tpmAbsState].  executeCom generates the the state
+  %% from a TPM state and command while the upcoming outputCom
+  %% generates the corresponding output.  Thus, to execute any
+  %% operation, both executeCom and outputCom must be used
+
+  %% Execute a command on state generating a new state.
   executeCom(s:tpmAbsState,c:tpmInput) : tpmAbsState = 
     CASES c OF
       extendCom(h,n) : extendState(s,n,h),
       installKeyCom(k): installKeyState(s,k),
       revokeKeyCom(k): revokeKeyState(s,k),
       noopCom : s,
-      offCom : tpmReset,
+      offCom : tpmUnknown,
       powerCom : tpmPower,
-      senterCom : s, % This is not right for now
-      sinitCom : s, % This is not right for now
-      quotePCR : s
-%      decryptCom(d) : decryptState(s,d),
+% Old version for demonstration
+%      senterCom : changeLocalityState(extendState(tpmReset,0,hash(sinit))),
+      senterCom : 
+        changeLocalityState(extendState(pcrsResetSenterState(s),0,hash(sinit))),
+      sinitCom : changeLocalityState(extendState(s,0,hash(mle))),
+      quoteCom : s,
+      decryptKeyCom(d) : s,
+      unsealCom(d,k) : s
 %      encryptCom(b) : encryptState(s,b), % unimplemented
-%      unsealCom(d,k) : unsealState(s,d)
       ELSE s
   ENDCASES;
   
+  % Output PCRs from a state as quote
+  quoteOut(s:tpmAbsState) : tpmAbsOutput =
+    outQuote(pcrs(s));
+
+  % Output decypted key
+  decryptKeyOut(s:tpmAbsState,d:(encrypt?)) : tpmAbsOutput = 
+    outBlob(decryptKeyState(s,d));
+
+  % Output unsealed key
+  unsealOut(s:tpmAbsState,d:(seal?),k:(asymKey?)) : tpmAbsOutput = 
+    outBlob(unsealState(s,d,k));
+
+  %% Generate output from a command and state
+  outputCom(s:tpmAbsState,c:tpmInput) : tpmAbsOutput = 
+    CASES c OF
+      extendCom(h,n) : outNothing,
+      installKeyCom(k): outNothing,
+      revokeKeyCom(k): outNothing,
+      noopCom : outNothing,
+      offCom : outNothing,
+      powerCom : outNothing,
+      senterCom : outNothing,
+      sinitCom : outNothing,
+      quoteCom : quoteOut(s),
+      decryptKeyCom(d) : decryptKeyOut(s,d),
+      unsealCom(d,k) : unsealOut(s,d,k)
+%      encryptCom(b) : encryptState(s,b), % unimplemented
+      ELSE outNothing
+  ENDCASES;
+
   %% Monotonicity of locality
   %% Assuming that we're not resetting or powering on, locality goes down
   %% or remains the same
-  %% proved - Wed Jun 13 14:01:55 CDT 2012
+  %% unproven - Wed Jun 13 23:15:36 CDT 2012
   monotonic_locality: THEOREM (FORALL (s:tpmAbsState,c:tpmInput) :
     not(offCom?(c) or powerCom?(c)) =>
       locality(s) >= locality(executeCom(s,c)));
-
 
   %% Minor Support Lemmas
 
@@ -190,36 +237,39 @@ tpm [ B:TYPE+, % BLOB
                  (LAMBDA (s:tpmAbsState):s WITH [`pcrs:=pcrsExtend(pcrs(s),0,hv1)])) IN
       hv0/=hv1 =>
         runState(
-          f2 >>= (LAMBDA (x:tpmOutput): f1 >>= unit))(tpmReset)
+          f2 >>= (LAMBDA (x:tpmAbsOutput): f1 >>= unit))(tpmReset)
         /=
         runState(
-          f1 >>= (LAMBDA (x:tpmOutput): f2 >>= unit))(tpmReset))
+          f1 >>= (LAMBDA (x:tpmAbsOutput): f2 >>= unit))(tpmReset))
 
-  %%%% TPM Command Definitions - Note that all commands used by the TPM
-  %%%% have the TPM suffix to distinguish from operations on tpm state
+  %% TPM Command Definitions - Note that all commands used by the TPM
+  %% have the TPM suffix to distinguish from operations on tpm state.
+  %% Commands thus far are defined as state transforming or output
+  %% generating.  This does not exclude the eventuality of doing both.
 
   %% Extend PCR n with hash value h.
   extendTPM(h:HV,n:PCRINDEX):State =
-    modify(outNothing,(LAMBDA (s:tpmAbsState):
-      executeCom(s,extendCom(h,n))));
+    modify(outNothing,
+           (LAMBDA (s:tpmAbsState):executeCom(s,extendCom(h,n))));
 
   %% Decrease locality value
   changeLocalityTPM : State =
-    modify(outNothing,(LAMBDA (s:tpmAbsState):changeLocalityState(s)));
+    modify(outNothing,
+           (LAMBDA (s:tpmAbsState):changeLocalityState(s)));
 
   %% Install key k in a TPM.
   installKeyTPM(k:(wrapKey?)):State =
-    modify(outNothing,(LAMBDA (s:tpmAbsState):
-      executeCom(s,installKeyCom(k))));
+    modify(outNothing,
+           (LAMBDA (s:tpmAbsState):executeCom(s,installKeyCom(k))));
 
   %% Revoke key k from a TPM.
   revokeKeyTPM(k:(wrapKey?)):State =
-    modify(outNothing,(LAMBDA (s:tpmAbsState):
-      executeCom(s,revokeKeyCom(k))));
+    modify(outNothing,
+           (LAMBDA (s:tpmAbsState):executeCom(s,revokeKeyCom(k))));
 
   %% No-op
-  noop : [tpmOutput -> State] =
-    (LAMBDA (a:tpmOutput): state((LAMBDA(s:tpmAbsState) : (a,s))));
+  noop : [tpmAbsOutput -> State] =
+    (LAMBDA (a:tpmAbsOutput): state((LAMBDA(s:tpmAbsState) : (a,s))));
 
   %% TPM is off
   offTPM : State = put(outNothing,tpmUnknown);
@@ -240,6 +290,9 @@ tpm [ B:TYPE+, % BLOB
   quoteTPM(nonce:BLOB,pcrMask:PCRMASK) : State =
      output((LAMBDA (s:tpmAbsState):
      		    (outQuote(inverse(ekVal),nonce,getPCRs(s`pcrs,pcrMask)),s)));
+  quoteTPM : State = 
+     output(outNothing,
+            (LAMBDA (s:tpmAbsState) : outputCom(s,quoteCom)));
 
   %% If nonces don't match, quotes don't match
   badNonce: THEOREM (FORALL(n1,n2:BLOB, pm:PCRMASK, s:tpmAbsState) :
@@ -282,11 +335,13 @@ tpm [ B:TYPE+, % BLOB
 
   %% Decrypt and output a blob (should be a key)
   decryptTPM(d:(encrypt?)) : State =
-     output((LAMBDA (s:tpmAbsState):(outBlob(decryptKeyState(s,d)),s)));
+     output(outNothing,
+            (LAMBDA (s:tpmAbsState) : outputCom(s,decryptKeyCom(d))));
 
   %% Unseal and output a blon (should be binary or data)
   unsealTPM(d:(seal?),k:(asymKey?)) : State = 
-     output((LAMBDA (s:tpmAbsState):(outBlob(unsealState(s,d,k)),s)));
+     output(outNothing,
+            (LAMBDA (s:tpmAbsState): outputCom(s,unsealCom(d,k))));
 
   %% Extending a reset PCR is antisymmetric if the two values are not equal
   %% Let form used to defined commands for bind.  Will use command forms
@@ -506,11 +561,9 @@ tpm [ B:TYPE+, % BLOB
   test4: THEOREM
     runState(
        modify(outNat(0),(LAMBDA (s:tpmAbsState):s)) >>=
-       (LAMBDA (x:tpmOutput):
+       (LAMBDA (x:tpmAbsOutput):
          modify(outNat(1),(LAMBDA (s:tpmAbsState):s)) >>= unit))(tpmReset)
      =
     (outNat(1),tpmReset)
 
 END tpm
-
-
