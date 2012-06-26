@@ -1,6 +1,9 @@
 (tpm
  (unique_hash 0
   (unique_hash-1 nil 3535917891 ("" (postpone) nil nil) nil shostak))
+ (IMP_StateMonad_TCC1 0
+  (IMP_StateMonad_TCC1-1 nil 3549386581 ("" (existence-tcc) nil nil)
+   nil nil))
  (tpmPower_TCC1 0
   (tpmPower_TCC1-1 nil 3535902101 ("" (tcc) nil nil)
    ((ekVal const-decl "KEY" tpm nil)) nil))
@@ -227,11 +230,7 @@
     (>>= const-decl "State" StateMonad nil))
    shostak))
  (quoteMonad_TCC1 0
-  (quoteMonad_TCC1-1 nil 3549372787 ("" (grind) nil nil)
-   ((every adt-def-decl "boolean" list_adt nil)) nil))
- (quoteMonad_TCC2 0
-  (quoteMonad_TCC2-1 nil 3549372787 ("" (subtype-tcc) nil nil)
-   ((ekVal const-decl "KEY" tpm nil)) nil))
+  (quoteMonad_TCC1-1 nil 3549372787 ("" (grind) nil nil) (nil) nil))
  (quoteMonad 0
   (quoteMonad-1 nil 3549040969 ("" (grind) nil nil)
    ((srkVal const-decl "KEY" tpm nil) (ekVal const-decl "KEY" tpm nil)
@@ -630,45 +629,6 @@
     (HV formal-nonempty-type-decl nil tpm nil)
     (PCR type-decl nil pcr nil))
    shostak))
- (decrypt_key_fail_TCC1 0
-  (decrypt_key_fail_TCC1-1 nil 3549372787 ("" (subtype-tcc) nil nil)
-   ((srkVal const-decl "KEY" tpm nil) (ekVal const-decl "KEY" tpm nil)
-    (tpmPower const-decl "tpmAbsState" tpm nil)
-    (tpmAbsState type-eq-decl nil tpm nil)
-    (PCRS type-eq-decl nil pcr nil) (LOCALITY type-eq-decl nil tpm nil)
-    (KEYSET type-eq-decl nil key nil)
-    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
-    (boolean nonempty-type-decl nil booleans nil)
-    (KEY type-decl nil key nil)
-    (HV formal-nonempty-type-decl nil tpm nil)
-    (K formal-nonempty-type-decl nil tpm nil)
-    (B formal-nonempty-type-decl nil tpm nil)
-    (tpmAbsOutput type-decl nil tpm nil)
-    (put const-decl "State" StateMonad nil)
-    (powerTPM const-decl "State" tpm nil)
-    (tpmReset const-decl "tpmAbsState" tpm nil)
-    (senterResetTPM const-decl "State" tpm nil)
-    (>> const-decl "State" StateMonad nil)
-    (pcrsExtend const-decl "PCRS" pcr nil)
-    (extendState const-decl "tpmAbsState" tpm nil)
-    (executeCom const-decl "tpmAbsState" tpm nil)
-    (modify const-decl "State" StateMonad nil)
-    (extendTPM const-decl "State" tpm nil)
-    (senterHashSinitTPM const-decl "State" tpm nil)
-    (pcrsReset const-decl "PCRS" pcr nil)
-    (changeLocalityState const-decl "tpmAbsState" tpm nil)
-    (changeLocalityTPM const-decl "State" tpm nil)
-    (member const-decl "bool" sets nil)
-    (add const-decl "(nonempty?)" sets nil)
-    (decryptKeyState const-decl "BLOB" tpm nil)
-    (decryptKeyOut const-decl "tpmAbsOutput" tpm nil)
-    (outputCom const-decl "tpmAbsOutput" tpm nil)
-    (output const-decl "State" StateMonad nil)
-    (decryptTPM const-decl "State" tpm nil)
-    (emptyset const-decl "set" sets nil)
-    (unit const-decl "State" StateMonad nil)
-    (>>= const-decl "State" StateMonad nil))
-   nil))
  (decrypt_key_fail 0
   (decrypt_key_fail-1 nil 3535901403
    ("" (skosimp*)

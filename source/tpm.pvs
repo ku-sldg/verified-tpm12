@@ -52,6 +52,8 @@ tpm [ B:TYPE+, % BLOB
     senterCom : senterCom? % implemented all actions as one senter
     sinitCom : sinitCom? % partially implemented
     unsealCom(d:(seal?),k:(asymKey?)) : unsealCom?   
+    takeOwnershipCom : takeOwnershipCom?
+    createWrapKeyCom(k,sk:(asymKey?)): createWrapKeyCom?
   END tpmInput;
 
   %% State monad output type
@@ -180,10 +182,20 @@ tpm [ B:TYPE+, % BLOB
       sinitCom : changeLocalityState(extendState(s,0,hash(mle))),
       quoteCom(n,pm) : s,
       decryptKeyCom(d) : s,
-      unsealCom(d,k) : s
+      unsealCom(d,k) : s,
+      takeOwnershipCom : s,
+      createWrapKeyCom(k,sk): s
 %      encryptCom(b) : encryptState(s,b), % unimplemented
       ELSE s
   ENDCASES;
+  
+  % Generate a NEW RANDOM key pair.
+  createWrapKey(k,sk:(asymKey?)):tpmAbsOutput = 
+     outKey(wrapKey(sk,k));
+
+  % NEED TO ENSURE NEW, RANDOM SRK KEY PAIR
+  takeOwnership : tpmAbsOutput =
+     outKey(srkVal);
   
   % Output PCRs from a state as quote
   quoteOut(s:tpmAbsState,n:BLOB,pm:PCRMASK) : tpmAbsOutput =
@@ -210,7 +222,9 @@ tpm [ B:TYPE+, % BLOB
       sinitCom : outNothing,
       quoteCom(n,pm) : quoteOut(s,n,pm),
       decryptKeyCom(d) : decryptKeyOut(s,d),
-      unsealCom(d,k) : unsealOut(s,d,k)
+      unsealCom(d,k) : unsealOut(s,d,k),
+      takeOwnershipCom : takeOwnership,
+      createWrapKeyCom(k,sk) : createWrapKey(k,sk)
 %      encryptCom(b) : encryptState(s,b), % unimplemented
       ELSE outNothing
   ENDCASES;
@@ -287,13 +301,9 @@ tpm [ B:TYPE+, % BLOB
   sinitTPM : State = extendTPM(hash(mle),0);
   
   %% Generate and output a quote
-%   quoteTPM(nonce:BLOB,pcrMask:PCRMASK) : State =
-%      output((LAMBDA (s:tpmAbsState):
-%      		    (outQuote(inverse(ekVal),nonce,getPCRs(s`pcrs,pcrMask)),s)));
   quoteTPM(n:BLOB,pm:PCRMASK) : State = 
      output(outNothing,
             (LAMBDA (s:tpmAbsState) : outputCom(s,quoteCom(n,pm))));
-
 
   %% Decrypt and output a blob (should be a key)
   decryptTPM(d:(encrypt?)) : State =
