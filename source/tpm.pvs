@@ -43,7 +43,7 @@ tpm [ B:TYPE+, % BLOB
     decryptKeyCom(d:(encrypt?)) : decryptKeyCom?
     encryptCom(b:BLOB) : encryptCom? % unimplemented
     extendCom(h:HV,n:PCRINDEX) : extendCom?
-    installKeyCom(k:(wrapKey?)): installKeyCom?
+    installKeyCom(k:(wrapKey?)): installKeyCom? %% RENAME: LoadKey2
     noopCom : noopCom?
     offCom : offCom?
     powerCom : powerCom?
@@ -140,6 +140,7 @@ tpm [ B:TYPE+, % BLOB
     s WITH [`pcrs := pcrsExtend(pcrs(s),n,h)];
 
   %% Install key operation on TPM state.
+  %% RENAME: LoadKey2
   installKeyState(s:tpmAbsState,k:(wrapKey?)) : tpmAbsState =
     s WITH [`keys := addKey(k,add(srk(s),keys(s)))];
 
@@ -170,7 +171,7 @@ tpm [ B:TYPE+, % BLOB
   executeCom(s:tpmAbsState,c:tpmInput) : tpmAbsState = 
     CASES c OF
       extendCom(h,n) : extendState(s,n,h),
-      installKeyCom(k): installKeyState(s,k),
+      installKeyCom(k): installKeyState(s,k), %% RENAME: LoadKey2
       revokeKeyCom(k): revokeKeyState(s,k),
       noopCom : s,
       offCom : tpmUnknown,
@@ -213,7 +214,7 @@ tpm [ B:TYPE+, % BLOB
   outputCom(s:tpmAbsState,c:tpmInput) : tpmAbsOutput = 
     CASES c OF
       extendCom(h,n) : outNothing,
-      installKeyCom(k): outNothing,
+      installKeyCom(k): outNothing, %% RENAME: LoadKey2
       revokeKeyCom(k): outNothing,
       noopCom : outNothing,
       offCom : outNothing,
@@ -272,6 +273,7 @@ tpm [ B:TYPE+, % BLOB
            (LAMBDA (s:tpmAbsState):changeLocalityState(s)));
 
   %% Install key k in a TPM.
+  %% RENAME: LoadKey2
   installKeyTPM(k:(wrapKey?)):State =
     modify(outNothing,
            (LAMBDA (s:tpmAbsState):executeCom(s,installKeyCom(k))));
