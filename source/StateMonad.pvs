@@ -39,7 +39,7 @@ BEGIN
           LET (a,s1) = runState(m)(s0) IN 
 	    runState(f(a))(s1));
 
->> (m:State,f:State):State =
+ >> (m:State,f:State):State =
    state(LAMBDA(s0:S):
           LET (a,s1) = runState(m)(s0) IN
             runState(f)(s1));
@@ -71,6 +71,10 @@ BEGIN
 
  % Modify state
  modify(a:A,f:[S->S]) : State = state(LAMBDA(s0:S):(a,f(s0)))
+
+ % unit(x:A):State = state(LAMBDA (s:S) : (x,s));
+ % Modify state with prev output
+ useOutput(a:A,f:[S->S]) : State = state(LAMBDA(s0:S):(a,f(s0)))
 
  % Generate output
  output(a:A,f:[S->A]) : State = state(LAMBDA(s0:S):(f(s0),s0))

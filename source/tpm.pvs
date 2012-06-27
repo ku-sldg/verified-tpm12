@@ -555,4 +555,35 @@ tpm [ B:TYPE+, % BLOB
      =
     (outNat(1),tpmReset)
 
+  % Take the output of the previous command execution and attempt to install
+  % it as akey.  Note the use of useOutput to create a function for bind
+  % rather than sequence.
+  installPrevKeyTPM:[tpmAbsOutput->State] =
+    (LAMBDA (a:tpmAbsOutput):
+      useOutput(outNothing,
+	        (LAMBDA (s:tpmAbsState):
+		  IF outKey?(a) AND wrapKey?(k(a))
+		  THEN executeCom(s,installKeyCom(k(a)))
+		  ELSE executeCom(s,noopCom)
+		  ENDIF)));
+
+
+  % Generate a key and immediately install it.  Note the use of bind rather
+  % sequence to capture the createWrapKeyTPM output and use it as input to
+  % the installPrevKeyTPM command.  Classic use of bind.
+  test5: THEOREM FORALL (k,p:(asymKey?)) :
+    LET (out,s) = runState(
+                  powerTPM
+		  >> senterResetTPM
+                  >> createWrapKeyTPM(k,p) 
+		  >>= installPrevKeyTPM
+		  >> senterHashSinitTPM
+		  >> changeLocalityTPM
+		  >>= unit)
+		  (tpmUnknown)
+      IN member(p,keys(s)) OR p=srk(s) => member(k,keys(s));
+
+%  createWrapKeyTPM(k,parent:(asymKey?)) : State = 
+
+
 END tpm
