@@ -1,6 +1,8 @@
 (key
- (decrypt_TCC1 0 (decrypt_TCC1-1 nil 3535745793 ("" (grind)) nil nil))
- (decrypt_TCC2 0 (decrypt_TCC2-1 nil 3535745793 ("" (grind)) nil nil))
+ (decrypt_TCC1 0
+  (decrypt_TCC1-1 nil 3535745793 ("" (grind) nil nil) nil nil))
+ (decrypt_TCC2 0
+  (decrypt_TCC2-1 nil 3535745793 ("" (grind) nil nil) nil nil))
  (test0 0
   (test0-1 nil 3535745994 ("" (grind) nil nil)
    ((sigCheckSym const-decl "boolean" key nil)
@@ -103,14 +105,20 @@
    shostak))
  (test6 0
   (test6-1 nil 3535891242 ("" (grind) nil nil)
-   ((member const-decl "bool" sets nil)
+   ((add const-decl "(nonempty?)" sets nil)
     (addKey const-decl "KEYSET" key nil)
-    (add const-decl "(nonempty?)" sets nil))
+    (member const-decl "bool" sets nil)
+    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
+    (wrapKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
+    (KEY type-decl nil key nil)
+    (NOT const-decl "[bool -> bool]" booleans nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (boolean nonempty-type-decl nil booleans nil))
    shostak))
  (test7 0
   (test7-1 nil 3535891455 ("" (grind) nil nil)
-   ((removeKey const-decl "KEYSET" key nil)
+   ((remove const-decl "set" sets nil)
     (member const-decl "bool" sets nil)
-    (remove const-decl "set" sets nil))
+    (removeKey const-decl "KEYSET" key nil))
    shostak)))
 

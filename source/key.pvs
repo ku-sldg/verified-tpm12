@@ -104,8 +104,11 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
   KEYSET : TYPE = set[(asymKey?)];
 
-  addKey(k:(wrapKey?),ks:KEYSET):KEYSET =
-    IF member(wrappingKey(k),ks) THEN add(key(k),ks) ELSE ks ENDIF;
+  addKey(k:(wrapKey?),rk:(asymKey?),ks:KEYSET):KEYSET =
+    IF member(wrappingKey(k),ks) OR wrappingKey(k)=rk
+    THEN add(key(k),ks)
+    ELSE ks
+    ENDIF;
 
   removeKey(k:(wrapKey?),ks:KEYSET):KEYSET =
     remove(key(k),ks);
@@ -138,13 +141,13 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
   %% Key installation
 
-  test6: THEOREM FORALL (k:(wrapKey?),ks:KEYSET) : 
-    IF member(wrappingKey(k),ks)
-       THEN member(key(k),addKey(k,ks))
-       ELSE ks=addKey(k,ks)
+  test6: THEOREM FORALL (k:(wrapKey?),rk:(asymKey?),ks:KEYSET) : 
+    IF member(wrappingKey(k),ks) OR wrappingKey(k)=rk
+       THEN member(key(k),addKey(k,rk,ks))
+       ELSE ks=addKey(k,rk,ks)
     ENDIF;
 
-  test7: THEOREM FORALL (k:(wrapKey?),ks:KEYSET) :
+  test7: THEOREM FORALL (k:(wrapKey?),rk:(asymKey?),ks:KEYSET) :
     NOT(member(key(k),removeKey(k,ks)));
 
 END key

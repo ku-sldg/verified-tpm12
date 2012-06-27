@@ -142,7 +142,7 @@ tpm [ B:TYPE+, % BLOB
   %% Install key operation on TPM state.
   %% RENAME: LoadKey2
   installKeyState(s:tpmAbsState,k:(wrapKey?)) : tpmAbsState =
-    s WITH [`keys := addKey(k,keys(s))];
+    s WITH [`keys := addKey(k,srk(s),keys(s))];
 
   %% Revoke key operation on TPM state
   revokeKeyState(s:tpmAbsState,k:(wrapKey?)) : tpmAbsState =
