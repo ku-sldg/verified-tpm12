@@ -1,6 +1,8 @@
-\contentsline {section}{\numberline {1}Introduction}{2}
-\contentsline {section}{\numberline {2}Modeling Approach}{2}
-\contentsline {section}{\numberline {3}Verification Approach}{2}
-\contentsline {section}{\numberline {A}Trusted Platform Definitions}{3}
-\contentsline {section}{\numberline {B}Cryptography Notations}{4}
-\contentsline {section}{\numberline {C}Intel Secure Boot}{4}
+\contentsline {section}{\numberline {1}Introduction}{1}
+\contentsline {section}{\numberline {2}Modeling Approach}{1}
+\contentsline {subsection}{\numberline {2.1}TPM State Monad}{1}
+\contentsline {subsection}{\numberline {2.2}TPM Command Definitions}{1}
+\contentsline {section}{\numberline {3}Verification Approach}{1}
+\contentsline {section}{\numberline {A}Trusted Platform Definitions}{4}
+\contentsline {section}{\numberline {B}Cryptography Notations}{5}
+\contentsline {section}{\numberline {C}Intel Secure Boot}{5}

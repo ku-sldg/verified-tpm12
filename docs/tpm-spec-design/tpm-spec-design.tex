@@ -1,6 +1,7 @@
 \documentclass[10pt]{article}
 
 %\usepackage{hyperref}
+\usepackage{alltt}
 \usepackage{natbib}
 \usepackage{graphicx}
 \usepackage{url}
@@ -53,6 +54,45 @@
 
 \section{Modeling Approach}
 
+\subsection{TPM State Monad}
+
+\subsection{TPM Command Definitions}
+
+\begin{figure}
+\begin{alltt}
+  tpmAbsState : TYPE = [#
+                       srk : (asymKey?),
+                       ek : (asymKey?),
+                       keys : KEYSET,
+                       pcrs : PCRS,
+                       locality : LOCALITY
+                       #];
+\end{alltt}
+\caption{Abstract TPM state record data structure.}
+\label{fig:tpm-abs-state}
+\end{figure}
+
+\begin{figure}
+\begin{alltt}
+  tpmInput : DATATYPE
+  BEGIN
+    decryptKeyCom(d:(encrypt?)) : decryptKeyCom?
+    encryptCom(b:BLOB) : encryptCom? % unimplemented
+    extendCom(h:HV,n:PCRINDEX) : extendCom?
+    installKeyCom(k:(wrapKey?)): installKeyCom?
+    noopCom : noopCom?
+    offCom : offCom?
+    powerCom : powerCom?
+    quoteCom(n:BLOB,pm:PCRMASK) : quoteCom? % partially implemented
+    revokeKeyCom(k:(wrapKey?)): revokeKeyCom?
+    senterCom : senterCom? % implemented all actions as one senter
+    sinitCom : sinitCom? % partially implemented
+    unsealCom(d:(seal?),k:(asymKey?)) : unsealCom?   
+  END tpmInput;
+\end{alltt}
+\caption{TPM command data type.}
+\label{fig:tpm-command}
+\end{figure}
 \section{Verification Approach}
 
 The approach taken for verification is establishing a \emph{weak
