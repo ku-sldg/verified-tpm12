@@ -191,12 +191,10 @@ tpm [ B:TYPE+, % BLOB
   ENDCASES;
   
   % Generate a NEW RANDOM key pair.
-  createWrapKey(k,parent:(asymKey?)):tpmAbsOutput = 
   createWrapKeyOut(k,parent:(asymKey?)):tpmAbsOutput = 
      outKey(wrapKey(parent,k));
 
   % NEED TO ENSURE NEW, RANDOM SRK KEY PAIR
-  takeOwnership : tpmAbsOutput =
   takeOwnershipOut : tpmAbsOutput =
      outKey(srkVal);
   
