@@ -1,6 +1,7 @@
 \documentclass[10pt]{article}
 
 %\usepackage{hyperref}
+\usepackage{alltt}
 \usepackage{natbib}
 \usepackage{graphicx}
 \usepackage{url}
@@ -52,6 +53,95 @@
 \section{Introduction}
 
 \section{Modeling Approach}
+
+\subsection{TPM State Monad}
+
+Figure~\ref{fig:tpm-abs-state} is the PVS record structure used to
+represent the internal state of the TPM.
+
+\begin{figure}
+\begin{alltt}
+  tpmAbsState : TYPE = [#
+                       srk : (asymKey?),
+                       ek : (asymKey?),
+                       keys : KEYSET,
+                       pcrs : PCRS,
+                       locality : LOCALITY
+                       #];
+\end{alltt}
+\caption{Abstract TPM state record data structure.}
+\label{fig:tpm-abs-state}
+\end{figure}
+
+\subsection{TPM Command Definitions}
+
+Figure~\ref{fig:tpm-command} is the PVS data type used to represent
+the abstract syntax of the TPM command set.
+
+\begin{figure}
+\begin{alltt}
+  tpmInput : DATATYPE
+  BEGIN
+    decryptKeyCom(d:(encrypt?)) : decryptKeyCom?
+    encryptCom(b:BLOB) : encryptCom? % unimplemented
+    extendCom(h:HV,n:PCRINDEX) : extendCom?
+    installKeyCom(k:(wrapKey?)): installKeyCom?
+    noopCom : noopCom?
+    offCom : offCom?
+    powerCom : powerCom?
+    quoteCom(n:BLOB,pm:PCRMASK) : quoteCom? % partially implemented
+    revokeKeyCom(k:(wrapKey?)): revokeKeyCom?
+    senterCom : senterCom? % implemented all actions as one senter
+    sinitCom : sinitCom? % partially implemented
+    unsealCom(d:(seal?),k:(asymKey?)) : unsealCom?   
+  END tpmInput;
+\end{alltt}
+\caption{TPM command data type.}
+\label{fig:tpm-command}
+\end{figure}
+
+Table~\ref{tab:tpm-to-pvs} maps TPM concrete commands to their
+abstract PVS representations.
+
+\begin{table}[hbtp]
+  \centering
+  \begin{tabular}{lll}
+    \hline
+    \emph{TPM} & \emph{Abstract PVS} & \emph{Concrete PVS} \\
+    \emph{Command} & \emph{Command} & \emph{Command} \\ \hline
+    \textsf{TPM\_CreateWrapKey} & & \\
+    \textsf{TPM\_LoadKey2} & \verb+instalKeyCom(k)+ & \\
+    \textsf{TPM\_Seal} & & \\
+    \textsf{TPM\_Unseal} & \verb+unsealCom(d,k)+ & \\
+    \textsf{TPM\_Extend} & \verb+extendCom(h,n)+ & \\
+    \textsf{TPM\_Quote} & \verb+quoteCom(b,pm)+ & \\
+    \textsf{TPM\_MakeIdentity} & & \\
+    \textsf{TPM\_ActivateIdentity} & & \\
+    \hline
+  \end{tabular}
+  \caption{TPM command mapping to PVS command representation.}
+  \label{tab:tpm-to-pvs}
+\end{table}
+
+Table~\ref{tab:commands-to-pvs} maps external commands that interact
+with the TPM to their PVS representations.
+
+\begin{table}[hbtp]
+  \centering
+  \begin{tabular}{lll}
+    \hline
+    \emph{External}& \emph{Abstract PVS} & \emph{Concrete PVS} \\
+    \emph{Command} & \emph{Command} & \emph{Command} \\ \hline
+    \textsf{senter} & \verb+senterCom+ & \\
+    \textsf{sinit} & \verb+sinitCom+ & \\
+    Power On & \verb+powerCom+ & \\
+    Power Off  & \verb+offCom+ & \\
+    \hline
+  \end{tabular}
+  \caption{System commands interacting with TPM.}
+  \label{tab:commands-to-pvs}
+\end{table}
+
 
 \section{Verification Approach}
 

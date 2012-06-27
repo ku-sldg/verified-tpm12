@@ -7,3 +7,7 @@ source/.pvscontext
 *.lot
 *.out
 *.toc
+
+docs/tpm-spec-design/tpm-spec-design.aux
+docs/tpm-spec-design/tpm-spec-design.lof
+docs/tpm-spec-design/tpm-spec-design.lot
