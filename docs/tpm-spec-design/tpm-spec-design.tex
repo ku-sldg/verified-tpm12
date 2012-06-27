@@ -56,7 +56,8 @@
 
 \subsection{TPM State Monad}
 
-\subsection{TPM Command Definitions}
+Figure~\ref{fig:tpm-abs-state} is the PVS record structure used to
+represent the internal state of the TPM.
 
 \begin{figure}
 \begin{alltt}
@@ -71,6 +72,11 @@
 \caption{Abstract TPM state record data structure.}
 \label{fig:tpm-abs-state}
 \end{figure}
+
+\subsection{TPM Command Definitions}
+
+Figure~\ref{fig:tpm-command} is the PVS data type used to represent
+the abstract syntax of the TPM command set.
 
 \begin{figure}
 \begin{alltt}
@@ -94,25 +100,31 @@
 \label{fig:tpm-command}
 \end{figure}
 
+Table~\ref{tab:tpm-to-pvs} maps TPM concrete commands to their
+abstract PVS representations.
+
 \begin{table}[hbtp]
   \centering
   \begin{tabular}{lll}
     \hline
     \emph{TPM} & \emph{Abstract PVS} & \emph{Concrete PVS} \\
     \emph{Command} & \emph{Command} & \emph{Command} \\ \hline
-    \textsf{TPM\_CreateWrapKey} & \verb+installKeyCom+ & \\
-    \textsf{TPM\_LoadKey2} & \verb+instalKeyCom+ & \\
-    \textsf{TPM\_Seal} & \\
-    \textsf{TPM\_Unseal} & \verb+unsealCom+ & \\
-    \textsf{TPM\_Extend} & \verb+extendCom+ & \\
-    \textsf{TPM\_Quote} & \verb+quoteCom+ & \\
-    \textsf{TPM\_MakeIdentity} & \\
-    \textsf{TPM\_ActivateIdentity} & \\
+    \textsf{TPM\_CreateWrapKey} & & \\
+    \textsf{TPM\_LoadKey2} & \verb+instalKeyCom(k)+ & \\
+    \textsf{TPM\_Seal} & & \\
+    \textsf{TPM\_Unseal} & \verb+unsealCom(d,k)+ & \\
+    \textsf{TPM\_Extend} & \verb+extendCom(h,n)+ & \\
+    \textsf{TPM\_Quote} & \verb+quoteCom(b,pm)+ & \\
+    \textsf{TPM\_MakeIdentity} & & \\
+    \textsf{TPM\_ActivateIdentity} & & \\
     \hline
   \end{tabular}
   \caption{TPM command mapping to PVS command representation.}
   \label{tab:tpm-to-pvs}
 \end{table}
+
+Table~\ref{tab:commands-to-pvs} maps external commands that interact
+with the TPM to their PVS representations.
 
 \begin{table}[hbtp]
   \centering
