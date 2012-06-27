@@ -94,6 +94,8 @@ the abstract syntax of the TPM command set.
     senterCom : senterCom? % implemented all actions as one senter
     sinitCom : sinitCom? % partially implemented
     unsealCom(d:(seal?),k:(asymKey?)) : unsealCom?   
+    takeOwnershipCom : takeOwnershipCom?
+    createWrapKeyCom(k,parent:(asymKey?)): createWrapKeyCom?
   END tpmInput;
 \end{alltt}
 \caption{TPM command data type.}
@@ -109,7 +111,7 @@ abstract PVS representations.
     \hline
     \emph{TPM} & \emph{Abstract PVS} & \emph{Concrete PVS} \\
     \emph{Command} & \emph{Command} & \emph{Command} \\ \hline
-    \textsf{TPM\_CreateWrapKey} & & \\
+    \textsf{TPM\_CreateWrapKey} & \verb+createWrapKeyCom+ & \\
     \textsf{TPM\_LoadKey2} & \verb+instalKeyCom(k)+ & \\
     \textsf{TPM\_Seal} & & \\
     \textsf{TPM\_Unseal} & \verb+unsealCom(d,k)+ & \\
@@ -117,6 +119,7 @@ abstract PVS representations.
     \textsf{TPM\_Quote} & \verb+quoteCom(b,pm)+ & \\
     \textsf{TPM\_MakeIdentity} & & \\
     \textsf{TPM\_ActivateIdentity} & & \\
+    \textsf{TPM\_TakeOwnership} & \verb+takeOwnershipCom(k,parent)+ & \\
     \hline
   \end{tabular}
   \caption{TPM command mapping to PVS command representation.}
