@@ -53,7 +53,7 @@ tpm [ B:TYPE+, % BLOB
     sinitCom : sinitCom? % partially implemented
     unsealCom(d:(seal?),k:(asymKey?)) : unsealCom?   
     takeOwnershipCom : takeOwnershipCom?
-    createWrapKeyCom(k,sk:(asymKey?)): createWrapKeyCom?
+    createWrapKeyCom(k,parent:(asymKey?)): createWrapKeyCom?
   END tpmInput;
 
   %% State monad output type
@@ -142,7 +142,7 @@ tpm [ B:TYPE+, % BLOB
   %% Install key operation on TPM state.
   %% RENAME: LoadKey2
   installKeyState(s:tpmAbsState,k:(wrapKey?)) : tpmAbsState =
-    s WITH [`keys := addKey(k,add(srk(s),keys(s)))];
+    s WITH [`keys := addKey(k,keys(s))];
 
   %% Revoke key operation on TPM state
   revokeKeyState(s:tpmAbsState,k:(wrapKey?)) : tpmAbsState =
@@ -185,14 +185,14 @@ tpm [ B:TYPE+, % BLOB
       decryptKeyCom(d) : s,
       unsealCom(d,k) : s,
       takeOwnershipCom : s,
-      createWrapKeyCom(k,sk): s
+      createWrapKeyCom(k,parent): s
 %      encryptCom(b) : encryptState(s,b), % unimplemented
       ELSE s
   ENDCASES;
   
   % Generate a NEW RANDOM key pair.
-  createWrapKey(k,sk:(asymKey?)):tpmAbsOutput = 
-     outKey(wrapKey(sk,k));
+  createWrapKey(k,parent:(asymKey?)):tpmAbsOutput = 
+     outKey(wrapKey(parent,k));
 
   % NEED TO ENSURE NEW, RANDOM SRK KEY PAIR
   takeOwnership : tpmAbsOutput =
@@ -225,7 +225,7 @@ tpm [ B:TYPE+, % BLOB
       decryptKeyCom(d) : decryptKeyOut(s,d),
       unsealCom(d,k) : unsealOut(s,d,k),
       takeOwnershipCom : takeOwnership,
-      createWrapKeyCom(k,sk) : createWrapKey(k,sk)
+      createWrapKeyCom(k,parent) : createWrapKey(k,parent)
 %      encryptCom(b) : encryptState(s,b), % unimplemented
       ELSE outNothing
   ENDCASES;
@@ -302,6 +302,17 @@ tpm [ B:TYPE+, % BLOB
   %% Call sinit for initial measurements - currently unused
   sinitTPM : State = extendTPM(hash(mle),0);
   
+  %% Establish SRK
+  takeOwnershipTPM : State = 
+     output(outNothing,
+            (LAMBDA (s:tpmAbsState) : outputCom(s,takeOwnershipCom)));
+
+  %% Wrap new key k with parent key
+  createWrapKeyTPM(k,parent:(asymKey?)) : State = 
+     output(outNothing,
+            (LAMBDA (s:tpmAbsState) : outputCom(s,createWrapKeyCom(k,parent))));
+
+		
   %% Generate and output a quote
   quoteTPM(n:BLOB,pm:PCRMASK) : State = 
      output(outNothing,
@@ -469,6 +480,7 @@ tpm [ B:TYPE+, % BLOB
 		  >>= unit)
 		  (tpmPower) IN
         inverse(wrappingKey(k))=srk(s) => out=outBlob(b)
+
 
   % A key is installed if it is wrapped with SRK
   % proved - Tue Jun 12 15:37:56 CDT 2012
