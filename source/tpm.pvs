@@ -192,10 +192,12 @@ tpm [ B:TYPE+, % BLOB
   
   % Generate a NEW RANDOM key pair.
   createWrapKey(k,parent:(asymKey?)):tpmAbsOutput = 
+  createWrapKeyOut(k,parent:(asymKey?)):tpmAbsOutput = 
      outKey(wrapKey(parent,k));
 
   % NEED TO ENSURE NEW, RANDOM SRK KEY PAIR
   takeOwnership : tpmAbsOutput =
+  takeOwnershipOut : tpmAbsOutput =
      outKey(srkVal);
   
   % Output PCRs from a state as quote
@@ -224,8 +226,8 @@ tpm [ B:TYPE+, % BLOB
       quoteCom(n,pm) : quoteOut(s,n,pm),
       decryptKeyCom(d) : decryptKeyOut(s,d),
       unsealCom(d,k) : unsealOut(s,d,k),
-      takeOwnershipCom : takeOwnership,
-      createWrapKeyCom(k,parent) : createWrapKey(k,parent)
+      takeOwnershipCom : takeOwnershipOut,
+      createWrapKeyCom(k,parent) : createWrapKeyOut(k,parent)
 %      encryptCom(b) : encryptState(s,b), % unimplemented
       ELSE outNothing
   ENDCASES;
