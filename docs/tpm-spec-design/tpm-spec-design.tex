@@ -93,6 +93,44 @@
 \caption{TPM command data type.}
 \label{fig:tpm-command}
 \end{figure}
+
+\begin{table}[hbtp]
+  \centering
+  \begin{tabular}{lll}
+    \hline
+    \emph{TPM} & \emph{Abstract PVS} & \emph{Concrete PVS} \\
+    \emph{Command} & \emph{Command} & \emph{Command} \\ \hline
+    \textsf{TPM\_CreateWrapKey} & \verb+installKeyCom+ & \\
+    \textsf{TPM\_LoadKey2} & \verb+instalKeyCom+ & \\
+    \textsf{TPM\_Seal} & \\
+    \textsf{TPM\_Unseal} & \verb+unsealCom+ & \\
+    \textsf{TPM\_Extend} & \verb+extendCom+ & \\
+    \textsf{TPM\_Quote} & \verb+quoteCom+ & \\
+    \textsf{TPM\_MakeIdentity} & \\
+    \textsf{TPM\_ActivateIdentity} & \\
+    \hline
+  \end{tabular}
+  \caption{TPM command mapping to PVS command representation.}
+  \label{tab:tpm-to-pvs}
+\end{table}
+
+\begin{table}[hbtp]
+  \centering
+  \begin{tabular}{lll}
+    \hline
+    \emph{External}& \emph{Abstract PVS} & \emph{Concrete PVS} \\
+    \emph{Command} & \emph{Command} & \emph{Command} \\ \hline
+    \textsf{senter} & \verb+senterCom+ & \\
+    \textsf{sinit} & \verb+sinitCom+ & \\
+    Power On & \verb+powerCom+ & \\
+    Power Off  & \verb+offCom+ & \\
+    \hline
+  \end{tabular}
+  \caption{System commands interacting with TPM.}
+  \label{tab:commands-to-pvs}
+\end{table}
+
+
 \section{Verification Approach}
 
 The approach taken for verification is establishing a \emph{weak
