@@ -635,4 +635,38 @@ tpm [ B:TYPE+, % BLOB
      =
     (outNat(1),tpmReset)
 
+  % Take the output of the previous command execution and attempt to install
+  % it as akey.  Note the use of useOutput to create a function for bind
+  % rather than sequence.  The big difference is that the output from the
+  % previous command executing is bound to a and can be used in the
+  % morphism.  Note also that outKey? and wrapKey? that would usually be
+  % used as predicate subtypes cannot be as we'll never guarantee the
+  % output argument will be a key or a wrapped key.  This does not complicate
+  % the proof, so it's not a big deal.
+  installPrevKeyTPM:[tpmAbsOutput->State] =
+    (LAMBDA (a:tpmAbsOutput):
+      useOutput(outNothing,
+	        (LAMBDA (s:tpmAbsState):
+		  IF outKey?(a) AND wrapKey?(k(a))
+		  THEN executeCom(s,installKeyCom(k(a)))
+		  ELSE executeCom(s,noopCom)
+		  ENDIF)));
+
+  % Generate a key and immediately install it.  Note the use of bind rather
+  % sequence to capture the createWrapKeyTPM output and use it as input to
+  % the installPrevKeyTPM command.  Specifically, the output of
+  % createWrapKeyTPM is bound to a in installPrevKeyTPM then used in that
+  % command.  Classic use of bind!!
+  install_prev_key_success: THEOREM FORALL (k,p:(asymKey?)) :
+    LET (out,s) = runState(
+                  powerTPM
+		  >> senterResetTPM
+                  >> createWrapKeyTPM(k,p) 
+		  >>= installPrevKeyTPM
+		  >> senterHashSinitTPM
+		  >> changeLocalityTPM
+		  >>= unit)
+		  (tpmUnknown)
+      IN member(p,keys(s)) OR p=srk(s) => member(k,keys(s));
+
 END tpm
