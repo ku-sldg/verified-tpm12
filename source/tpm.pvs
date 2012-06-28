@@ -52,7 +52,7 @@ tpm [ B:TYPE+, % BLOB
     senterCom : senterCom? % implemented all actions as one senter
     sinitCom : sinitCom? % partially implemented
     unsealCom(d:(seal?),k:(asymKey?)) : unsealCom?   
-    sealCom(data:BLOB,k:(asymKey?)) : sealCom?
+    sealCom(k:(asymKey?),data:BLOB) : sealCom?
     takeOwnershipCom : takeOwnershipCom?
     createWrapKeyCom(k,parent:(asymKey?)): createWrapKeyCom?
   END tpmInput;
@@ -158,14 +158,6 @@ tpm [ B:TYPE+, % BLOB
       ELSE nothing
     ENDCASES;
 
-  %% Unseal a secret sealed with an asymetric key and PCRs
-  unsealState(s:tpmAbsState,d:(seal?),k:(asymKey?)) : BLOB = 
-    unseal(d,pcrs(s),k);
-
-  %% Seal a secret with an asymetric key
-  sealState(s:tpmAbsState,data:BLOB,k:(asymKey?)) : BLOB = 
-    seal(k,pcrs(s),data);
-
   %% What we want to generate with each command is a pair of type
   %% [tpmAbsOut,tpmAbsState].  executeCom generates the the state
   %% from a TPM state and command while the upcoming outputCom
@@ -189,7 +181,7 @@ tpm [ B:TYPE+, % BLOB
       quoteCom(n,pm) : s,
       decryptKeyCom(d) : s,
       unsealCom(d,k) : s,
-      sealCom(data,k) : s,
+      sealCom(k,data) : s,
       takeOwnershipCom : s,
       createWrapKeyCom(k,parent): s
 %      encryptCom(b) : encryptState(s,b), % unimplemented
@@ -212,13 +204,13 @@ tpm [ B:TYPE+, % BLOB
   decryptKeyOut(s:tpmAbsState,d:(encrypt?)) : tpmAbsOutput = 
     outBlob(decryptKeyState(s,d));
 
-  % Output unsealed key
+  % Output secret unsealed with an asymetric key and PCRs 
   unsealOut(s:tpmAbsState,d:(seal?),k:(asymKey?)) : tpmAbsOutput = 
-    outBlob(unsealState(s,d,k));
+    outBlob(unseal(d,pcrs(s),k));
 
-  % Output sealed key
-  sealOut(s:tpmAbsState,data:BLOB,k:(asymKey?)) : tpmAbsOutput = 
-    outBlob(sealState(s,data,k));
+  % Output secret sealed with asymetric key 
+  sealOut(s:tpmAbsState,k:(asymKey?),data:BLOB) : tpmAbsOutput = 
+    outBlob(seal(k,pcrs(s),data));
 
   %% Generate output from a command and state
   outputCom(s:tpmAbsState,c:tpmInput) : tpmAbsOutput = 
@@ -234,7 +226,7 @@ tpm [ B:TYPE+, % BLOB
       quoteCom(n,pm) : quoteOut(s,n,pm),
       decryptKeyCom(d) : decryptKeyOut(s,d),
       unsealCom(d,k) : unsealOut(s,d,k),
-      sealCom(d,k) : sealOut(s,d,k),
+      sealCom(k,data) : sealOut(s,k,data),
       takeOwnershipCom : takeOwnershipOut,
       createWrapKeyCom(k,parent) : createWrapKeyOut(k,parent)
 %      encryptCom(b) : encryptState(s,b), % unimplemented
@@ -340,9 +332,9 @@ tpm [ B:TYPE+, % BLOB
             (LAMBDA (s:tpmAbsState): outputCom(s,unsealCom(d,k))));
 
   %% Seal and output a blob (should be binary or data)
-  sealTPM(data:BLOB,k:(asymKey?)) : State = 
+  sealTPM(k:(asymKey?),data:BLOB) : State = 
      output(outNothing,
-            (LAMBDA (s:tpmAbsState): outputCom(s,sealCom(data,k))));
+            (LAMBDA (s:tpmAbsState): outputCom(s,sealCom(k,data))));
 
   %% Extending a reset PCR is antisymmetric if the two values are not equal
   %% Let form used to defined commands for bind.  Will use command forms
@@ -542,69 +534,6 @@ tpm [ B:TYPE+, % BLOB
          ELSE out=outBlob(nothing)
       ENDIF;
 
- %% Seal and unseal a secret successfully - This is not right yet 
-%  seal_unseal_secret_success: THEOREM FORALL (j,k:(asymKey?),hv:HV,b:BLOB,pcrs:PCRS) :
-%     LET (out,s) = runState(
-%                   powerTPM
-% 		  >> senterResetTPM
-% 		  >> senterHashSinitTPM
-% 		  >> changeLocalityTPM
-% 		  >> extendTPM(hv,0)
-% 		  >> sealTPM(k,b)
-% 		  >> unsealTPM(***,j)
-% 		  >>= unit)
-% 		  (tpmUnknown) IN
-%       IF j=inverse(k) AND pcrs=pcrs(s)
-%          THEN out=outBlob(b)
-%          ELSE out=outBlob(nothing)
-%       ENDIF;
-
-
-  %% Seal a secret successfully
-  seal_secret_success: THEOREM FORALL (j,k:(asymKey?),hv:HV,b:BLOB) :
-    LET (out,s) = runState(
-    	 	  powerTPM
-		  >> senterResetTPM
-		  >> senterHashSinitTPM
-		  >> changeLocalityTPM
-		  >> extendTPM(hv,0)
-		  >> sealTPM(b,k)
-		  >>= unit)
-		  (tpmUnknown) IN
-     j = inverse(k) AND unsealTPM(out`b,j) = outBlob(b);
-
-  %% Creating and installing key successfully
-%   create_wrap_and_install: THEOREM FORALL (k:(asymKey?)) :
-%      LET (out,s) = runState(
-%      	 	   powerTPM
-% 		   >> senterResetTPM
-% 		   >> senterHashSinitTPM
-% 		   >> changeLocalityTPM
-% 		   >> takeOwnershipTPM
-% 		   >> createWrapKeyTPM(k,srkVal)
-% 		   >>= installKeyTPM()
-% 		   >>= unit)
-% 		   (tpmUnknown) IN
-% 	out = outNothing?;
-
-%%can't install key that hasn't been created - how to model this?
-%%install key wrapped by bad key
-
-  %%install two wrapped keys?
-%  nestedWrappedKeys: THEOREM FORALL (k,j:(asymKey?)) :
-%      LET (out,s) = runState(
-%      	 	   powerTPM
-% 		   >> senterResetTPM
-% 		   >> senterHashSinitTPM
-% 		   >> changeLocalityTPM
-% 		   >> takeOwnershipTPM
-% 		   >> createWrapKey(k,srkVal)
-% 		   >> installKeyTPM(k)
-% 		   >> createWrapKey(j,k)
-% 		   >> installKeyTPM(j)
-% 		   >>= unit)
-% 		   (tpmUnknown) IN
-% 	out = outNothing?;
 
   %% Regression theorems for testing only
 
