@@ -564,13 +564,14 @@ tpm [ B:TYPE+, % BLOB
   % output argument will be a key or a wrapped key.  This does not complicate
   % the proof, so it's not a big deal.
   installPrevKeyTPM:[tpmAbsOutput->State] =
-    (LAMBDA (a:tpmAbsOutput):
-      useOutput(outNothing,
-	        (LAMBDA (s:tpmAbsState):
-		  IF outKey?(a) AND wrapKey?(k(a))
-		  THEN executeCom(s,installKeyCom(k(a)))
-		  ELSE executeCom(s,noopCom)
-		  ENDIF)));
+    useOutput(outNothing,
+               (LAMBDA (a:tpmAbsOutput):
+                  (LAMBDA (s:tpmAbsState):
+		    IF outKey?(a) AND wrapKey?(k(a))
+		    THEN executeCom(s,installKeyCom(k(a)))
+		    ELSE executeCom(s,noopCom)
+		    ENDIF)));
+                 
 
   % Generate a key and immediately install it.  Note the use of bind rather
   % sequence to capture the createWrapKeyTPM output and use it as input to
