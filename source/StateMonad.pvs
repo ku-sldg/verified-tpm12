@@ -72,7 +72,6 @@ BEGIN
  % Modify state
  modify(a:A,f:[S->S]) : State = state(LAMBDA(s0:S):(a,f(s0)))
 
- % unit(x:A):State = state(LAMBDA (s:S) : (x,s));
  % Modify state with prev output
  useOutput(a:A,f:[S->S]) : State = state(LAMBDA(s0:S):(a,f(s0)))
 
