@@ -572,7 +572,6 @@ tpm [ B:TYPE+, % BLOB
 		    ELSE executeCom(s,noopCom)
 		    ENDIF)));
                  
-
   % Generate a key and immediately install it.  Note the use of bind rather
   % sequence to capture the createWrapKeyTPM output and use it as input to
   % the installPrevKeyTPM command.  Specifically, the output of
@@ -584,8 +583,6 @@ tpm [ B:TYPE+, % BLOB
 		  >> senterResetTPM
                   >> createWrapKeyTPM(k,p) 
 		  >>= installPrevKeyTPM
-		  >> senterHashSinitTPM
-		  >> changeLocalityTPM
 		  >>= unit)
 		  (tpmUnknown)
       IN member(p,keys(s)) OR p=srk(s) => member(k,keys(s));

@@ -63,20 +63,17 @@ BEGIN
 
  %% Predefined, useful values for f.  
 
- % Get the state
- get(s:S) : [S,S] = (s,s)
-
  % Replace state
  put(a:A,s1:S) : State = state(LAMBDA(s0:S):(a,s1))
 
- % Modify state
+ % Modify state using only the current state
  modify(a:A,f:[S->S]) : State = state(LAMBDA(s0:S):(a,f(s0)))
 
- % Modify state with prev output
+ % Generate output with no state modification
+ output(a:A,f:[S->A]) : State = state(LAMBDA(s0:S):(f(s0),s0))
+
+ % Modify state with previous output and current state.
  useOutput(a:A,f:[A->[S->S]]) : [A->State] =
     (LAMBDA (a:A):state(LAMBDA(s0:S):(a,f(a)(s0))))
-
- % Generate output
- output(a:A,f:[S->A]) : State = state(LAMBDA(s0:S):(f(s0),s0))
 
 END StateMonad
