@@ -41,20 +41,20 @@ tpm [ B:TYPE+, % BLOB
   tpmInput : DATATYPE
   BEGIN
     decryptKeyCom(d:(encrypt?)) : decryptKeyCom?
-    encryptCom(b:BLOB) : encryptCom? % unimplemented
-    TPM_Extend(h:HV,n:PCRINDEX) : TPM_Extend?
-    TPM_LoadKey2(k:(wrapKey?)): TPM_LoadKey2? 
+    encryptCom(en:BLOB) : encryptCom? % unimplemented
+    TPM_Extend(h:HV,i:PCRINDEX) : TPM_Extend?
+    TPM_LoadKey2(lk:(wrapKey?)): TPM_LoadKey2? 
     noopCom : noopCom?
     offCom : offCom?
     powerCom : powerCom?
-    TPM_Quote(n:BLOB,pm:PCRMASK) : TPM_Quote? % partially implemented
-    revokeKeyCom(k:(wrapKey?)): revokeKeyCom?
+    TPM_Quote(nonce:BLOB,pm:PCRMASK) : TPM_Quote? % partially implemented
+    revokeKeyCom(rk:(wrapKey?)): revokeKeyCom?
     senterCom : senterCom? % implemented all actions as one senter
     sinitCom : sinitCom? % partially implemented
-    TPM_Unseal(d:(seal?),k:(asymKey?)) : TPM_Unseal?   
-    TPM_Seal(k:(asymKey?),data:BLOB) : TPM_Seal?
+    TPM_Unseal(s:(seal?),uk:(asymKey?)) : TPM_Unseal?   
+    TPM_Seal(sk:(asymKey?),data:BLOB) : TPM_Seal?
     TPM_TakeOwnership : TPM_TakeOwnership?
-    TPM_CreateWrapKey(k,parent:(asymKey?)): TPM_CreateWrapKey?
+    TPM_CreateWrapKey(wk,parentk:(asymKey?)): TPM_CreateWrapKey?
   END tpmInput;
 
   %% State monad output type
@@ -63,8 +63,8 @@ tpm [ B:TYPE+, % BLOB
     outNothing : outNothing?
     outError(s:string) : outError?
     outNat(n:nat) : outNat?
-    outQuote(k:KEY,n:BLOB,pcrs:list[PCR]) : outQuote?
-    outBlob(k:BLOB) : outBlob?
+    outQuote(qk:KEY,non:BLOB,pcrs:list[PCR]) : outQuote?
+    outBlob(bl:BLOB) : outBlob?
     outKey(k:KEY) : outKey?
   END tpmAbsOutput;
 
@@ -516,8 +516,8 @@ tpm [ B:TYPE+, % BLOB
       wrappingKey(j) = key(k) AND wrappingKey(k) = srk(s) =>
          member(key(j),keys(s));
 
- %% Unseal a secret successfully - This is not right yet 
- unseal_secret_success: THEOREM FORALL (j,k:(asymKey?),hv:HV,b:BLOB,pcrs:PCRS) :
+  %% Unseal a secret successfully - This is not right yet 
+  unseal_secret_success: THEOREM FORALL (j,k:(asymKey?),hv:HV,b:BLOB,pcrs:PCRS) :
     LET (out,s) = runState(
                   powerTPM
 		  >> senterResetTPM
@@ -532,6 +532,48 @@ tpm [ B:TYPE+, % BLOB
          ELSE out=outBlob(nothing)
       ENDIF;
 
+  %% Seal a secret successfully
+  seal_secret_success: THEOREM FORALL (j,k:(asymKey?),hv:HV,b:BLOB,s:tpmAbsState) :
+    LET (out,s) = runState(
+     	 	  powerTPM
+ 		  >> senterResetTPM
+ 		  >> senterHashSinitTPM
+ 		  >> changeLocalityTPM
+ 		  >> extendTPM(hv,0)
+ 		  >> sealTPM(k,b)
+		  >>= unit)
+ 		  (tpmUnknown) IN
+      j = inverse(k) =>
+      unseal(bl(out),s`pcrs,j) = b;
+  
+  % Take the output of the previous command execution and attempt to unseal
+  % it.  Note the use of useOutput to create a function for bind
+  % rather than sequence.
+  unsealPrevSealTPM(k:(asymKey?)):[tpmAbsOutput->State] =
+    useOutput(outNothing,
+		(LAMBDA (a:tpmAbsOutput):
+		  (LAMBDA (s:tpmAbsState):
+		    IF outBlob?(a) AND seal?(bl(a))
+		    THEN executeCom(s, TPM_Unseal(bl(a),k))
+		    ELSE executeCom(s,noopCom)
+		    ENDIF)));
+
+  %% Seal and unseal a secret successfully 
+  seal_unseal_secret_success: THEOREM FORALL (j,k:(asymKey?),hv:HV,b:BLOB,pcrs:PCRS) :
+    LET (out,s) = runState(
+                  powerTPM
+		  >> senterResetTPM
+		  >> senterHashSinitTPM
+		  >> changeLocalityTPM
+		  >> extendTPM(hv,0)
+		  >> sealTPM(k,b)
+		  >>= unsealPrevSealTPM(j)
+		  >>= unit)
+		  (tpmUnknown) IN
+      (j=inverse(k) AND pcrs=pcrs(s))
+	=> blob(bl(out))=b
+     %    ELSE out=outBlob(nothing)
+     % ENDIF;
 
   %% Regression theorems for testing only
 
@@ -579,6 +621,7 @@ tpm [ B:TYPE+, % BLOB
 		    ELSE executeCom(s,noopCom)
 		    ENDIF)));
                  
+  
   % Generate a key and immediately install it.  Note the use of bind rather
   % sequence to capture the createWrapKeyTPM output and use it as input to
   % the installPrevKeyTPM command.  Specifically, the output of
@@ -593,5 +636,37 @@ tpm [ B:TYPE+, % BLOB
 		  >>= unit)
 		  (tpmUnknown)
       IN member(p,keys(s)) OR p=srk(s) => member(k,keys(s));
+
+  %%install two wrapped keys?
+  nested_wrapped_keys_success: THEOREM FORALL (k,j,p:(asymKey?)) :
+     LET (out,s) = runState(
+     	 	   powerTPM
+		   >> senterResetTPM
+		   >> senterHashSinitTPM
+		   >> changeLocalityTPM
+		   >> takeOwnershipTPM
+		   >> createWrapKeyTPM(k,p)
+		   >>= installPrevKeyTPM
+		   >> createWrapKeyTPM(j,k)
+		   >>= installPrevKeyTPM
+		   >>= unit)
+		   (tpmUnknown) IN
+	member(p,keys(s)) OR p=srk(s)
+	=>
+	member(j,keys(s)) %AND member(k,keys(s))
+	
+  %% Create a seal and immediately unseal it.
+  unseal_prev_seal_success: THEOREM FORALL (k,j:(asymKey?),data:BLOB,pcrs:PCRS) :
+    LET (out,s) = runState(
+                  powerTPM
+		  >> senterResetTPM
+                  >> sealTPM(k,data)
+		  >>= unsealPrevSealTPM(j)
+		  >>= unit)
+		  (tpmUnknown)
+      IN  j=inverse(k) AND pcrs=pcrs(s)
+          => blob(bl(out)) = data
+	 %ELSE out = outBlob(nothing)
+	 %ENDIF
 
 END tpm
