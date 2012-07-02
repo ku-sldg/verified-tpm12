@@ -546,34 +546,6 @@ tpm [ B:TYPE+, % BLOB
       j = inverse(k) =>
       unseal(bl(out),s`pcrs,j) = b;
   
-  % Take the output of the previous command execution and attempt to unseal
-  % it.  Note the use of useOutput to create a function for bind
-  % rather than sequence.
-  unsealPrevSealTPM(k:(asymKey?)):[tpmAbsOutput->State] =
-    useOutput(outNothing,
-		(LAMBDA (a:tpmAbsOutput):
-		  (LAMBDA (s:tpmAbsState):
-		    IF outBlob?(a) AND seal?(bl(a))
-		    THEN executeCom(s, TPM_Unseal(bl(a),k))
-		    ELSE executeCom(s,noopCom)
-		    ENDIF)));
-
-  %% Seal and unseal a secret successfully 
-  seal_unseal_secret_success: THEOREM FORALL (j,k:(asymKey?),hv:HV,b:BLOB,pcrs:PCRS) :
-    LET (out,s) = runState(
-                  powerTPM
-		  >> senterResetTPM
-		  >> senterHashSinitTPM
-		  >> changeLocalityTPM
-		  >> extendTPM(hv,0)
-		  >> sealTPM(k,b)
-		  >>= unsealPrevSealTPM(j)
-		  >>= unit)
-		  (tpmUnknown) IN
-      (j=inverse(k) AND pcrs=pcrs(s))
-	=> blob(bl(out))=b
-     %    ELSE out=outBlob(nothing)
-     % ENDIF;
 
   %% Regression theorems for testing only
 
@@ -635,9 +607,10 @@ tpm [ B:TYPE+, % BLOB
 		  >>= installPrevKeyTPM
 		  >>= unit)
 		  (tpmUnknown)
-      IN member(p,keys(s)) OR p=srk(s) => member(k,keys(s));
+      IN member(p,keys(s)) OR p=srk(s)
+       => member(k,keys(s));
 
-  %%install two wrapped keys?
+  %%install nested wrapped keys?
   nested_wrapped_keys_success: THEOREM FORALL (k,j,p:(asymKey?)) :
      LET (out,s) = runState(
      	 	   powerTPM
@@ -653,8 +626,22 @@ tpm [ B:TYPE+, % BLOB
 		   (tpmUnknown) IN
 	member(p,keys(s)) OR p=srk(s)
 	=>
-	member(j,keys(s)) %AND member(k,keys(s))
+	%% Does member(j,keys(s)) automatically imply member(k,keys(s))?
+	%% member(j,keys(s)) pops out with grind, but I can't get the k part to pop out.
+	member(j,keys(s)) AND member(k,keys(s));
 	
+  % Take the output of the previous command execution and attempt to unseal
+  % it.  Note the use of useOutput to create a function for bind
+  % rather than sequence.
+  unsealPrevSealTPM(k:(asymKey?)):[tpmAbsOutput->State] =
+    useOutput(outNothing,
+		(LAMBDA (a:tpmAbsOutput):
+		  (LAMBDA (s:tpmAbsState):
+		    IF outBlob?(a) AND seal?(bl(a))
+		    THEN executeCom(s, TPM_Unseal(bl(a),k))
+		    ELSE executeCom(s,noopCom)
+		    ENDIF)));
+
   %% Create a seal and immediately unseal it.
   unseal_prev_seal_success: THEOREM FORALL (k,j:(asymKey?),data:BLOB,pcrs:PCRS) :
     LET (out,s) = runState(
@@ -663,10 +650,26 @@ tpm [ B:TYPE+, % BLOB
                   >> sealTPM(k,data)
 		  >>= unsealPrevSealTPM(j)
 		  >>= unit)
-		  (tpmUnknown)
-      IN  j=inverse(k) AND pcrs=pcrs(s)
+		  (tpmUnknown) IN  
+	(j=inverse(k) AND pcrs=pcrs(s))
           => blob(bl(out)) = data
 	 %ELSE out = outBlob(nothing)
-	 %ENDIF
+
+  %% Seal and unseal a secret successfully 
+  seal_unseal_secret_success: THEOREM FORALL (j,k:(asymKey?),hv:HV,b:BLOB,pcrs:PCRS) :
+    LET (out,s) = runState(
+                  powerTPM
+		  >> senterResetTPM
+		  >> senterHashSinitTPM
+		  >> changeLocalityTPM
+		  >> extendTPM(hv,0)
+		  >> sealTPM(k,b)
+		  >>= unsealPrevSealTPM(j)
+		  >>= unit)
+		  (tpmUnknown) IN
+      (j=inverse(k) AND pcrs=pcrs(s))
+	=> blob(bl(out))=b
+     % ELSE out=outBlob(nothing)
+
 
 END tpm
