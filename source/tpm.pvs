@@ -42,6 +42,13 @@ tpm [ B:TYPE+, % BLOB
   BEGIN
     decryptKeyCom(d:(encrypt?)) : decryptKeyCom?
     encryptCom(en:BLOB) : encryptCom? % unimplemented
+    %% Startup commands
+    TPM_Init : TPM_Init? % TPM goes into a state where only TPM_startup
+                         % is allowed.
+    TPM_Startup : TPM_Startup? % clear - all variables back to default values
+                               % save - restore from TPM_SaveState
+			       % deactivated - turn off and wait for TPM_init
+    TPM_SaveState : TPM_SaveState? % See docs on how save occurs
     TPM_Extend(h:HV,i:PCRINDEX) : TPM_Extend?
     TPM_LoadKey2(lk:(wrapKey?)): TPM_LoadKey2? 
     noopCom : noopCom?
@@ -54,6 +61,9 @@ tpm [ B:TYPE+, % BLOB
     TPM_Unseal(s:(seal?),uk:(asymKey?)) : TPM_Unseal?   
     TPM_Seal(sk:(asymKey?),data:BLOB) : TPM_Seal?
     TPM_TakeOwnership : TPM_TakeOwnership?
+    TPM_OwnerClear : TPM_OwnerClear? % unimplemented
+    TPM_ForceClear : TPM_ForceClear? % unimplemented
+    TPM_DisableOwnerClear : TPM_DisabelOwnerClear? % unimplemented
     TPM_CreateWrapKey(wk,parentk:(asymKey?)): TPM_CreateWrapKey?
   END tpmInput;
 
