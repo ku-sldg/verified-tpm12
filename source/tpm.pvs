@@ -173,8 +173,6 @@ tpm [ B:TYPE+, % BLOB
       noopCom : s,
       offCom : tpmUnknown,
       powerCom : tpmPower,
-% Old version for demonstration
-%      senterCom : changeLocalityState(extendState(tpmReset,0,hash(sinit))),
       senterCom : 
         changeLocalityState(extendState(pcrsResetSenterState(s),0,hash(sinit))),
       sinitCom : changeLocalityState(extendState(s,0,hash(mle))),
