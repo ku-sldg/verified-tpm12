@@ -2,21 +2,17 @@
 %%
 %% TPM Theory
 %%
-%% Author: Perry Alexander
+%% Author: Perry Alexander, Brigid Halling
 %% Date: Mon Nov 28 01:09:39 CST 2011
 %%
 %% Description: Basic model of a TPM using a monadic state model
 %% 
 %% Dependencies:
 %%  StateMonad.pvs
+%%  key.pvs
+%%  pcr.pvs
 %%
 %% Todo: (key - => pending, + => done)
-%% + Added updates to locality following sinit measurement
-%% + Added monotonicity proof for locality changes
-%% - Add regressions and theorems for key installation
-%% - outBlob should be outKey and only output keys
-%% - Add PCR composite to wrapped keys
-%% - Add commands for sealing small data to state
 %% ----
 
 tpm [ B:TYPE+, % BLOB
@@ -43,28 +39,32 @@ tpm [ B:TYPE+, % BLOB
     decryptKeyCom(d:(encrypt?)) : decryptKeyCom?
     encryptCom(en:BLOB) : encryptCom? % unimplemented
     %% Startup commands
-    TPM_Init : TPM_Init? % TPM goes into a state where only TPM_startup
+    ABS_Init : ABS_Init? % TPM goes into a state where only ABS_startup
                          % is allowed.  This is a hardware signal and cannot
 			 % be invoked by software
-    TPM_Startup : TPM_Startup? % clear - all variables back to default values
-                               % save - restore from TPM_SaveState
-			       % deactivated - turn off and wait for TPM_init
-    TPM_SaveState : TPM_SaveState? % See docs on how save occurs
-    TPM_Extend(h:HV,i:PCRINDEX) : TPM_Extend?
-    TPM_LoadKey2(lk:(wrapKey?)): TPM_LoadKey2? 
+    ABS_Startup : ABS_Startup? % clear - all variables back to default values
+                               % save - restore from ABS_SaveState
+			       % deactivated - turn off and wait for ABS_init
+    ABS_SaveState : ABS_SaveState? % unimplemented
+    %% PCRs, quotes, seals and keys
+    ABS_Extend(h:HV,i:PCRINDEX) : ABS_Extend?
+    ABS_Quote(nonce:BLOB,pm:PCRMASK) : ABS_Quote? % partially implemented
+    ABS_Unseal(s:(seal?),uk:(asymKey?)) : ABS_Unseal?   
+    ABS_Seal(sk:(asymKey?),data:BLOB) : ABS_Seal?
+    ABS_LoadKey2(lk:(wrapKey?)): ABS_LoadKey2? 
+    ABS_CreateWrapKey(wk,parentk:(asymKey?)): ABS_CreateWrapKey?
+    %% Ownership management
+    ABS_TakeOwnership : ABS_TakeOwnership?
+    ABS_OwnerClear : ABS_OwnerClear? % unimplemented
+    ABS_ForceClear : ABS_ForceClear? % unimplemented
+    ABS_DisableOwnerClear : ABS_DisabelOwnerClear? % unimplemented
+    %% Software Commands
+    ABS_senter : ABS_senter? % implemented all actions as one senter
+    ABS_sinit : ABS_sinit? % partially implemented
+    %% Invented, imaginary Commands
     noopCom : noopCom?
     offCom : offCom?
-    TPM_Quote(nonce:BLOB,pm:PCRMASK) : TPM_Quote? % partially implemented
     revokeKeyCom(rk:(wrapKey?)): revokeKeyCom?
-    senterCom : senterCom? % implemented all actions as one senter
-    sinitCom : sinitCom? % partially implemented
-    TPM_Unseal(s:(seal?),uk:(asymKey?)) : TPM_Unseal?   
-    TPM_Seal(sk:(asymKey?),data:BLOB) : TPM_Seal?
-    TPM_TakeOwnership : TPM_TakeOwnership?
-    TPM_OwnerClear : TPM_OwnerClear? % unimplemented
-    TPM_ForceClear : TPM_ForceClear? % unimplemented
-    TPM_DisableOwnerClear : TPM_DisabelOwnerClear? % unimplemented
-    TPM_CreateWrapKey(wk,parentk:(asymKey?)): TPM_CreateWrapKey?
   END tpmInput;
 
   %% State monad output type
@@ -112,7 +112,7 @@ tpm [ B:TYPE+, % BLOB
   %% Unknown state
   tpmUnknown : tpmAbsState
 
-  %% Power on state
+  %% Power on state after init is raised by hardwer
   tpmPostInit : tpmAbsState = (#
                          pcrs:=pcrsPower
 			 , postInit:=true
@@ -122,7 +122,8 @@ tpm [ B:TYPE+, % BLOB
 			 , ek:=inverse(ekVal)
 			 #);
 
-  %% Standard initial state following reset
+  %% Standard initial state following startup command.  Technically, there
+  %% will be many results of TPM_Startup, but this is a good starting point
   tpmStartup : tpmAbsState = (#
                          pcrs:=pcrsReset
 			 , postInit:=false
@@ -132,13 +133,16 @@ tpm [ B:TYPE+, % BLOB
 			 , ek:=inverse(ekVal)
 			 #);
 
-  %% Predicate to determine if startup has occured
+  %% Predicate to determine if startup has occured.  Used as types
+  %% (afterInit?) is the set of states occuring immediately after TPM_Init
+  %% (afterStartup?) is the set of states occuring immediately after
+  %% TPM_Startup
   afterInit?(s:tpmAbsState):bool = postInit(s);
   afterStartup?(s:tpmAbsState):bool = NOT postInit(s);
 
   %% Standard operations on TPM state definition above.  All such
   %% functions end with State to indicate they operate on the state
-  %% value rather than on the TPM moand.  Note that key set and pcr
+  %% value rather than on the TPM monad.  Note that key set and pcr
   %% manipulation functions are defined externally in key.pvs and
   %% pcr.pvs respectively
 
@@ -158,7 +162,6 @@ tpm [ B:TYPE+, % BLOB
     s WITH [`pcrs := pcrsExtend(pcrs(s),n,h)];
 
   %% Install key operation on TPM state.
-  
   installKeyState(s:tpmAbsState,k:(wrapKey?)) : tpmAbsState =
     s WITH [`keys := addKey(k,srk(s),keys(s))];
 
@@ -184,29 +187,29 @@ tpm [ B:TYPE+, % BLOB
   %% Run if TPM_Init has run but TPM_Startup has not
   executeComPostInit(s:(afterInit?),c:tpmInput) : tpmAbsState =
     CASES c OF
-      TPM_Startup : tpmStartup
+      ABS_Startup : tpmStartup
       ELSE s
     ENDCASES;
 
-  %% Run if TPM_Startup has run
+  %% Run if ABS_Startup has run
   executeComStartup(s:(afterStartup?),c:tpmInput) : tpmAbsState = 
     CASES c OF
-      TPM_Extend(h,n) : extendState(s,n,h),
-      TPM_LoadKey2(k): installKeyState(s,k), 
+      ABS_Extend(h,n) : extendState(s,n,h),
+      ABS_LoadKey2(k): installKeyState(s,k), 
       revokeKeyCom(k): revokeKeyState(s,k),
       noopCom : s,
       offCom : tpmUnknown,
-      TPM_Init : tpmPostInit,
-      TPM_Startup : s,
-      senterCom : 
+      ABS_Init : tpmPostInit,
+      ABS_Startup : s,
+      ABS_senter : 
         changeLocalityState(extendState(pcrsResetSenterState(s),0,hash(sinit))),
-      sinitCom : changeLocalityState(extendState(s,0,hash(mle))),
-      TPM_Quote(n,pm) : s,
+      ABS_sinit : changeLocalityState(extendState(s,0,hash(mle))),
+      ABS_Quote(n,pm) : s,
       decryptKeyCom(d) : s,
-      TPM_Unseal(d,k) : s,
-      TPM_Seal(k,data) : s,
-      TPM_TakeOwnership : s,
-      TPM_CreateWrapKey(k,parent): s
+      ABS_Unseal(d,k) : s,
+      ABS_Seal(k,data) : s,
+      ABS_TakeOwnership : s,
+      ABS_CreateWrapKey(k,parent): s
       ELSE s
   ENDCASES;
   
@@ -245,20 +248,20 @@ tpm [ B:TYPE+, % BLOB
   %% Generate output from a command and state
   outputCom(s:tpmAbsState,c:tpmInput) : tpmAbsOutput = 
     CASES c OF
-      TPM_Extend(h,n) : outNothing,
-      TPM_LoadKey2(k): outNothing, 
+      ABS_Extend(h,n) : outNothing,
+      ABS_LoadKey2(k): outNothing, 
       revokeKeyCom(k): outNothing,
       noopCom : outNothing,
       offCom : outNothing,
-      TPM_Init : outNothing,
-      senterCom : outNothing,
-      sinitCom : outNothing,
-      TPM_Quote(n,pm) : quoteOut(s,n,pm),
+      ABS_Init : outNothing,
+      ABS_senter : outNothing,
+      ABS_sinit : outNothing,
+      ABS_Quote(n,pm) : quoteOut(s,n,pm),
       decryptKeyCom(d) : decryptKeyOut(s,d),
-      TPM_Unseal(d,k) : unsealOut(s,d,k),
-      TPM_Seal(k,data) : sealOut(s,k,data),
-      TPM_TakeOwnership : takeOwnershipOut,
-      TPM_CreateWrapKey(k,parent) : createWrapKeyOut(k,parent)
+      ABS_Unseal(d,k) : unsealOut(s,d,k),
+      ABS_Seal(k,data) : sealOut(s,k,data),
+      ABS_TakeOwnership : takeOwnershipOut,
+      ABS_CreateWrapKey(k,parent) : createWrapKeyOut(k,parent)
       ELSE outNothing
   ENDCASES;
 
@@ -267,7 +270,7 @@ tpm [ B:TYPE+, % BLOB
   %% or remains the same
   %% unproven - Wed Jun 13 23:15:36 CDT 2012
   monotonic_locality: THEOREM (FORALL (s:tpmAbsState,c:tpmInput) :
-    not(offCom?(c) or TPM_Init?(c) or TPM_Startup?(c)) =>
+    not(offCom?(c) or ABS_Init?(c) or ABS_Startup?(c)) =>
       locality(s) >= locality(executeCom(s,c)));
 
   %% Minor Support Lemmas
@@ -295,94 +298,88 @@ tpm [ B:TYPE+, % BLOB
   %% generating.  This does not exclude the eventuality of doing both.
 
   %% Extend PCR n with hash value h.
-  extendTPM(h:HV,n:PCRINDEX):State =
+  TPM_Extend(h:HV,n:PCRINDEX):State =
     modify(outNothing,
-           (LAMBDA (s:tpmAbsState):executeCom(s,TPM_Extend(h,n))));
-
-  %% Decrease locality value
-  changeLocalityTPM : State =
-    modify(outNothing,
-           (LAMBDA (s:tpmAbsState):changeLocalityState(s)));
+           (LAMBDA (s:tpmAbsState):executeCom(s,ABS_Extend(h,n))));
 
   %% Install key k in a TPM
-  installKeyTPM(k:(wrapKey?)):State =
+  TPM_InstallKey(k:(wrapKey?)):State =
     modify(outNothing,
-           (LAMBDA (s:tpmAbsState):executeCom(s,TPM_LoadKey2(k))));
+           (LAMBDA (s:tpmAbsState):executeCom(s,ABS_LoadKey2(k))));
 
-  %% Revoke key k from a TPM.
-  revokeKeyTPM(k:(wrapKey?)):State =
+  %% Revoke key k from a TPM - unused - not a real TPM command
+  TPM_RevokeKey(k:(wrapKey?)):State =
     modify(outNothing,
            (LAMBDA (s:tpmAbsState):executeCom(s,revokeKeyCom(k))));
 
-  %% No-op
-  noop : [tpmAbsOutput -> State] =
+  %% Noe-op - not a real TPM command
+  TPM_Noop : [tpmAbsOutput -> State] =
     (LAMBDA (a:tpmAbsOutput): state((LAMBDA(s:tpmAbsState) : (a,s))));
 
-  %% TPM is off
-  offTPM : State = put(outNothing,tpmUnknown);
+  %% TPM is off - not a real TPM command
+  TPM_Off : State = put(outNothing,tpmUnknown);
 
   %% Power up the TPM and hit the TPM_Init signal
-  powerTPM : State = put(outNothing,tpmPostInit);
+  TPM_Init : State = put(outNothing,tpmPostInit);
 
   %% Start up the TPM after TPM_Init
-  startupTPM : State =
+  TPM_Startup : State =
     modify(outNothing,
-            (LAMBDA (s:tpmAbsState):executeCom(s,TPM_Startup)));
+            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_Startup)));
 
   %% Call SENTER 
-  senterTPM : State =
+  CPU_senter : State =
     modify(outNothing,
-           (LAMBDA (s:tpmAbsState):executeCom(s,senterCom)));
+           (LAMBDA (s:tpmAbsState):executeCom(s,ABS_senter)));
 
-  %% Reset the TPM by senter call - obscolete
+  %% Reset the TPM by senter call - depreciated - DO NOT USE
   senterResetTPM : State = put(outNothing,tpmStartup);
 
-  %% Measure sinit by senter call - obscolete
-  senterHashSinitTPM : State = extendTPM(hash(sinit),0);
+  %% Measure sinit by senter call - depreciated - DO NOT USE
+  senterHashSinitTPM : State = TPM_Extend(hash(sinit),0);
 
   %% Call sinit for initial measurements - currently unused
-%%  sinitTPM : State = extendTPM(hash(mle),0);
-  sinitTPM : State =
+  CPU_sinit : State =
     modify(outNothing,
-           (LAMBDA (s:tpmAbsState):executeCom(s,sinitCom)));
+           (LAMBDA (s:tpmAbsState):executeCom(s,ABS_sinit)));
   
   %% Establish SRK
-  takeOwnershipTPM : State = 
+  TPM_TakeOwnership : State = 
      output(outNothing,
-            (LAMBDA (s:tpmAbsState) : outputCom(s,TPM_TakeOwnership)));
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_TakeOwnership)));
 
   %% Wrap new key k with parent key
-  createWrapKeyTPM(k,parent:(asymKey?)) : State = 
+  TPM_CreateWrapKey(k,parent:(asymKey?)) : State = 
      output(outNothing,
-            (LAMBDA (s:tpmAbsState) : outputCom(s,TPM_CreateWrapKey(k,parent))));
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_CreateWrapKey(k,parent))));
 		
   %% Generate and output a quote
-  quoteTPM(n:BLOB,pm:PCRMASK) : State = 
+  TPM_quote(n:BLOB,pm:PCRMASK) : State = 
      output(outNothing,
-            (LAMBDA (s:tpmAbsState) : outputCom(s,TPM_Quote(n,pm))));
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_Quote(n,pm))));
 
   %% Decrypt and output a blob (should be a key)
-  decryptTPM(d:(encrypt?)) : State =
+  TPM_Decrypt(d:(encrypt?)) : State =
      output(outNothing,
             (LAMBDA (s:tpmAbsState) : outputCom(s,decryptKeyCom(d))));
 
   %% Unseal and output a blob (should be binary or data)
-  unsealTPM(d:(seal?),k:(asymKey?)) : State = 
+  TPM_Unseal(d:(seal?),k:(asymKey?)) : State = 
      output(outNothing,
-            (LAMBDA (s:tpmAbsState): outputCom(s,TPM_Unseal(d,k))));
+            (LAMBDA (s:tpmAbsState): outputCom(s,ABS_Unseal(d,k))));
 
   %% Seal and output a blob (should be binary or data)
-  sealTPM(k:(asymKey?),data:BLOB) : State = 
+  TPM_Seal(k:(asymKey?),data:BLOB) : State = 
      output(outNothing,
-            (LAMBDA (s:tpmAbsState): outputCom(s,TPM_Seal(k,data))));
+            (LAMBDA (s:tpmAbsState): outputCom(s,ABS_Seal(k,data))));
 
   %% Extending a reset PCR is antisymmetric if the two values are not equal
   %% Let form used to defined commands for bind.  Will use command forms
   %% later in antisymmetryMonad3
   antisymmetryMonad2: THEOREM (FORALL (hv0,hv1:HV) :
     LET 
-        f1:State = extendTPM(hv0,0),
-      	f2:State = extendTPM(hv1,0) IN
+        f1:State = TPM_Extend(hv0,0),
+      	f2:State = TPM_Extend(hv1,0) IN
       (hv0/=hv1 =>
         runState(f2 >> f1 >>= unit)(tpmStartup)
         /=
@@ -395,14 +392,14 @@ tpm [ B:TYPE+, % BLOB
   antisymmetryMonad3: THEOREM (FORALL (hv0,hv1:HV) :
     hv0/=hv1 =>
        runState(
-         extendTPM(hv1,0)
-	 >> extendTPM(hv0,0)
+         TPM_Extend(hv1,0)
+	 >> TPM_Extend(hv0,0)
 	 >>= unit)
 	 (tpmStartup)
        /=
        runState(
-         extendTPM(hv0,0)
-	 >> extendTPM(hv1,0)
+         TPM_Extend(hv0,0)
+	 >> TPM_Extend(hv1,0)
 	 >>= unit)
 	 (tpmStartup))
 
@@ -411,10 +408,10 @@ tpm [ B:TYPE+, % BLOB
   %% proved - Tue Jun 12 15:31:12 CDT 2012
   resetMonad: THEOREM (FORALL (hv:HV) :
     runState(
-      powerTPM
-      >> startupTPM
-      >> senterTPM
-      >> sinitTPM
+      TPM_Init
+      >> TPM_Startup
+      >> CPU_senter
+      >> CPU_sinit
       >>= unit)
       (tpmUnknown)
     =
@@ -424,12 +421,12 @@ tpm [ B:TYPE+, % BLOB
   %% unproven - Tue Jul  3 21:20:21 CDT 2012
   quoteMonad: THEOREM (FORALL (hv:HV,n:BLOB) :
     runState(
-      powerTPM
-      >> startupTPM
-      >> senterTPM
-      >> sinitTPM
-      >> extendTPM(hv,0)
-      >> quoteTPM(n,cons(0,null))
+      TPM_Init
+      >> TPM_Startup
+      >> CPU_senter
+      >> CPU_sinit
+      >> TPM_Extend(hv,0)
+      >> TPM_quote(n,cons(0,null))
       >>= unit)
       (tpmUnknown)
     =
@@ -442,17 +439,17 @@ tpm [ B:TYPE+, % BLOB
   badNonce: THEOREM (FORALL(n1,n2:BLOB, pm:PCRMASK, s:tpmAbsState) :
      n1/=n2 =>
        runState(
-         quoteTPM(n1,pm))
+         TPM_quote(n1,pm))
 	 (s)
        /=
        runState(
-	 quoteTPM(n2,pm))
+	 TPM_quote(n2,pm))
 	 (s));
   
   %% Bad Signing Key - Man in the Middle Attack
   %% proved - Fri Jun 22 16:55:56 CDT 2012
   badSigningKey: THEOREM (FORALL(n:BLOB, pm:PCRMASK, k:(asymKey?), s:tpmAbsState) :
-     LET(a,s) = runState(quoteTPM(n,pm))(s) IN
+     LET(a,s) = runState(TPM_quote(n,pm))(s) IN
      inverse(k) /= inverse(ekVal) 
      =>
      outQuote(inverse(k),n,getPCRs(s`pcrs,pm))
@@ -464,12 +461,12 @@ tpm [ B:TYPE+, % BLOB
   checkPCRS: THEOREM (FORALL(hv:HV,pm:PCRMASK,n:BLOB) :
     LET (a,s) =
     runState(
-      powerTPM
-      >> startupTPM
-      >> senterTPM
-      >> sinitTPM
-      >> extendTPM(hv,0)
-      >> quoteTPM(n,pm)
+      TPM_Init
+      >> TPM_Startup
+      >> CPU_senter
+      >> CPU_sinit
+      >> TPM_Extend(hv,0)
+      >> TPM_quote(n,pm)
       >>= unit)
       (tpmUnknown) IN
     a
@@ -484,19 +481,19 @@ tpm [ B:TYPE+, % BLOB
   %% proved - Tue Jun 12 15:34:24 CDT 2012
   noSenter: THEOREM (FORALL (hv:HV,n:BLOB,pcrMask:PCRMASK) :
     runState(
-      powerTPM
-      >> startupTPM
-      >> senterTPM
-      >> sinitTPM
-      >> extendTPM(hv,0)
-      >> quoteTPM(n,pcrMask)
+      TPM_Init
+      >> TPM_Startup
+      >> CPU_senter
+      >> CPU_sinit
+      >> TPM_Extend(hv,0)
+      >> TPM_quote(n,pcrMask)
       >>= unit)
       (tpmUnknown)
     /=
     runState(
-      powerTPM
-      >> extendTPM(hv,0)
-      >> quoteTPM(n,pcrMask)
+      TPM_Init
+      >> TPM_Extend(hv,0)
+      >> TPM_quote(n,pcrMask)
       >>= unit)
       (tpmUnknown))
 
@@ -505,11 +502,11 @@ tpm [ B:TYPE+, % BLOB
   %% proved - Tue Jun 12 15:36:53 CDT 2012  
   decrypt_key_fail: THEOREM FORALL (k:(wrapKey?),b:BLOB) :
     LET (out,s) = runState(
-                  powerTPM
-		  >> startupTPM
-                  >> senterTPM
-                  >> sinitTPM
-                  >> decryptTPM(encrypt(k,b))
+                  TPM_Init
+		  >> TPM_Startup
+                  >> CPU_senter
+                  >> CPU_sinit
+                  >> TPM_Decrypt(encrypt(k,b))
                   >>= unit)
                   (tpmUnknown) IN
       inverse(wrappingKey(k))/=inverse(srkVal) => out = outBlob(nothing);
@@ -519,12 +516,12 @@ tpm [ B:TYPE+, % BLOB
   %% proved - Tue Jun 12 15:37:29 CDT 2012
   decrypt_key_success: THEOREM FORALL (k:(wrapKey?),b:BLOB):
     LET (out,s) = runState(
-                  powerTPM
-		  >> startupTPM
-	  	  >> senterTPM
-		  >> sinitTPM
-		  >> installKeyTPM(k)
-		  >> decryptTPM(encrypt(k,b))
+                  TPM_Init
+		  >> TPM_Startup
+	  	  >> CPU_senter
+		  >> CPU_sinit
+		  >> TPM_InstallKey(k)
+		  >> TPM_Decrypt(encrypt(k,b))
 		  >>= unit)
 		  (tpmPostInit) IN
         inverse(wrappingKey(k))=srk(s) => out=outBlob(b)
@@ -534,11 +531,11 @@ tpm [ B:TYPE+, % BLOB
   % proved - Tue Jun 12 15:37:56 CDT 2012
   install_key_success: THEOREM FORALL (k:(wrapKey?)) :
     LET (out,s) = runState(
-                  powerTPM
-      		  >> startupTPM
-		  >> senterTPM
-		  >> sinitTPM
-		  >> installKeyTPM(k)
+                  TPM_Init
+      		  >> TPM_Startup
+		  >> CPU_senter
+		  >> CPU_sinit
+		  >> TPM_InstallKey(k)
 		  >>= unit)
 		  (tpmUnknown) IN
       wrappingKey(k) = srk(s) => member(key(k),keys(s));
@@ -547,12 +544,12 @@ tpm [ B:TYPE+, % BLOB
   %% proved - Tue Jun 12 15:38:22 CDT 2012
   install_key_success2: THEOREM FORALL (j,k:(wrapKey?)) :
     LET (out,s) = runState(
-                  powerTPM
-      		  >> startupTPM
-		  >> senterTPM
-		  >> sinitTPM
-		  >> installKeyTPM(k)
-		  >> installKeyTPM(j)
+                  TPM_Init
+      		  >> TPM_Startup
+		  >> CPU_senter
+		  >> CPU_sinit
+		  >> TPM_InstallKey(k)
+		  >> TPM_InstallKey(j)
 		  >>= unit)
 		  (tpmUnknown) IN
       wrappingKey(j) = key(k) AND wrappingKey(k) = srk(s) =>
@@ -561,12 +558,12 @@ tpm [ B:TYPE+, % BLOB
   %% Unseal a secret successfully - This is not right yet 
   unseal_secret_success: THEOREM FORALL (j,k:(asymKey?),hv:HV,b:BLOB,pcrs:PCRS) :
     LET (out,s) = runState(
-                  powerTPM
-      		  >> startupTPM
-		  >> senterTPM
-		  >> sinitTPM
-		  >> extendTPM(hv,0)
-		  >> unsealTPM(seal(k,pcrs,b),j)
+                  TPM_Init
+      		  >> TPM_Startup
+		  >> CPU_senter
+		  >> CPU_sinit
+		  >> TPM_Extend(hv,0)
+		  >> TPM_Unseal(seal(k,pcrs,b),j)
 		  >>= unit)
 		  (tpmUnknown) IN
       IF j=inverse(k) AND pcrs=pcrs(s)
@@ -577,12 +574,12 @@ tpm [ B:TYPE+, % BLOB
   %% Seal a secret successfully
   seal_secret_success: THEOREM FORALL (j,k:(asymKey?),hv:HV,b:BLOB,s:tpmAbsState) :
     LET (out,s) = runState(
-     	 	  powerTPM
-      		  >> startupTPM
- 		  >> senterTPM
- 		  >> sinitTPM
- 		  >> extendTPM(hv,0)
- 		  >> sealTPM(k,b)
+     	 	  TPM_Init
+      		  >> TPM_Startup
+ 		  >> CPU_senter
+ 		  >> CPU_sinit
+ 		  >> TPM_Extend(hv,0)
+ 		  >> TPM_Seal(k,b)
 		  >>= unit)
  		  (tpmUnknown) IN
       j = inverse(k) =>
@@ -626,29 +623,29 @@ tpm [ B:TYPE+, % BLOB
   % used as predicate subtypes cannot be as we'll never guarantee the
   % output argument will be a key or a wrapped key.  This does not complicate
   % the proof, so it's not a big deal.
-  installPrevKeyTPM:[tpmAbsOutput->State] =
+  TPM_InstallPrev:[tpmAbsOutput->State] =
     useOutput(outNothing,
                (LAMBDA (a:tpmAbsOutput):
                   (LAMBDA (s:tpmAbsState):
 		    IF outKey?(a) AND wrapKey?(k(a))
-		    THEN executeCom(s,TPM_LoadKey2(k(a)))
+		    THEN executeCom(s,ABS_LoadKey2(k(a)))
 		    ELSE executeCom(s,noopCom)
 		    ENDIF)));
                  
   
   % Generate a key and immediately install it.  Note the use of bind rather
-  % sequence to capture the createWrapKeyTPM output and use it as input to
-  % the installPrevKeyTPM command.  Specifically, the output of
-  % createWrapKeyTPM is bound to a in installPrevKeyTPM then used in that
+  % sequence to capture the TPM_CreateWrapKey output and use it as input to
+  % the TPM_InstallPrev command.  Specifically, the output of
+  % TPM_CreateWrapKey is bound to a in TPM_InstallPrev then used in that
   % command.  Classic use of bind!!
   install_prev_key_success: THEOREM FORALL (k,p:(asymKey?)) :
     LET (out,s) = runState(
-                  powerTPM
-      		  >> startupTPM
-		  >> senterTPM
-		  >> sinitTPM
-                  >> createWrapKeyTPM(k,p) 
-		  >>= installPrevKeyTPM
+                  TPM_Init
+      		  >> TPM_Startup
+		  >> CPU_senter
+		  >> CPU_sinit
+                  >> TPM_CreateWrapKey(k,p) 
+		  >>= TPM_InstallPrev
 		  >>= unit)
 		  (tpmUnknown)
       IN member(p,keys(s)) OR p=srk(s)
@@ -657,15 +654,15 @@ tpm [ B:TYPE+, % BLOB
   %%install nested wrapped keys?
   nested_wrapped_keys_success: THEOREM FORALL (k,j,p:(asymKey?)) :
      LET (out,s) = runState(
-     	 	   powerTPM
-      		   >> startupTPM
-		   >> senterTPM
-		   >> sinitTPM
-		   >> takeOwnershipTPM
-		   >> createWrapKeyTPM(k,p)
-		   >>= installPrevKeyTPM
-		   >> createWrapKeyTPM(j,k)
-		   >>= installPrevKeyTPM
+     	 	   TPM_Init
+      		   >> TPM_Startup
+		   >> CPU_senter
+		   >> CPU_sinit
+		   >> TPM_TakeOwnership
+		   >> TPM_CreateWrapKey(k,p)
+		   >>= TPM_InstallPrev
+		   >> TPM_CreateWrapKey(j,k)
+		   >>= TPM_InstallPrev
 		   >>= unit)
 		   (tpmUnknown) IN
 	member(p,keys(s)) OR p=srk(s)
@@ -677,24 +674,24 @@ tpm [ B:TYPE+, % BLOB
   % Take the output of the previous command execution and attempt to unseal
   % it.  Note the use of useOutput to create a function for bind
   % rather than sequence.
-  unsealPrevSealTPM(k:(asymKey?)):[tpmAbsOutput->State] =
+  TPM_UnsealPrev(k:(asymKey?)):[tpmAbsOutput->State] =
     useOutput(outNothing,
 		(LAMBDA (a:tpmAbsOutput):
 		  (LAMBDA (s:tpmAbsState):
 		    IF outBlob?(a) AND seal?(bl(a))
-		    THEN executeCom(s, TPM_Unseal(bl(a),k))
+		    THEN executeCom(s, ABS_Unseal(bl(a),k))
 		    ELSE executeCom(s,noopCom)
 		    ENDIF)));
 
   %% Create a seal and immediately unseal it.
   unseal_prev_seal_success: THEOREM FORALL (k,j:(asymKey?),data:BLOB,pcrs:PCRS) :
     LET (out,s) = runState(
-                  powerTPM
-      		  >> startupTPM
-		  >> senterTPM
-		  >> sinitTPM
-                  >> sealTPM(k,data)
-		  >>= unsealPrevSealTPM(j)
+                  TPM_Init
+      		  >> TPM_Startup
+		  >> CPU_senter
+		  >> CPU_sinit
+                  >> TPM_Seal(k,data)
+		  >>= TPM_UnsealPrev(j)
 		  >>= unit)
 		  (tpmUnknown) IN  
 	(j=inverse(k) AND pcrs=pcrs(s))
@@ -704,13 +701,13 @@ tpm [ B:TYPE+, % BLOB
   %% Seal and unseal a secret successfully 
   seal_unseal_secret_success: THEOREM FORALL (j,k:(asymKey?),hv:HV,b:BLOB,pcrs:PCRS) :
     LET (out,s) = runState(
-                  powerTPM
-      		  >> startupTPM
-		  >> senterTPM
-		  >> sinitTPM
-		  >> extendTPM(hv,0)
-		  >> sealTPM(k,b)
-		  >>= unsealPrevSealTPM(j)
+                  TPM_Init
+      		  >> TPM_Startup
+		  >> CPU_senter
+		  >> CPU_sinit
+		  >> TPM_Extend(hv,0)
+		  >> TPM_Seal(k,b)
+		  >>= TPM_UnsealPrev(j)
 		  >>= unit)
 		  (tpmUnknown) IN
       (j=inverse(k) AND pcrs=pcrs(s))
