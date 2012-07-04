@@ -220,7 +220,7 @@ tpm [ B:TYPE+, % BLOB
        THEN executeComPostInit(s,c)
        ELSE executeComStartup(s,c)
     ENDIF;
-                    
+
   % Generate a NEW RANDOM key pair.
   createWrapKeyOut(k,parent:(asymKey?)):tpmAbsOutput = 
      outKey(wrapKey(parent,k));
@@ -326,7 +326,22 @@ tpm [ B:TYPE+, % BLOB
   TPM_Startup : State =
     modify(outNothing,
             (LAMBDA (s:tpmAbsState):executeCom(s,ABS_Startup)));
-
+  
+  %% The only command that can run and do anyting folling a TPM_Init is 
+  %% TPM_Startup.  If anything else tries to run, nothing happens.  Note
+  %% the use of an "anything" command in the first command sequence.
+  startup_after_init : THEOREM FORALL
+    (s0:tpmAbsState,a:tpmAbsOutput,c:tpmInput) :
+      NOT ABS_Startup?(c) =>
+        runState(TPM_Init
+               >> state(LAMBDA (s:tpmAbsState):(a,executeCom(s,c)))
+	       >>= unit)
+	       (s0)`2
+        =
+        runState(TPM_Init
+               >>= unit)
+	      (s0)`2
+                    
   %% Call SENTER 
   CPU_senter : State =
     modify(outNothing,

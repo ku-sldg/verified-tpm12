@@ -1,9 +1,6 @@
 (tpm
  (unique_hash 0
   (unique_hash-1 nil 3535917891 ("" (postpone) nil nil) nil shostak))
- (IMP_StateMonad_TCC1 0
-  (IMP_StateMonad_TCC1-1 nil 3550361586 ("" (existence-tcc) nil nil)
-   nil nil))
  (tpmPostInit_TCC1 0
   (tpmPostInit_TCC1-1 nil 3550353288 ("" (subtype-tcc) nil nil)
    ((ekVal const-decl "KEY" tpm nil)) nil))
@@ -96,6 +93,31 @@
     (tpmAbsState type-eq-decl nil tpm nil)
     (pcrsExtend const-decl "PCRS" pcr nil)
     (HV formal-nonempty-type-decl nil tpm nil))
+   shostak))
+ (startup_after_init 0
+  (startup_after_init-1 nil 3550428542 ("" (grind) nil nil)
+   ((srkVal const-decl "KEY" tpm nil) (ekVal const-decl "KEY" tpm nil)
+    (tpmPostInit const-decl "tpmAbsState" tpm nil)
+    (tpmAbsState type-eq-decl nil tpm nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (PCRS type-eq-decl nil pcr nil) (LOCALITY type-eq-decl nil tpm nil)
+    (KEYSET type-eq-decl nil key nil)
+    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
+    (boolean nonempty-type-decl nil booleans nil)
+    (KEY type-decl nil key nil)
+    (HV formal-nonempty-type-decl nil tpm nil)
+    (K formal-nonempty-type-decl nil tpm nil)
+    (B formal-nonempty-type-decl nil tpm nil)
+    (tpmAbsOutput type-decl nil tpm nil)
+    (put const-decl "State" StateMonad nil)
+    (TPM_Init const-decl "State" tpm nil)
+    (afterInit? const-decl "bool" tpm nil)
+    (executeComPostInit const-decl "tpmAbsState" tpm nil)
+    (executeComStartup const-decl "tpmAbsState" tpm nil)
+    (executeCom const-decl "tpmAbsState" tpm nil)
+    (>> const-decl "State" StateMonad nil)
+    (unit const-decl "State" StateMonad nil)
+    (>>= const-decl "State" StateMonad nil))
    shostak))
  (antisymmetryMonad2 0
   (antisymmetryMonad2-1 nil 3531432087
@@ -247,7 +269,10 @@
     (>>= const-decl "State" StateMonad nil))
    shostak))
  (quoteMonad_TCC1 0
-  (quoteMonad_TCC1-1 nil 3549372787 ("" (grind) nil nil) (nil) nil))
+  (quoteMonad_TCC1-1 nil 3549372787 ("" (grind) nil nil) nil nil))
+ (quoteMonad_TCC2 0
+  (quoteMonad_TCC2-1 nil 3550429520 ("" (subtype-tcc) nil nil) nil
+   nil))
  (quoteMonad 0
   (quoteMonad-1 nil 3549040969 ("" (grind) nil nil)
    ((srkVal const-decl "KEY" tpm nil) (ekVal const-decl "KEY" tpm nil)
@@ -281,7 +306,6 @@
     (CPU_senter const-decl "State" tpm nil)
     (CPU_sinit const-decl "State" tpm nil)
     (TPM_Extend const-decl "State" tpm nil)
-    (map adt-def-decl "list[T1]" list_adt_map nil)
     (getPCRs const-decl "list[PCR]" pcr nil)
     (quoteOut const-decl "tpmAbsOutput" tpm nil)
     (outputCom const-decl "tpmAbsOutput" tpm nil)
@@ -305,14 +329,12 @@
     (int nonempty-type-eq-decl nil integers nil)
     (nat nonempty-type-eq-decl nil naturalnumbers nil)
     (PCRINDEX type-eq-decl nil pcr nil)
-    (map adt-def-decl "list[T1]" list_adt_map nil)
     (non adt-accessor-decl "[(outQuote?) -> BLOB[B, K, HV]]" tpm nil)
     (pcrs adt-accessor-decl "[(outQuote?) -> list[PCR]]" tpm nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
     (number nonempty-type-decl nil numbers nil)
     (PRED type-eq-decl nil defined_types nil)
     (list type-decl nil list_adt nil)
-    (every adt-def-decl "boolean" list_adt nil)
     (AND const-decl "[bool, bool -> bool]" booleans nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
@@ -356,7 +378,6 @@
     (int nonempty-type-eq-decl nil integers nil)
     (nat nonempty-type-eq-decl nil naturalnumbers nil)
     (PCRINDEX type-eq-decl nil pcr nil)
-    (map adt-def-decl "list[T1]" list_adt_map nil)
     (asymKey adt-constructor-decl "[KVAL -> (asymKey?)]" key nil)
     (ekKeyVal const-decl "K" tpm nil)
     (non adt-accessor-decl "[(outQuote?) -> BLOB[B, K, HV]]" tpm nil)
@@ -365,7 +386,6 @@
     (number nonempty-type-decl nil numbers nil)
     (PRED type-eq-decl nil defined_types nil)
     (list type-decl nil list_adt nil)
-    (every adt-def-decl "boolean" list_adt nil)
     (AND const-decl "[bool, bool -> bool]" booleans nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
@@ -477,6 +497,9 @@
     (tpmPostInit const-decl "tpmAbsState" tpm nil)
     (ekVal const-decl "KEY" tpm nil) (srkVal const-decl "KEY" tpm nil))
    shostak))
+ (decrypt_key_fail_TCC1 0
+  (decrypt_key_fail_TCC1-1 nil 3550429520 ("" (subtype-tcc) nil nil)
+   nil nil))
  (decrypt_key_fail 0
   (decrypt_key_fail-1 nil 3535901403
    ("" (skosimp*)
@@ -833,22 +856,22 @@
     (K formal-nonempty-type-decl nil tpm nil)
     (B formal-nonempty-type-decl nil tpm nil)
     (tpmAbsOutput type-decl nil tpm nil)
-    (put const-decl "State" StateMonad nil) nil
+    (put const-decl "State" StateMonad nil)
     (afterInit? const-decl "bool" tpm nil)
-    (modify const-decl "State" StateMonad nil) nil
+    (modify const-decl "State" StateMonad nil)
     (tpmStartup const-decl "tpmAbsState" tpm nil)
     (executeComPostInit const-decl "tpmAbsState" tpm nil)
     (executeCom const-decl "tpmAbsState" tpm nil)
-    (>> const-decl "State" StateMonad nil) nil
+    (>> const-decl "State" StateMonad nil)
     (pcrsResetSenterState const-decl "tpmAbsState" tpm nil)
     (pcrsReset const-decl "PCRS" pcr nil)
     (pcrsExtend const-decl "PCRS" pcr nil)
     (extendState const-decl "tpmAbsState" tpm nil)
     (changeLocalityState const-decl "tpmAbsState" tpm nil)
-    (executeComStartup const-decl "tpmAbsState" tpm nil) nil nil
+    (executeComStartup const-decl "tpmAbsState" tpm nil)
     (sealOut const-decl "tpmAbsOutput" tpm nil)
     (outputCom const-decl "tpmAbsOutput" tpm nil)
-    (output const-decl "State" StateMonad nil) nil
+    (output const-decl "State" StateMonad nil)
     (unit const-decl "State" StateMonad nil)
     (>>= const-decl "State" StateMonad nil))
    nil))
@@ -869,22 +892,22 @@
     (K formal-nonempty-type-decl nil tpm nil)
     (B formal-nonempty-type-decl nil tpm nil)
     (tpmAbsOutput type-decl nil tpm nil)
-    (put const-decl "State" StateMonad nil) nil
+    (put const-decl "State" StateMonad nil)
     (afterInit? const-decl "bool" tpm nil)
-    (modify const-decl "State" StateMonad nil) nil
+    (modify const-decl "State" StateMonad nil)
     (tpmStartup const-decl "tpmAbsState" tpm nil)
     (executeComPostInit const-decl "tpmAbsState" tpm nil)
     (executeCom const-decl "tpmAbsState" tpm nil)
-    (>> const-decl "State" StateMonad nil) nil
+    (>> const-decl "State" StateMonad nil)
     (pcrsResetSenterState const-decl "tpmAbsState" tpm nil)
     (pcrsReset const-decl "PCRS" pcr nil)
     (pcrsExtend const-decl "PCRS" pcr nil)
     (extendState const-decl "tpmAbsState" tpm nil)
     (changeLocalityState const-decl "tpmAbsState" tpm nil)
-    (executeComStartup const-decl "tpmAbsState" tpm nil) nil nil
+    (executeComStartup const-decl "tpmAbsState" tpm nil)
     (sealOut const-decl "tpmAbsOutput" tpm nil)
     (outputCom const-decl "tpmAbsOutput" tpm nil)
-    (output const-decl "State" StateMonad nil) nil
+    (output const-decl "State" StateMonad nil)
     (unit const-decl "State" StateMonad nil)
     (>>= const-decl "State" StateMonad nil))
    nil))
@@ -1112,23 +1135,23 @@
     (K formal-nonempty-type-decl nil tpm nil)
     (B formal-nonempty-type-decl nil tpm nil)
     (tpmAbsOutput type-decl nil tpm nil)
-    (put const-decl "State" StateMonad nil) nil
+    (put const-decl "State" StateMonad nil)
     (senterResetTPM const-decl "State" tpm nil)
     (>> const-decl "State" StateMonad nil)
     (pcrsExtend const-decl "PCRS" pcr nil)
     (extendState const-decl "tpmAbsState" tpm nil)
     (executeCom const-decl "tpmAbsState" tpm nil)
-    (modify const-decl "State" StateMonad nil) nil
+    (modify const-decl "State" StateMonad nil)
     (senterHashSinitTPM const-decl "State" tpm nil)
     (pcrsReset const-decl "PCRS" pcr nil)
-    (changeLocalityState const-decl "tpmAbsState" tpm nil) nil
+    (changeLocalityState const-decl "tpmAbsState" tpm nil)
     (takeOwnershipOut const-decl "tpmAbsOutput" tpm nil)
     (outputCom const-decl "tpmAbsOutput" tpm nil)
-    (output const-decl "State" StateMonad nil) nil
-    (createWrapKeyOut const-decl "tpmAbsOutput" tpm nil) nil
+    (output const-decl "State" StateMonad nil)
+    (createWrapKeyOut const-decl "tpmAbsOutput" tpm nil)
     (member const-decl "bool" sets nil)
     (addKey const-decl "KEYSET" key nil)
-    (installKeyState const-decl "tpmAbsState" tpm nil) nil
+    (installKeyState const-decl "tpmAbsState" tpm nil)
     (useOutput const-decl "[A -> State]" StateMonad nil)
     (emptyset const-decl "set" sets nil)
     (>>= const-decl "State" StateMonad nil)
@@ -1153,22 +1176,22 @@
     (K formal-nonempty-type-decl nil tpm nil)
     (B formal-nonempty-type-decl nil tpm nil)
     (tpmAbsOutput type-decl nil tpm nil)
-    (put const-decl "State" StateMonad nil) nil
+    (put const-decl "State" StateMonad nil)
     (afterInit? const-decl "bool" tpm nil)
-    (modify const-decl "State" StateMonad nil) nil
+    (modify const-decl "State" StateMonad nil)
     (tpmStartup const-decl "tpmAbsState" tpm nil)
     (executeComPostInit const-decl "tpmAbsState" tpm nil)
     (executeCom const-decl "tpmAbsState" tpm nil)
-    (>> const-decl "State" StateMonad nil) nil
+    (>> const-decl "State" StateMonad nil)
     (pcrsResetSenterState const-decl "tpmAbsState" tpm nil)
     (pcrsReset const-decl "PCRS" pcr nil)
     (pcrsExtend const-decl "PCRS" pcr nil)
     (extendState const-decl "tpmAbsState" tpm nil)
     (changeLocalityState const-decl "tpmAbsState" tpm nil)
-    (executeComStartup const-decl "tpmAbsState" tpm nil) nil
+    (executeComStartup const-decl "tpmAbsState" tpm nil)
     (sealOut const-decl "tpmAbsOutput" tpm nil)
     (outputCom const-decl "tpmAbsOutput" tpm nil)
-    (output const-decl "State" StateMonad nil) nil nil
+    (output const-decl "State" StateMonad nil)
     (useOutput const-decl "[A -> State]" StateMonad nil)
     (>>= const-decl "State" StateMonad nil)
     (unit const-decl "State" StateMonad nil))
@@ -1191,22 +1214,22 @@
     (K formal-nonempty-type-decl nil tpm nil)
     (B formal-nonempty-type-decl nil tpm nil)
     (tpmAbsOutput type-decl nil tpm nil)
-    (put const-decl "State" StateMonad nil) nil
+    (put const-decl "State" StateMonad nil)
     (afterInit? const-decl "bool" tpm nil)
-    (modify const-decl "State" StateMonad nil) nil
+    (modify const-decl "State" StateMonad nil)
     (tpmStartup const-decl "tpmAbsState" tpm nil)
     (executeComPostInit const-decl "tpmAbsState" tpm nil)
     (executeCom const-decl "tpmAbsState" tpm nil)
-    (>> const-decl "State" StateMonad nil) nil
+    (>> const-decl "State" StateMonad nil)
     (pcrsResetSenterState const-decl "tpmAbsState" tpm nil)
     (pcrsReset const-decl "PCRS" pcr nil)
     (pcrsExtend const-decl "PCRS" pcr nil)
     (extendState const-decl "tpmAbsState" tpm nil)
     (changeLocalityState const-decl "tpmAbsState" tpm nil)
-    (executeComStartup const-decl "tpmAbsState" tpm nil) nil
+    (executeComStartup const-decl "tpmAbsState" tpm nil)
     (sealOut const-decl "tpmAbsOutput" tpm nil)
     (outputCom const-decl "tpmAbsOutput" tpm nil)
-    (output const-decl "State" StateMonad nil) nil nil
+    (output const-decl "State" StateMonad nil)
     (useOutput const-decl "[A -> State]" StateMonad nil)
     (>>= const-decl "State" StateMonad nil)
     (unit const-decl "State" StateMonad nil))
@@ -1270,22 +1293,22 @@
     (K formal-nonempty-type-decl nil tpm nil)
     (B formal-nonempty-type-decl nil tpm nil)
     (tpmAbsOutput type-decl nil tpm nil)
-    (put const-decl "State" StateMonad nil) nil
+    (put const-decl "State" StateMonad nil)
     (afterInit? const-decl "bool" tpm nil)
-    (modify const-decl "State" StateMonad nil) nil
+    (modify const-decl "State" StateMonad nil)
     (tpmStartup const-decl "tpmAbsState" tpm nil)
     (executeComPostInit const-decl "tpmAbsState" tpm nil)
     (executeCom const-decl "tpmAbsState" tpm nil)
-    (>> const-decl "State" StateMonad nil) nil
+    (>> const-decl "State" StateMonad nil)
     (pcrsResetSenterState const-decl "tpmAbsState" tpm nil)
     (pcrsReset const-decl "PCRS" pcr nil)
     (pcrsExtend const-decl "PCRS" pcr nil)
     (extendState const-decl "tpmAbsState" tpm nil)
     (changeLocalityState const-decl "tpmAbsState" tpm nil)
-    (executeComStartup const-decl "tpmAbsState" tpm nil) nil nil
+    (executeComStartup const-decl "tpmAbsState" tpm nil)
     (sealOut const-decl "tpmAbsOutput" tpm nil)
     (outputCom const-decl "tpmAbsOutput" tpm nil)
-    (output const-decl "State" StateMonad nil) nil nil
+    (output const-decl "State" StateMonad nil)
     (useOutput const-decl "[A -> State]" StateMonad nil)
     (>>= const-decl "State" StateMonad nil)
     (unit const-decl "State" StateMonad nil))
@@ -1308,22 +1331,22 @@
     (K formal-nonempty-type-decl nil tpm nil)
     (B formal-nonempty-type-decl nil tpm nil)
     (tpmAbsOutput type-decl nil tpm nil)
-    (put const-decl "State" StateMonad nil) nil
+    (put const-decl "State" StateMonad nil)
     (afterInit? const-decl "bool" tpm nil)
-    (modify const-decl "State" StateMonad nil) nil
+    (modify const-decl "State" StateMonad nil)
     (tpmStartup const-decl "tpmAbsState" tpm nil)
     (executeComPostInit const-decl "tpmAbsState" tpm nil)
     (executeCom const-decl "tpmAbsState" tpm nil)
-    (>> const-decl "State" StateMonad nil) nil
+    (>> const-decl "State" StateMonad nil)
     (pcrsResetSenterState const-decl "tpmAbsState" tpm nil)
     (pcrsReset const-decl "PCRS" pcr nil)
     (pcrsExtend const-decl "PCRS" pcr nil)
     (extendState const-decl "tpmAbsState" tpm nil)
     (changeLocalityState const-decl "tpmAbsState" tpm nil)
-    (executeComStartup const-decl "tpmAbsState" tpm nil) nil nil
+    (executeComStartup const-decl "tpmAbsState" tpm nil)
     (sealOut const-decl "tpmAbsOutput" tpm nil)
     (outputCom const-decl "tpmAbsOutput" tpm nil)
-    (output const-decl "State" StateMonad nil) nil nil
+    (output const-decl "State" StateMonad nil)
     (useOutput const-decl "[A -> State]" StateMonad nil)
     (>>= const-decl "State" StateMonad nil)
     (unit const-decl "State" StateMonad nil))
