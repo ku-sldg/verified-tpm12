@@ -267,7 +267,7 @@ tpm [ B:TYPE+, % BLOB
   %% or remains the same
   %% unproven - Wed Jun 13 23:15:36 CDT 2012
   monotonic_locality: THEOREM (FORALL (s:tpmAbsState,c:tpmInput) :
-    not(offCom?(c) or TPM_Init?(c)) =>
+    not(offCom?(c) or TPM_Init?(c) or TPM_Startup?(c)) =>
       locality(s) >= locality(executeCom(s,c)));
 
   %% Minor Support Lemmas
@@ -321,17 +321,30 @@ tpm [ B:TYPE+, % BLOB
   %% TPM is off
   offTPM : State = put(outNothing,tpmUnknown);
 
-  %% Power up the TPM
+  %% Power up the TPM and hit the TPM_Init signal
   powerTPM : State = put(outNothing,tpmPostInit);
 
-  %% Reset the TPM by senter call
+  %% Start up the TPM after TPM_Init
+  startupTPM : State =
+    modify(outNothing,
+            (LAMBDA (s:tpmAbsState):executeCom(s,TPM_Startup)));
+
+  %% Call SENTER 
+  senterTPM : State =
+    modify(outNothing,
+           (LAMBDA (s:tpmAbsState):executeCom(s,senterCom)));
+
+  %% Reset the TPM by senter call - obscolete
   senterResetTPM : State = put(outNothing,tpmStartup);
 
-  %% Measure sinit by senter call
+  %% Measure sinit by senter call - obscolete
   senterHashSinitTPM : State = extendTPM(hash(sinit),0);
 
   %% Call sinit for initial measurements - currently unused
-  sinitTPM : State = extendTPM(hash(mle),0);
+%%  sinitTPM : State = extendTPM(hash(mle),0);
+  sinitTPM : State =
+    modify(outNothing,
+           (LAMBDA (s:tpmAbsState):executeCom(s,sinitCom)));
   
   %% Establish SRK
   takeOwnershipTPM : State = 
@@ -399,29 +412,29 @@ tpm [ B:TYPE+, % BLOB
   resetMonad: THEOREM (FORALL (hv:HV) :
     runState(
       powerTPM
-      >> senterResetTPM
-      >> senterHashSinitTPM
-      >> changeLocalityTPM
+      >> startupTPM
+      >> senterTPM
+      >> sinitTPM
       >>= unit)
       (tpmUnknown)
     =
-    (outNothing,changeLocalityState(extendState(tpmStartup,0,hash(sinit)))))
+    (outNothing,changeLocalityState(changeLocalityState(extendState((extendState(tpmStartup,0,hash(sinit))),0,hash(mle))))))
 
   %% Prove that quote generation returns the correct PCR
-  %% proved - Tue Jun 12 15:33:33 CDT 2012
+  %% unproven - Tue Jul  3 21:20:21 CDT 2012
   quoteMonad: THEOREM (FORALL (hv:HV,n:BLOB) :
     runState(
       powerTPM
-      >> senterResetTPM
-      >> senterHashSinitTPM
-      >> changeLocalityTPM
+      >> startupTPM
+      >> senterTPM
+      >> sinitTPM
       >> extendTPM(hv,0)
       >> quoteTPM(n,cons(0,null))
       >>= unit)
       (tpmUnknown)
     =
-    (outQuote(inverse(ekVal),n,cons(extend(extend(reset,hash(sinit)),hv),null)),
-      changeLocalityState(extendState(extendState(tpmStartup,0,hash(sinit)),0,hv))))
+    (outQuote(inverse(ekVal),n,cons(extend(extend(extend(reset,hash(sinit)),hash(mle)),hv),null)),
+      changeLocalityState(changeLocalityState(extendState(extendState(extendState(tpmStartup,0,hash(sinit)),0,hash(mle)),0,hv)))))
 
  
   %% If nonces don't match, quotes don't match
@@ -452,9 +465,9 @@ tpm [ B:TYPE+, % BLOB
     LET (a,s) =
     runState(
       powerTPM
-      >> senterResetTPM
-      >> senterHashSinitTPM
-      >> changeLocalityTPM
+      >> startupTPM
+      >> senterTPM
+      >> sinitTPM
       >> extendTPM(hv,0)
       >> quoteTPM(n,pm)
       >>= unit)
@@ -472,9 +485,9 @@ tpm [ B:TYPE+, % BLOB
   noSenter: THEOREM (FORALL (hv:HV,n:BLOB,pcrMask:PCRMASK) :
     runState(
       powerTPM
-      >> senterResetTPM
-      >> senterHashSinitTPM
-      >> changeLocalityTPM
+      >> startupTPM
+      >> senterTPM
+      >> sinitTPM
       >> extendTPM(hv,0)
       >> quoteTPM(n,pcrMask)
       >>= unit)
@@ -493,9 +506,9 @@ tpm [ B:TYPE+, % BLOB
   decrypt_key_fail: THEOREM FORALL (k:(wrapKey?),b:BLOB) :
     LET (out,s) = runState(
                   powerTPM
-                  >> senterResetTPM
-                  >> senterHashSinitTPM
-		  >> changeLocalityTPM
+		  >> startupTPM
+                  >> senterTPM
+                  >> sinitTPM
                   >> decryptTPM(encrypt(k,b))
                   >>= unit)
                   (tpmUnknown) IN
@@ -507,9 +520,9 @@ tpm [ B:TYPE+, % BLOB
   decrypt_key_success: THEOREM FORALL (k:(wrapKey?),b:BLOB):
     LET (out,s) = runState(
                   powerTPM
-	  	  >> senterResetTPM
-		  >> senterHashSinitTPM
-		  >> changeLocalityTPM
+		  >> startupTPM
+	  	  >> senterTPM
+		  >> sinitTPM
 		  >> installKeyTPM(k)
 		  >> decryptTPM(encrypt(k,b))
 		  >>= unit)
@@ -522,9 +535,9 @@ tpm [ B:TYPE+, % BLOB
   install_key_success: THEOREM FORALL (k:(wrapKey?)) :
     LET (out,s) = runState(
                   powerTPM
-		  >> senterResetTPM
-		  >> senterHashSinitTPM
-		  >> changeLocalityTPM
+      		  >> startupTPM
+		  >> senterTPM
+		  >> sinitTPM
 		  >> installKeyTPM(k)
 		  >>= unit)
 		  (tpmUnknown) IN
@@ -535,9 +548,9 @@ tpm [ B:TYPE+, % BLOB
   install_key_success2: THEOREM FORALL (j,k:(wrapKey?)) :
     LET (out,s) = runState(
                   powerTPM
-		  >> senterResetTPM
-		  >> senterHashSinitTPM
-		  >> changeLocalityTPM
+      		  >> startupTPM
+		  >> senterTPM
+		  >> sinitTPM
 		  >> installKeyTPM(k)
 		  >> installKeyTPM(j)
 		  >>= unit)
@@ -549,9 +562,9 @@ tpm [ B:TYPE+, % BLOB
   unseal_secret_success: THEOREM FORALL (j,k:(asymKey?),hv:HV,b:BLOB,pcrs:PCRS) :
     LET (out,s) = runState(
                   powerTPM
-		  >> senterResetTPM
-		  >> senterHashSinitTPM
-		  >> changeLocalityTPM
+      		  >> startupTPM
+		  >> senterTPM
+		  >> sinitTPM
 		  >> extendTPM(hv,0)
 		  >> unsealTPM(seal(k,pcrs,b),j)
 		  >>= unit)
@@ -565,9 +578,9 @@ tpm [ B:TYPE+, % BLOB
   seal_secret_success: THEOREM FORALL (j,k:(asymKey?),hv:HV,b:BLOB,s:tpmAbsState) :
     LET (out,s) = runState(
      	 	  powerTPM
- 		  >> senterResetTPM
- 		  >> senterHashSinitTPM
- 		  >> changeLocalityTPM
+      		  >> startupTPM
+ 		  >> senterTPM
+ 		  >> sinitTPM
  		  >> extendTPM(hv,0)
  		  >> sealTPM(k,b)
 		  >>= unit)
@@ -631,7 +644,9 @@ tpm [ B:TYPE+, % BLOB
   install_prev_key_success: THEOREM FORALL (k,p:(asymKey?)) :
     LET (out,s) = runState(
                   powerTPM
-		  >> senterResetTPM
+      		  >> startupTPM
+		  >> senterTPM
+		  >> sinitTPM
                   >> createWrapKeyTPM(k,p) 
 		  >>= installPrevKeyTPM
 		  >>= unit)
@@ -643,9 +658,9 @@ tpm [ B:TYPE+, % BLOB
   nested_wrapped_keys_success: THEOREM FORALL (k,j,p:(asymKey?)) :
      LET (out,s) = runState(
      	 	   powerTPM
-		   >> senterResetTPM
-		   >> senterHashSinitTPM
-		   >> changeLocalityTPM
+      		   >> startupTPM
+		   >> senterTPM
+		   >> sinitTPM
 		   >> takeOwnershipTPM
 		   >> createWrapKeyTPM(k,p)
 		   >>= installPrevKeyTPM
@@ -675,7 +690,9 @@ tpm [ B:TYPE+, % BLOB
   unseal_prev_seal_success: THEOREM FORALL (k,j:(asymKey?),data:BLOB,pcrs:PCRS) :
     LET (out,s) = runState(
                   powerTPM
-		  >> senterResetTPM
+      		  >> startupTPM
+		  >> senterTPM
+		  >> sinitTPM
                   >> sealTPM(k,data)
 		  >>= unsealPrevSealTPM(j)
 		  >>= unit)
@@ -688,9 +705,9 @@ tpm [ B:TYPE+, % BLOB
   seal_unseal_secret_success: THEOREM FORALL (j,k:(asymKey?),hv:HV,b:BLOB,pcrs:PCRS) :
     LET (out,s) = runState(
                   powerTPM
-		  >> senterResetTPM
-		  >> senterHashSinitTPM
-		  >> changeLocalityTPM
+      		  >> startupTPM
+		  >> senterTPM
+		  >> sinitTPM
 		  >> extendTPM(hv,0)
 		  >> sealTPM(k,b)
 		  >>= unsealPrevSealTPM(j)
