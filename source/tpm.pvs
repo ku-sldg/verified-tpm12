@@ -44,7 +44,8 @@ tpm [ B:TYPE+, % BLOB
     encryptCom(en:BLOB) : encryptCom? % unimplemented
     %% Startup commands
     TPM_Init : TPM_Init? % TPM goes into a state where only TPM_startup
-                         % is allowed.
+                         % is allowed.  This is a hardware signal and cannot
+			 % be invoked by software
     TPM_Startup : TPM_Startup? % clear - all variables back to default values
                                % save - restore from TPM_SaveState
 			       % deactivated - turn off and wait for TPM_init
@@ -53,7 +54,6 @@ tpm [ B:TYPE+, % BLOB
     TPM_LoadKey2(lk:(wrapKey?)): TPM_LoadKey2? 
     noopCom : noopCom?
     offCom : offCom?
-    powerCom : powerCom?
     TPM_Quote(nonce:BLOB,pm:PCRMASK) : TPM_Quote? % partially implemented
     revokeKeyCom(rk:(wrapKey?)): revokeKeyCom?
     senterCom : senterCom? % implemented all actions as one senter
@@ -97,6 +97,7 @@ tpm [ B:TYPE+, % BLOB
 
   %% Abstract TPM State with keys, PCR array and locality
   tpmAbsState : TYPE = [#
+                       postInit : bool,
                        srk : (asymKey?),
 		       ek : (asymKey?),
 		       keys : KEYSET,
@@ -112,8 +113,9 @@ tpm [ B:TYPE+, % BLOB
   tpmUnknown : tpmAbsState
 
   %% Power on state
-  tpmPower : tpmAbsState = (#
+  tpmPostInit : tpmAbsState = (#
                          pcrs:=pcrsPower
+			 , postInit:=true
                          , locality:=4
 			 , keys:=emptyset
 			 , srk:=inverse(srkVal)
@@ -121,13 +123,18 @@ tpm [ B:TYPE+, % BLOB
 			 #);
 
   %% Standard initial state following reset
-  tpmReset : tpmAbsState = (#
+  tpmStartup : tpmAbsState = (#
                          pcrs:=pcrsReset
+			 , postInit:=false
 			 , locality:=4
 			 , keys:=emptyset
 			 , srk:=inverse(srkVal)
 			 , ek:=inverse(ekVal)
 			 #);
+
+  %% Predicate to determine if startup has occured
+  afterInit?(s:tpmAbsState):bool = postInit(s);
+  afterStartup?(s:tpmAbsState):bool = NOT postInit(s);
 
   %% Standard operations on TPM state definition above.  All such
   %% functions end with State to indicate they operate on the state
@@ -174,15 +181,23 @@ tpm [ B:TYPE+, % BLOB
   %% generates the corresponding output.  Thus, to execute any
   %% operation, both executeCom and outputCom must be used
 
-  %% Execute a command on state generating a new state.
-  executeCom(s:tpmAbsState,c:tpmInput) : tpmAbsState = 
+  %% Run if TPM_Init has run but TPM_Startup has not
+  executeComPostInit(s:(afterInit?),c:tpmInput) : tpmAbsState =
+    CASES c OF
+      TPM_Startup : tpmStartup
+      ELSE s
+    ENDCASES;
+
+  %% Run if TPM_Startup has run
+  executeComStartup(s:(afterStartup?),c:tpmInput) : tpmAbsState = 
     CASES c OF
       TPM_Extend(h,n) : extendState(s,n,h),
       TPM_LoadKey2(k): installKeyState(s,k), 
       revokeKeyCom(k): revokeKeyState(s,k),
       noopCom : s,
       offCom : tpmUnknown,
-      powerCom : tpmPower,
+      TPM_Init : tpmPostInit,
+      TPM_Startup : s,
       senterCom : 
         changeLocalityState(extendState(pcrsResetSenterState(s),0,hash(sinit))),
       sinitCom : changeLocalityState(extendState(s,0,hash(mle))),
@@ -192,10 +207,17 @@ tpm [ B:TYPE+, % BLOB
       TPM_Seal(k,data) : s,
       TPM_TakeOwnership : s,
       TPM_CreateWrapKey(k,parent): s
-%      encryptCom(b) : encryptState(s,b), % unimplemented
       ELSE s
   ENDCASES;
   
+  %% Execute a command on state generating a new state.  Commands execution
+  %% should be blocked if startup has not run and postInit=true.
+  executeCom(s:tpmAbsState,c:tpmInput) : tpmAbsState =
+    IF afterInit?(s)
+       THEN executeComPostInit(s,c)
+       ELSE executeComStartup(s,c)
+    ENDIF;
+                    
   % Generate a NEW RANDOM key pair.
   createWrapKeyOut(k,parent:(asymKey?)):tpmAbsOutput = 
      outKey(wrapKey(parent,k));
@@ -228,7 +250,7 @@ tpm [ B:TYPE+, % BLOB
       revokeKeyCom(k): outNothing,
       noopCom : outNothing,
       offCom : outNothing,
-      powerCom : outNothing,
+      TPM_Init : outNothing,
       senterCom : outNothing,
       sinitCom : outNothing,
       TPM_Quote(n,pm) : quoteOut(s,n,pm),
@@ -237,7 +259,6 @@ tpm [ B:TYPE+, % BLOB
       TPM_Seal(k,data) : sealOut(s,k,data),
       TPM_TakeOwnership : takeOwnershipOut,
       TPM_CreateWrapKey(k,parent) : createWrapKeyOut(k,parent)
-%      encryptCom(b) : encryptState(s,b), % unimplemented
       ELSE outNothing
   ENDCASES;
 
@@ -246,7 +267,7 @@ tpm [ B:TYPE+, % BLOB
   %% or remains the same
   %% unproven - Wed Jun 13 23:15:36 CDT 2012
   monotonic_locality: THEOREM (FORALL (s:tpmAbsState,c:tpmInput) :
-    not(offCom?(c) or powerCom?(c)) =>
+    not(offCom?(c) or TPM_Init?(c)) =>
       locality(s) >= locality(executeCom(s,c)));
 
   %% Minor Support Lemmas
@@ -263,10 +284,10 @@ tpm [ B:TYPE+, % BLOB
                  (LAMBDA (s:tpmAbsState):s WITH [`pcrs:=pcrsExtend(pcrs(s),0,hv1)])) IN
       hv0/=hv1 =>
         runState(
-          f2 >>= (LAMBDA (x:tpmAbsOutput): f1 >>= unit))(tpmReset)
+          f2 >>= (LAMBDA (x:tpmAbsOutput): f1 >>= unit))(tpmStartup)
         /=
         runState(
-          f1 >>= (LAMBDA (x:tpmAbsOutput): f2 >>= unit))(tpmReset))
+          f1 >>= (LAMBDA (x:tpmAbsOutput): f2 >>= unit))(tpmStartup))
 
   %% TPM Command Definitions - Note that all commands used by the TPM
   %% have the TPM suffix to distinguish from operations on tpm state.
@@ -301,10 +322,10 @@ tpm [ B:TYPE+, % BLOB
   offTPM : State = put(outNothing,tpmUnknown);
 
   %% Power up the TPM
-  powerTPM : State = put(outNothing,tpmPower);
+  powerTPM : State = put(outNothing,tpmPostInit);
 
   %% Reset the TPM by senter call
-  senterResetTPM : State = put(outNothing,tpmReset);
+  senterResetTPM : State = put(outNothing,tpmStartup);
 
   %% Measure sinit by senter call
   senterHashSinitTPM : State = extendTPM(hash(sinit),0);
@@ -350,9 +371,9 @@ tpm [ B:TYPE+, % BLOB
         f1:State = extendTPM(hv0,0),
       	f2:State = extendTPM(hv1,0) IN
       (hv0/=hv1 =>
-        runState(f2 >> f1 >>= unit)(tpmReset)
+        runState(f2 >> f1 >>= unit)(tpmStartup)
         /=
-        runState(f1 >> f2 >>= unit)(tpmReset)))
+        runState(f1 >> f2 >>= unit)(tpmStartup)))
 
 
   %% Extending a reset PCR is antisymmetric if the two values are not equal.
@@ -364,13 +385,13 @@ tpm [ B:TYPE+, % BLOB
          extendTPM(hv1,0)
 	 >> extendTPM(hv0,0)
 	 >>= unit)
-	 (tpmReset)
+	 (tpmStartup)
        /=
        runState(
          extendTPM(hv0,0)
 	 >> extendTPM(hv1,0)
 	 >>= unit)
-	 (tpmReset))
+	 (tpmStartup))
 
   %% Prove that senter after power up results in reset PCRs followed by sinit
   %% measurement.
@@ -384,7 +405,7 @@ tpm [ B:TYPE+, % BLOB
       >>= unit)
       (tpmUnknown)
     =
-    (outNothing,changeLocalityState(extendState(tpmReset,0,hash(sinit)))))
+    (outNothing,changeLocalityState(extendState(tpmStartup,0,hash(sinit)))))
 
   %% Prove that quote generation returns the correct PCR
   %% proved - Tue Jun 12 15:33:33 CDT 2012
@@ -400,7 +421,7 @@ tpm [ B:TYPE+, % BLOB
       (tpmUnknown)
     =
     (outQuote(inverse(ekVal),n,cons(extend(extend(reset,hash(sinit)),hv),null)),
-      changeLocalityState(extendState(extendState(tpmReset,0,hash(sinit)),0,hv))))
+      changeLocalityState(extendState(extendState(tpmStartup,0,hash(sinit)),0,hv))))
 
  
   %% If nonces don't match, quotes don't match
@@ -492,7 +513,7 @@ tpm [ B:TYPE+, % BLOB
 		  >> installKeyTPM(k)
 		  >> decryptTPM(encrypt(k,b))
 		  >>= unit)
-		  (tpmPower) IN
+		  (tpmPostInit) IN
         inverse(wrappingKey(k))=srk(s) => out=outBlob(b)
 
 
@@ -561,28 +582,28 @@ tpm [ B:TYPE+, % BLOB
            (state(LAMBDA (s:tpmAbsState) : (outNat(3),s)))
   test1b: THEOREM (runState(unit(outNat(3)))) =
            (runState(state(LAMBDA (s:tpmAbsState) : (outNat(3),s))))
-  test1c: THEOREM (runState(unit(outNat(3))))(tpmReset) =
-           (runState(state(LAMBDA (s:tpmAbsState) : (outNat(3),s))))(tpmReset)
+  test1c: THEOREM (runState(unit(outNat(3))))(tpmStartup) =
+           (runState(state(LAMBDA (s:tpmAbsState) : (outNat(3),s))))(tpmStartup)
 
-  test2:  THEOREM (runState(unit(outNat(3))))(tpmReset) = (outNat(3),tpmReset)
+  test2:  THEOREM (runState(unit(outNat(3))))(tpmStartup) = (outNat(3),tpmStartup)
 
   % Random hash values
   hv0, hv1, hv2 : HV
 
   % reset followed by a copy
   test3: THEOREM
-    runState(modify(outNat(0),(LAMBDA (s:tpmAbsState):s)) >>= unit)(tpmReset)
+    runState(modify(outNat(0),(LAMBDA (s:tpmAbsState):s)) >>= unit)(tpmStartup)
     =
-    (outNat(0),tpmReset)
+    (outNat(0),tpmStartup)
 
   % reset followed by two copies
   test4: THEOREM
     runState(
        modify(outNat(0),(LAMBDA (s:tpmAbsState):s)) >>=
        (LAMBDA (x:tpmAbsOutput):
-         modify(outNat(1),(LAMBDA (s:tpmAbsState):s)) >>= unit))(tpmReset)
+         modify(outNat(1),(LAMBDA (s:tpmAbsState):s)) >>= unit))(tpmStartup)
      =
-    (outNat(1),tpmReset)
+    (outNat(1),tpmStartup)
 
   % Take the output of the previous command execution and attempt to install
   % it as akey.  Note the use of useOutput to create a function for bind
