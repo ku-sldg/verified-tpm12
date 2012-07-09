@@ -65,6 +65,17 @@ tpm [ B:TYPE+, % BLOB
     noopCom : noopCom?
     offCom : offCom?
     revokeKeyCom(rk:(wrapKey?)): revokeKeyCom?
+<<<<<<< HEAD
+    senterCom : senterCom? % implemented all actions as one senter
+    sinitCom : sinitCom? % partially implemented
+    TPM_Unseal(s:(seal?),uk:(asymKey?)) : TPM_Unseal?   
+    TPM_Seal(sk:(asymKey?),data:BLOB) : TPM_Seal?
+    TPM_TakeOwnership : TPM_TakeOwnership?
+    TPM_CreateWrapKey(k,parentk:(asymKey?),k_a:AUTHDATA): TPM_CreateWrapKey?
+    % TPM_CreateWrapKey(parent,authdata_e,key_type,hmac_parent):blob(key_pub,package(key_priv,authdata)_encrypted with parent) %(don't store key... just return it)
+    % TPM_LoadKey2(blob(key)):handle %(pointer to key stored in memory)
+=======
+>>>>>>> refs/heads/master
   END tpmInput;
 
   %% State monad output type
@@ -86,7 +97,7 @@ tpm [ B:TYPE+, % BLOB
 
   %% Locality type - check with spec
   LOCALITY : TYPE = {n:nat | n<=4};
-
+  
   %% Uninterpreted Key values.
   ekKeyVal : K;
   srkKeyVal : K;
@@ -208,6 +219,21 @@ tpm [ B:TYPE+, % BLOB
       ABS_sinit : changeLocalityState(extendState(s,0,hash(mle))),
       ABS_Quote(n,pm) : s,
       decryptKeyCom(d) : s,
+<<<<<<< HEAD
+      TPM_Unseal(d,k) : s,
+      TPM_Seal(k,data) : s,
+      TPM_TakeOwnership : s,
+      TPM_CreateWrapKey(k,parent,a): s
+%      encryptCom(b) : encryptState(s,b), % unimplemented
+      ELSE s
+  ENDCASES;
+  
+  % Creates a new TPM key. The new key is returned to the user, with the 
+  % private part, the authdata, and key attributes encrypted with another 
+  % TPM key, called the parent key 
+  createWrapKeyOut(k,parent:(asymKey?),a:AUTHDATA):tpmAbsOutput = 
+     outKey(wrapKey(parent,k,a));
+=======
       ABS_Unseal(d,k) : s,
       ABS_Seal(k,data) : s,
       ABS_TakeOwnership : s,
@@ -226,6 +252,7 @@ tpm [ B:TYPE+, % BLOB
   % Generate a NEW RANDOM key pair.
   createWrapKeyOut(k,parent:(asymKey?)):tpmAbsOutput = 
      outKey(wrapKey(parent,k));
+>>>>>>> refs/heads/master
 
   % NEED TO ENSURE NEW, RANDOM SRK KEY PAIR
   takeOwnershipOut : tpmAbsOutput =
@@ -260,10 +287,18 @@ tpm [ B:TYPE+, % BLOB
       ABS_sinit : outNothing,
       ABS_Quote(n,pm) : quoteOut(s,n,pm),
       decryptKeyCom(d) : decryptKeyOut(s,d),
+<<<<<<< HEAD
+      TPM_Unseal(d,k) : unsealOut(s,d,k),
+      TPM_Seal(k,data) : sealOut(s,k,data),
+      TPM_TakeOwnership : takeOwnershipOut,
+      TPM_CreateWrapKey(k,parent,a) : createWrapKeyOut(k,parent,a)
+%      encryptCom(b) : encryptState(s,b), % unimplemented
+=======
       ABS_Unseal(d,k) : unsealOut(s,d,k),
       ABS_Seal(k,data) : sealOut(s,k,data),
       ABS_TakeOwnership : takeOwnershipOut,
       ABS_CreateWrapKey(k,parent) : createWrapKeyOut(k,parent)
+>>>>>>> refs/heads/master
       ELSE outNothing
   ENDCASES;
 
@@ -300,12 +335,22 @@ tpm [ B:TYPE+, % BLOB
   %% generating.  This does not exclude the eventuality of doing both.
 
   %% Extend PCR n with hash value h.
+<<<<<<< HEAD
+  % Updates a PCR by “hashing in” a measurement value
+  extendTPM(h:HV,n:PCRINDEX):State =
+=======
   TPM_Extend(h:HV,n:PCRINDEX):State =
+>>>>>>> refs/heads/master
     modify(outNothing,
            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_Extend(h,n))));
 
   %% Install key k in a TPM
+<<<<<<< HEAD
+  % Given a wrapped key, loads it on to the TPM for usage
+  installKeyTPM(k:(wrapKey?)):State =
+=======
   TPM_InstallKey(k:(wrapKey?)):State =
+>>>>>>> refs/heads/master
     modify(outNothing,
            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_LoadKey2(k))));
 
@@ -366,12 +411,25 @@ tpm [ B:TYPE+, % BLOB
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_TakeOwnership)));
 
   %% Wrap new key k with parent key
+<<<<<<< HEAD
+  % Creates a new TPM key. The new key is returned to the user, with the 
+  % private part, the authdata, and key attributes encrypted with another 
+  % TPM key, called the parent key
+  createWrapKeyTPM(k,parent:(asymKey?),a:AUTHDATA) : State = 
+     output(outNothing,
+            (LAMBDA (s:tpmAbsState) : outputCom(s,TPM_CreateWrapKey(k,parent,a))));
+		
+  %% Generate and output a quote
+  % Obtains a signed report of the current PCR values
+  quoteTPM(n:BLOB,pm:PCRMASK) : State = 
+=======
   TPM_CreateWrapKey(k,parent:(asymKey?)) : State = 
      output(outNothing,
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_CreateWrapKey(k,parent))));
 		
   %% Generate and output a quote
   TPM_quote(n:BLOB,pm:PCRMASK) : State = 
+>>>>>>> refs/heads/master
      output(outNothing,
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_Quote(n,pm))));
 
@@ -381,12 +439,24 @@ tpm [ B:TYPE+, % BLOB
             (LAMBDA (s:tpmAbsState) : outputCom(s,decryptKeyCom(d))));
 
   %% Unseal and output a blob (should be binary or data)
+<<<<<<< HEAD
+  % Given sealed data, decrypts it. Checks that the PCR values specified 
+  % in the blob are indeed current
+  unsealTPM(d:(seal?),k:(asymKey?)) : State = 
+=======
   TPM_Unseal(d:(seal?),k:(asymKey?)) : State = 
+>>>>>>> refs/heads/master
      output(outNothing,
             (LAMBDA (s:tpmAbsState): outputCom(s,ABS_Unseal(d,k))));
 
   %% Seal and output a blob (should be binary or data)
+<<<<<<< HEAD
+  % Given some data, encrypts it with a TPM key. Some PCR values that should 
+  % hold on unseal may also be specified
+  sealTPM(k:(asymKey?),data:BLOB) : State = 
+=======
   TPM_Seal(k:(asymKey?),data:BLOB) : State = 
+>>>>>>> refs/heads/master
      output(outNothing,
             (LAMBDA (s:tpmAbsState): outputCom(s,ABS_Seal(k,data))));
 
@@ -657,12 +727,19 @@ tpm [ B:TYPE+, % BLOB
   % command.  Classic use of bind!!
   install_prev_key_success: THEOREM FORALL (k,p:(asymKey?),a:AUTHDATA) :
     LET (out,s) = runState(
+<<<<<<< HEAD
+                  powerTPM
+		  >> senterResetTPM
+                  >> createWrapKeyTPM(k,p,a) 
+		  >>= installPrevKeyTPM
+=======
                   TPM_Init
       		  >> TPM_Startup
 		  >> CPU_senter
 		  >> CPU_sinit
                   >> TPM_CreateWrapKey(k,p) 
 		  >>= TPM_InstallPrev
+>>>>>>> refs/heads/master
 		  >>= unit)
 		  (tpmUnknown)
       IN member(p,keys(s)) OR p=srk(s)
@@ -671,6 +748,17 @@ tpm [ B:TYPE+, % BLOB
   %%install nested wrapped keys?
   nested_wrapped_keys_success: THEOREM FORALL (k,j,p:(asymKey?),a1,a2:AUTHDATA) :
      LET (out,s) = runState(
+<<<<<<< HEAD
+     	 	   powerTPM
+		   >> senterResetTPM
+		   >> senterHashSinitTPM
+		   >> changeLocalityTPM
+		   >> takeOwnershipTPM
+		   >> createWrapKeyTPM(k,p,a1)
+		   >>= installPrevKeyTPM
+		   >> createWrapKeyTPM(j,k,a2)
+		   >>= installPrevKeyTPM
+=======
      	 	   TPM_Init
       		   >> TPM_Startup
 		   >> CPU_senter
@@ -680,6 +768,7 @@ tpm [ B:TYPE+, % BLOB
 		   >>= TPM_InstallPrev
 		   >> TPM_CreateWrapKey(j,k)
 		   >>= TPM_InstallPrev
+>>>>>>> refs/heads/master
 		   >>= unit)
 		   (tpmUnknown) IN
 	member(p,keys(s)) OR p=srk(s)
