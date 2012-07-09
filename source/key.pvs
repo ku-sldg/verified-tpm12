@@ -26,12 +26,14 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   %% Basic key types - symmetric, assymetric, wrapped - built with key values
   %% Note that KVAL is completely uninterpretted at this point
   IMPORTING pcr[HVAL];
-
+  
+  AUTHDATA : TYPE = string
+  
   KEY : DATATYPE
   BEGIN
-    symKey(key:KVAL) : symKey?
-    asymKey(key:KVAL) : asymKey?
-    wrapKey(wrappingKey:(asymKey?),key:(asymKey?)) : wrapKey?
+    symKey(key:KVAL,a:AUTHDATA) : symKey?
+    asymKey(key:KVAL,a:AUTHDATA) : asymKey?
+    wrapKey(wrappingKey:(asymKey?),key:(asymKey?),a:AUTHDATA) : wrapKey?
   END KEY;		
 
   inverse(k:(asymKey?)):(asymKey?)
@@ -72,9 +74,9 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   %% Decryption for all key types
   decrypt(b:(encrypt?),k:KEY):BLOB = 
     CASES k OF 
-      symKey(k0) : decryptSym(b,k),
-      asymKey(k0) : decryptAsym(b,k),
-      wrapKey(k0,k1) : nothing
+      symKey(k0,a) : decryptSym(b,k),
+      asymKey(k0,a) : decryptAsym(b,k),
+      wrapKey(k0,k1,a) : nothing
   ENDCASES;
 
   %% Unseal for aysmetric keys
@@ -97,9 +99,9 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   %% Signature checking for all keys
   sigCheck(b:(sign?),k:KEY):boolean =
     CASES k OF
-      symKey(k0) : sigCheckSym(b,k),
-      asymKey(k0) : sigCheckAsym(b,k),
-      wrapKey(k0,k1) : FALSE
+      symKey(k0,a) : sigCheckSym(b,k),
+      asymKey(k0,a) : sigCheckAsym(b,k),
+      wrapKey(k0,k1,a) : FALSE
     ENDCASES;
 
   KEYSET : TYPE = set[(asymKey?)];
