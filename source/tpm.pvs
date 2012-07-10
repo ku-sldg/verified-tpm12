@@ -118,8 +118,8 @@ tpm [ B:TYPE+, % BLOB
 			 , postInit:=true
                          , locality:=4
 			 , keys:=emptyset
-			 , srk:=inverse(srkVal)
-			 , ek:=inverse(ekVal)
+			 , srk:=private(srkVal)
+			 , ek:=private(ekVal)
 			 #);
 
   %% Standard initial state following startup command.  Technically, there
@@ -129,8 +129,8 @@ tpm [ B:TYPE+, % BLOB
 			 , postInit:=false
 			 , locality:=4
 			 , keys:=emptyset
-			 , srk:=inverse(srkVal)
-			 , ek:=inverse(ekVal)
+			 , srk:=private(srkVal)
+			 , ek:=private(ekVal)
 			 #);
 
   %% Predicate to determine if startup has occured.  Used as types
@@ -172,7 +172,7 @@ tpm [ B:TYPE+, % BLOB
   %% Decrypt a secret encrypted with a wrapped key
   decryptKeyState(s:tpmAbsState,d:(encrypt?)) : BLOB =
     CASES key(d) OF
-      wrapKey(w,k) : IF member(inverse(w),add(srk(s),keys(s)))
+      wrapKey(w,k) : IF member(private(w),add(srk(s),keys(s)))
                         THEN blob(d)
 			ELSE nothing ENDIF
       ELSE nothing
@@ -231,7 +231,7 @@ tpm [ B:TYPE+, % BLOB
   
   % Output PCRs from a state as quote
   quoteOut(s:tpmAbsState,n:BLOB,pm:PCRMASK) : tpmAbsOutput =
-    outQuote(inverse(ekVal),n,getPCRs(s`pcrs,pm));
+    outQuote(private(ekVal),n,getPCRs(s`pcrs,pm));
 
   % Output decypted key
   decryptKeyOut(s:tpmAbsState,d:(encrypt?)) : tpmAbsOutput = 
@@ -444,7 +444,7 @@ tpm [ B:TYPE+, % BLOB
       >>= unit)
       (tpmUnknown)
     =
-    (outQuote(inverse(ekVal),n,cons(extend(extend(extend(reset,hash(sinit)),hash(mle)),hv),null)),
+    (outQuote(private(ekVal),n,cons(extend(extend(extend(reset,hash(sinit)),hash(mle)),hv),null)),
       changeLocalityState(changeLocalityState(extendState(extendState(extendState(tpmStartup,0,hash(sinit)),0,hash(mle)),0,hv)))))
 
  
@@ -464,9 +464,9 @@ tpm [ B:TYPE+, % BLOB
   %% proved - Fri Jun 22 16:55:56 CDT 2012
   badSigningKey: THEOREM (FORALL(n:BLOB, pm:PCRMASK, k:(asymKey?), s:tpmAbsState) :
      LET(a,s) = runState(TPM_quote(n,pm))(s) IN
-     inverse(k) /= inverse(ekVal) 
+     private(k) /= private(ekVal) 
      =>
-     outQuote(inverse(k),n,getPCRs(s`pcrs,pm))
+     outQuote(private(k),n,getPCRs(s`pcrs,pm))
      /=
      a);
      
@@ -485,7 +485,7 @@ tpm [ B:TYPE+, % BLOB
       (tpmUnknown) IN
     a
     =
-    outQuote(inverse(ekVal),n,map(s`pcrs,pm)));
+    outQuote(private(ekVal),n,map(s`pcrs,pm)));
 
   %% Checks three parts of outQuote (key, nonce, pcrs)
   %checkQuote: THEOREM(badNonce AND badSigningKey AND checkPCRS);
@@ -523,7 +523,7 @@ tpm [ B:TYPE+, % BLOB
                   >> TPM_Decrypt(encrypt(k,b))
                   >>= unit)
                   (tpmUnknown) IN
-      inverse(wrappingKey(k))/=inverse(srkVal) => out = outBlob(nothing);
+      private(wrappingKey(k))/=private(srkVal) => out = outBlob(nothing);
 
   %% Key chaining theorem.  If k is wrapped with srk and encrypts b,
   %% b will decrypt if k is installed
@@ -538,7 +538,7 @@ tpm [ B:TYPE+, % BLOB
 		  >> TPM_Decrypt(encrypt(k,b))
 		  >>= unit)
 		  (tpmPostInit) IN
-        inverse(wrappingKey(k))=srk(s) => out=outBlob(b)
+        private(wrappingKey(k))=srk(s) => out=outBlob(b)
 
 
   % A key is installed if it is wrapped with SRK
@@ -580,7 +580,7 @@ tpm [ B:TYPE+, % BLOB
 		  >> TPM_Unseal(seal(k,pcrs,b),j)
 		  >>= unit)
 		  (tpmUnknown) IN
-      IF j=inverse(k) AND pcrs=pcrs(s)
+      IF j=private(k) AND pcrs=pcrs(s)
          THEN out=outBlob(b)
          ELSE out=outBlob(nothing)
       ENDIF;
@@ -596,7 +596,7 @@ tpm [ B:TYPE+, % BLOB
  		  >> TPM_Seal(k,b)
 		  >>= unit)
  		  (tpmUnknown) IN
-      j = inverse(k) =>
+      j = private(k) =>
       unseal(bl(out),s`pcrs,j) = b;
   
 
@@ -708,7 +708,7 @@ tpm [ B:TYPE+, % BLOB
 		  >>= TPM_UnsealPrev(j)
 		  >>= unit)
 		  (tpmUnknown) IN  
-	(j=inverse(k) AND pcrs=pcrs(s))
+	(j=private(k) AND pcrs=pcrs(s))
           => blob(bl(out)) = data
 	 %ELSE out = outBlob(nothing)
 
@@ -724,7 +724,7 @@ tpm [ B:TYPE+, % BLOB
 		  >>= TPM_UnsealPrev(j)
 		  >>= unit)
 		  (tpmUnknown) IN
-      (j=inverse(k) AND pcrs=pcrs(s))
+      (j=private(k) AND pcrs=pcrs(s))
 	=> blob(bl(out))=b
      % ELSE out=outBlob(nothing)
 
