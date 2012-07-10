@@ -34,9 +34,12 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
     wrapKey(wrappingKey:(asymKey?),key:(asymKey?)) : wrapKey?
   END KEY;		
 
-  inverse(k:(asymKey?)):(asymKey?)
+  private(k:(asymKey?)):(asymKey?)
 
-  double_inverse: AXIOM FORALL (k:(asymKey?)) :inverse(inverse(k))=k;
+  %% This theorem does NOT say that the private key of a private key is
+  %% a key.  It says that everything - signing and encrypting - can be done
+  %% in reverse if you swap the keys around.
+  double_private: AXIOM FORALL (k:(asymKey?)) : private(private(k))=k;
 
   %% Basic blob types - data, keys, hashs, encrypted blobs, signed blobs
   %% Blobs in this context are things that can be encrypted or signed
@@ -50,6 +53,8 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
     encrypt(key:KEY,blob:BLOB) : encrypt?
     sign(key:KEY,blob:BLOB) : sign?
     seal(key:KEY,pcrs:PCRS,blob:BLOB) : seal?
+    pair(left,right : BLOB) : pair?
+    cert(key:KEY,blob:BLOB) : cert?
   END BLOB;
 
   %% Decryption for specific key types.  Key types not matching automatically
@@ -61,14 +66,13 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
     ENDIF;
 
   decryptAsym(b:(encrypt?),k:(asymKey?)):BLOB =
-    IF asymKey?(key(b)) AND asymKey?(k) AND key(b) = inverse(k)
+    IF asymKey?(key(b)) AND asymKey?(k) AND key(b) = private(k)
        THEN blob(b)
        ELSE nothing
     ENDIF;
 
   decryptWrapped(b:(encrypt?),k:(wrapKey?)):BLOB = nothing;
   
-
   %% Decryption for all key types
   decrypt(b:(encrypt?),k:KEY):BLOB = 
     CASES k OF 
@@ -79,7 +83,7 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
   %% Unseal for aysmetric keys
   unseal(b:(seal?),pcrs:PCRS,k:(asymKey?)):BLOB =
-    IF pcrs(b) = pcrs AND key(b)=inverse(k)
+    IF pcrs(b) = pcrs AND key(b)=private(k)
        THEN blob(b)
        ELSE nothing
     ENDIF;
@@ -90,7 +94,7 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
     symKey?(key(b)) AND symKey?(k) AND key(b) = k;
 
   sigCheckAsym(b:(sign?),k:(asymKey?)):boolean =
-    asymKey?(key(b)) AND asymKey?(k) AND key(b) = inverse(k);
+    asymKey?(key(b)) AND asymKey?(k) AND key(b) = private(k);
 
   sigCheckWrapped(b:(sign?),k:(wrapKey?)):boolean = FALSE;
 
@@ -120,10 +124,11 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   %% Signature checks
   
   test0: THEOREM FORALL (k0,k1:(symKey?),b:BLOB) :
-    k0=k1 IFF sigCheck(sign(k0,b),k1);
+  
+  k0=k1 IFF sigCheck(sign(k0,b),k1);
 
   test1: THEOREM FORALL (k0,k1:(asymKey?),b:BLOB) :
-    inverse(k0)=k1 IFF sigCheck(sign(k0,b),k1);
+    private(k0)=k1 IFF sigCheck(sign(k0,b),k1);
 
   %% Decryption
 
@@ -131,13 +136,13 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
     k0=k1 IMPLIES decrypt(encrypt(k0,b),k1) = b;
 
   test3: THEOREM FORALL (k0,k1:(asymKey?),b:BLOB) :
-    k0=k1 IMPLIES decrypt(encrypt(k0,b),inverse(k1)) = b;
+    k0=k1 IMPLIES decrypt(encrypt(k0,b),private(k1)) = b;
 
   test4: THEOREM FORALL (k0,k1:(symKey?),b:BLOB) :
     k0/=k1 IMPLIES decrypt(encrypt(k0,b),k1) = nothing;
 
   test5: THEOREM FORALL (k0,k1:(asymKey?),b:BLOB) :
-    k0/=k1 IMPLIES decrypt(encrypt(k0,b),inverse(k1)) = nothing;
+    k0/=k1 IMPLIES decrypt(encrypt(k0,b),private(k1)) = nothing;
 
   %% Key installation
 
