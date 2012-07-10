@@ -52,7 +52,8 @@ tpm [ B:TYPE+, % BLOB
     ABS_Unseal(s:(seal?),uk:(asymKey?)) : ABS_Unseal?   
     ABS_Seal(sk:(asymKey?),data:BLOB) : ABS_Seal?
     ABS_LoadKey2(lk:(wrapKey?)): ABS_LoadKey2? 
-    ABS_CreateWrapKey(wk,parentk:(asymKey?)): ABS_CreateWrapKey?
+    ABS_CreateWrapKey(k,parentk:(asymKey?),k_a:AUTHDATA): ABS_CreateWrapKey?
+    ABS_UnBind : ABS_UnBind? % unimplemented encrypt???
     %% Ownership management
     ABS_TakeOwnership : ABS_TakeOwnership?
     ABS_OwnerClear : ABS_OwnerClear? % unimplemented
@@ -65,6 +66,7 @@ tpm [ B:TYPE+, % BLOB
     noopCom : noopCom?
     offCom : offCom?
     revokeKeyCom(rk:(wrapKey?)): revokeKeyCom?
+
   END tpmInput;
 
   %% State monad output type
@@ -90,8 +92,8 @@ tpm [ B:TYPE+, % BLOB
   %% Uninterpreted Key values.
   ekKeyVal : K;
   srkKeyVal : K;
-  ekAuthdata : string;
-  srkAuthdata : string;
+  ekAuthdata : AUTHDATA;
+  srkAuthdata : AUTHDATA;
 
   %% Key definitions that make ek and srk values asymmetric keys.
   ekVal : KEY = asymKey(ekKeyVal,ekAuthdata);
@@ -164,7 +166,7 @@ tpm [ B:TYPE+, % BLOB
     s WITH [`pcrs := pcrsExtend(pcrs(s),n,h)];
 
   %% Install key operation on TPM state.
-  installKeyState(s:tpmAbsState,k:(wrapKey?)) : tpmAbsState =
+  loadKey2State(s:tpmAbsState,k:(wrapKey?)) : tpmAbsState =
     s WITH [`keys := addKey(k,srk(s),keys(s))];
 
   %% Revoke key operation on TPM state
@@ -197,7 +199,7 @@ tpm [ B:TYPE+, % BLOB
   executeComStartup(s:(afterStartup?),c:tpmInput) : tpmAbsState = 
     CASES c OF
       ABS_Extend(h,n) : extendState(s,n,h),
-      ABS_LoadKey2(k): installKeyState(s,k), 
+      ABS_LoadKey2(k): loadKey2State(s,k), 
       revokeKeyCom(k): revokeKeyState(s,k),
       noopCom : s,
       offCom : tpmUnknown,
@@ -211,7 +213,7 @@ tpm [ B:TYPE+, % BLOB
       ABS_Unseal(d,k) : s,
       ABS_Seal(k,data) : s,
       ABS_TakeOwnership : s,
-      ABS_CreateWrapKey(k,parent): s
+      ABS_CreateWrapKey(k,parent,a): s
       ELSE s
   ENDCASES;
   
@@ -224,8 +226,8 @@ tpm [ B:TYPE+, % BLOB
     ENDIF;
 
   % Generate a NEW RANDOM key pair.
-  createWrapKeyOut(k,parent:(asymKey?)):tpmAbsOutput = 
-     outKey(wrapKey(parent,k));
+  createWrapKeyOut(k,parent:(asymKey?),a:AUTHDATA):tpmAbsOutput = 
+     outKey(wrapKey(parent,k,a));
 
   % NEED TO ENSURE NEW, RANDOM SRK KEY PAIR
   takeOwnershipOut : tpmAbsOutput =
@@ -263,7 +265,7 @@ tpm [ B:TYPE+, % BLOB
       ABS_Unseal(d,k) : unsealOut(s,d,k),
       ABS_Seal(k,data) : sealOut(s,k,data),
       ABS_TakeOwnership : takeOwnershipOut,
-      ABS_CreateWrapKey(k,parent) : createWrapKeyOut(k,parent)
+      ABS_CreateWrapKey(k,parent,a) : createWrapKeyOut(k,parent,a)
       ELSE outNothing
   ENDCASES;
 
@@ -305,7 +307,7 @@ tpm [ B:TYPE+, % BLOB
            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_Extend(h,n))));
 
   %% Install key k in a TPM
-  TPM_InstallKey(k:(wrapKey?)):State =
+  TPM_LoadKey2(k:(wrapKey?)):State =
     modify(outNothing,
            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_LoadKey2(k))));
 
@@ -366,9 +368,9 @@ tpm [ B:TYPE+, % BLOB
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_TakeOwnership)));
 
   %% Wrap new key k with parent key
-  TPM_CreateWrapKey(k,parent:(asymKey?)) : State = 
+  TPM_CreateWrapKey(k,parent:(asymKey?),a:AUTHDATA) : State = 
      output(outNothing,
-            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_CreateWrapKey(k,parent))));
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_CreateWrapKey(k,parent,a))));
 		
   %% Generate and output a quote
   TPM_quote(n:BLOB,pm:PCRMASK) : State = 
@@ -537,7 +539,7 @@ tpm [ B:TYPE+, % BLOB
 		  >> TPM_Startup
 	  	  >> CPU_senter
 		  >> CPU_sinit
-		  >> TPM_InstallKey(k)
+		  >> TPM_LoadKey2(k)
 		  >> TPM_Decrypt(encrypt(k,b))
 		  >>= unit)
 		  (tpmPostInit) IN
@@ -552,7 +554,7 @@ tpm [ B:TYPE+, % BLOB
       		  >> TPM_Startup
 		  >> CPU_senter
 		  >> CPU_sinit
-		  >> TPM_InstallKey(k)
+		  >> TPM_LoadKey2(k)
 		  >>= unit)
 		  (tpmUnknown) IN
       wrappingKey(k) = srk(s) => member(key(k),keys(s));
@@ -565,8 +567,8 @@ tpm [ B:TYPE+, % BLOB
       		  >> TPM_Startup
 		  >> CPU_senter
 		  >> CPU_sinit
-		  >> TPM_InstallKey(k)
-		  >> TPM_InstallKey(j)
+		  >> TPM_LoadKey2(k)
+		  >> TPM_LoadKey2(j)
 		  >>= unit)
 		  (tpmUnknown) IN
       wrappingKey(j) = key(k) AND wrappingKey(k) = srk(s) =>
@@ -661,7 +663,7 @@ tpm [ B:TYPE+, % BLOB
       		  >> TPM_Startup
 		  >> CPU_senter
 		  >> CPU_sinit
-                  >> TPM_CreateWrapKey(k,p) 
+                  >> TPM_CreateWrapKey(k,p,a)
 		  >>= TPM_InstallPrev
 		  >>= unit)
 		  (tpmUnknown)
@@ -676,9 +678,9 @@ tpm [ B:TYPE+, % BLOB
 		   >> CPU_senter
 		   >> CPU_sinit
 		   >> TPM_TakeOwnership
-		   >> TPM_CreateWrapKey(k,p)
+		   >> TPM_CreateWrapKey(k,p,a1)
 		   >>= TPM_InstallPrev
-		   >> TPM_CreateWrapKey(j,k)
+		   >> TPM_CreateWrapKey(j,k,a2)
 		   >>= TPM_InstallPrev
 		   >>= unit)
 		   (tpmUnknown) IN
@@ -714,22 +716,5 @@ tpm [ B:TYPE+, % BLOB
 	(j=inverse(k) AND pcrs=pcrs(s))
           => blob(bl(out)) = data
 	 %ELSE out = outBlob(nothing)
-
-  %% Seal and unseal a secret successfully 
-  seal_unseal_secret_success: THEOREM FORALL (j,k:(asymKey?),hv:HV,b:BLOB,pcrs:PCRS) :
-    LET (out,s) = runState(
-                  TPM_Init
-      		  >> TPM_Startup
-		  >> CPU_senter
-		  >> CPU_sinit
-		  >> TPM_Extend(hv,0)
-		  >> TPM_Seal(k,b)
-		  >>= TPM_UnsealPrev(j)
-		  >>= unit)
-		  (tpmUnknown) IN
-      (j=inverse(k) AND pcrs=pcrs(s))
-	=> blob(bl(out))=b
-     % ELSE out=outBlob(nothing)
-
 
 END tpm
