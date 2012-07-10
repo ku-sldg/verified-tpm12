@@ -422,15 +422,14 @@ tpm [ B:TYPE+, % BLOB
   %% measurement.
   %% proved - Tue Jun 12 15:31:12 CDT 2012
   resetMonad: THEOREM (FORALL (hv:HV) :
-    runState(
-      TPM_Init
-      >> TPM_Startup
-      >> CPU_senter
-      >> CPU_sinit
-      >>= unit)
-      (tpmUnknown)
-    =
-    (outNothing,changeLocalityState(changeLocalityState(extendState((extendState(tpmStartup,0,hash(sinit))),0,hash(mle))))))
+    LET (a,s) = runState(
+      	          TPM_Init
+      		  >> TPM_Startup
+      		  >> CPU_senter
+      		  >> CPU_sinit
+      		  >>= unit)
+      		  (tpmUnknown)
+      IN s = changeLocalityState(changeLocalityState(extendState((extendState(tpmStartup,0,hash(sinit))),0,hash(mle)))))
 
   %% Prove that quote generation returns the correct PCR
   %% unproven - Tue Jul  3 21:20:21 CDT 2012
