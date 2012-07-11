@@ -64,6 +64,8 @@ tpm [ B:TYPE+, % BLOB
     %% Software Commands
     ABS_senter : ABS_senter? % implemented all actions as one senter
     ABS_sinit : ABS_sinit? % partially implemented
+    %% CA Commands
+    ABS_certify(ek:(asymKey?),aik:(wrapKey?),sessk:(symKey?)) : AVS_certify? % Certify an AIK
     %% Invented, imaginary Commands
     noopCom : noopCom?
     offCom : offCom?
@@ -259,6 +261,12 @@ tpm [ B:TYPE+, % BLOB
   sealOut(s:tpmAbsState,k:(asymKey?),data:BLOB) : tpmAbsOutput = 
     outBlob(seal(k,pcrs(s),data));
 
+  caKeyVal : K
+  caKey : KEY = asymKey(caKeyVal);
+
+  certOut(s:tpmAbsState,ek:(asymKey?),aik:(wrapKey?),k:(symKey?)) : tpmAbsOutput =
+    outBlob(pair(encrypt(k,cert(private(caKey),key(aik))),encrypt(k,key(ek))));
+
   %% Generate output from a command and state
   outputCom(s:tpmAbsState,c:tpmInput) : tpmAbsOutput = 
     CASES c OF
@@ -277,7 +285,8 @@ tpm [ B:TYPE+, % BLOB
       ABS_Unseal(d,k) : unsealOut(s,d,k),
       ABS_Seal(k,data) : sealOut(s,k,data),
       ABS_TakeOwnership : takeOwnershipOut,
-      ABS_CreateWrapKey(k,parent) : createWrapKeyOut(k,parent)
+      ABS_CreateWrapKey(k,parent) : createWrapKeyOut(k,parent),
+      ABS_certify(ek,aik,sesk) : certOut(s,ek,aik,sesk)
       ELSE outNothing
   ENDCASES;
 
