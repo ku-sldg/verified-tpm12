@@ -54,7 +54,7 @@ tpm [ B:TYPE+, % BLOB
     ABS_CreateWrapKey(wk,parentk:(asymKey?)): ABS_CreateWrapKey?
     %% Quotes and Identities
     ABS_Quote(aik:(wrapKey?),nonce:BLOB,pm:PCRMASK) : ABS_Quote? % partially implemented
-    ABS_MakeIdentity(naik:(wrapKey?)) : ABS_MakeIdentity?
+    ABS_MakeIdentity(naik:(asymKey?)) : ABS_MakeIdentity?
     ABS_UseIdentity(caik:(wrapKey?)) : ABS_UseIdentity? % unimplemented
     %% Ownership management
     ABS_TakeOwnership : ABS_TakeOwnership?
@@ -240,8 +240,8 @@ tpm [ B:TYPE+, % BLOB
     ENDIF;
 
   % Output a newly generated AIK.  Note that a simulates the new aik.
-  makeIdentityOut(s:tpmAbsState,a:(wrapKey?)) : tpmAbsOutput =
-    outKey(a);
+  makeIdentityOut(s:tpmAbsState,a:(asymKey?)) : tpmAbsOutput =
+    outKey(wrapKey(srk(s),a));
 
   % Use an AIK.  This is currently unimplemented.
   useIdentityOut(s:tpmAbsState,a:(wrapKey?)) : tpmAbsOutput =
@@ -390,7 +390,7 @@ tpm [ B:TYPE+, % BLOB
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_Quote(k,n,pm))));
 
   %% Make a new identity and output it
-  TPM_MakeIdentity(n:(wrapKey?)) : State =
+  TPM_MakeIdentity(n:(asymKey?)) : State =
      output(outNothing,
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_MakeIdentity(n))));
 
