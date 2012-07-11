@@ -234,7 +234,10 @@ tpm [ B:TYPE+, % BLOB
   
   % Output PCRs from a state as quote
   quoteOut(s:tpmAbsState,k:(wrapKey?),n:BLOB,pm:PCRMASK) : tpmAbsOutput =
-    outQuote(private(key(k)),n,getPCRs(s`pcrs,pm));
+    IF checkKey(k,srk(s),keys(s))
+    THEN outQuote(private(key(k)),n,getPCRs(s`pcrs,pm))
+    ELSE outNothing
+    ENDIF;
 
   % Output a newly generated AIK.  Note that a simulates the new aik.
   makeIdentityOut(s:tpmAbsState,a:(wrapKey?)) : tpmAbsOutput =
