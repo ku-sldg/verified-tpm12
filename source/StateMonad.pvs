@@ -73,7 +73,11 @@ BEGIN
  output(a:A,f:[S->A]) : State = state(LAMBDA(s0:S):(f(s0),s0))
 
  % Modify state with previous output and current state.
- useOutput(a:A,f:[A->[S->S]]) : [A->State] =
+ useOutputState(a:A,f:[A->[S->S]]) : [A->State] =
     (LAMBDA (a:A):state(LAMBDA(s0:S):(a,f(a)(s0))))
+
+ % Generate output with previous output and current state.
+ useOutputOutput(a:A,f:[A->[S->A]]) : [A->State] =
+    (LAMBDA (a:A):state(LAMBDA(s0:S):(f(a)(s0),s0)))
 
 END StateMonad

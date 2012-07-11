@@ -95,10 +95,12 @@ tpm [ B:TYPE+, % BLOB
   %% Uninterpreted Key values.
   ekKeyVal : K;
   srkKeyVal : K;
+  caKeyVal : K
 
   %% Key definitions that make ek and srk values asymmetric keys.
   ekVal : KEY = asymKey(ekKeyVal);
   srkVal : KEY = asymKey(srkKeyVal);
+  caKey : KEY = asymKey(caKeyVal); % Certificate Authority key
 
   %% Abstract TPM State with keys, PCR array and locality
   tpmAbsState : TYPE = [#
@@ -261,9 +263,8 @@ tpm [ B:TYPE+, % BLOB
   sealOut(s:tpmAbsState,k:(asymKey?),data:BLOB) : tpmAbsOutput = 
     outBlob(seal(k,pcrs(s),data));
 
-  caKeyVal : K
-  caKey : KEY = asymKey(caKeyVal);
-
+  % Generate a certified AIK from an AIK.  Certification assumes that the
+  % EK really does belong to the TPM.  We're abstracting away that check.
   certOut(s:tpmAbsState,ek:(asymKey?),aik:(wrapKey?),k:(symKey?)) : tpmAbsOutput =
     outBlob(pair(encrypt(k,cert(private(caKey),key(aik))),encrypt(k,key(ek))));
 
@@ -422,6 +423,11 @@ tpm [ B:TYPE+, % BLOB
   TPM_Seal(k:(asymKey?),data:BLOB) : State = 
      output(outNothing,
             (LAMBDA (s:tpmAbsState): outputCom(s,ABS_Seal(k,data))));
+
+  %% Invoke the certification authority
+  CA_certify(aik:(wrapKey?),k:(symKey?)) : State =
+     output(outNothing,
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_certify(ek(s),aik,k))));
 
   %% Extending a reset PCR is antisymmetric if the two values are not equal
   %% Let form used to defined commands for bind.  Will use command forms
@@ -673,7 +679,7 @@ tpm [ B:TYPE+, % BLOB
     (outNat(1),tpmStartup)
 
   % Take the output of the previous command execution and attempt to install
-  % it as akey.  Note the use of useOutput to create a function for bind
+  % it as akey.  Note the use of useOutputState to create a function for bind
   % rather than sequence.  The big difference is that the output from the
   % previous command executing is bound to a and can be used in the
   % morphism.  Note also that outKey? and wrapKey? that would usually be
@@ -681,7 +687,7 @@ tpm [ B:TYPE+, % BLOB
   % output argument will be a key or a wrapped key.  This does not complicate
   % the proof, so it's not a big deal.
   TPM_InstallPrev:[tpmAbsOutput->State] =
-    useOutput(outNothing,
+    useOutputState(outNothing,
                (LAMBDA (a:tpmAbsOutput):
                   (LAMBDA (s:tpmAbsState):
 		    IF outKey?(a) AND wrapKey?(k(a))
@@ -729,10 +735,10 @@ tpm [ B:TYPE+, % BLOB
 	member(j,keys(s)) AND member(k,keys(s));
 	
   % Take the output of the previous command execution and attempt to unseal
-  % it.  Note the use of useOutput to create a function for bind
+  % it.  Note the use of useOutputState to create a function for bind
   % rather than sequence.
   TPM_UnsealPrev(k:(asymKey?)):[tpmAbsOutput->State] =
-    useOutput(outNothing,
+    useOutputState(outNothing,
 		(LAMBDA (a:tpmAbsOutput):
 		  (LAMBDA (s:tpmAbsState):
 		    IF outBlob?(a) AND seal?(bl(a))
@@ -785,12 +791,24 @@ tpm [ B:TYPE+, % BLOB
 		  (tpmUnknown) IN
        NOT checkKey(aik,srk(s),keys(s)) => out=outNothing;    
 
+  %% Assure the CA generates an appropriate cert from the AIK and Ek
+  %% proved - Wed Jul 11 13:14:11 EDT 2012
+  gen_cert : THEOREM FORALL (aik:(wrapKey?),k:(symKey?)) :
+    LET (out,s) = runState(
+                  CA_certify(aik,k)
+		  >>= unit)
+		  (tpmStartup) IN
+      out = (outBlob(pair(encrypt(k,
+                                  cert(private(asymKey(caKeyVal)),key(aik))),
+                          encrypt(k,
+                                  key(private(asymKey(ekKeyVal)))))));
+
   %% Generate a key and use it to generate a quote.  Need to write something
-  %% like useOutput that will generate a new output from the previously
+  %% like useOutputState that will generate a new output from the previously
   %% generated output.
   %% unproved
   TPM_QuotePrev(n:BLOB,pm:PCRMASK):[tpmAbsOutput->State] =
-    useOutput(outNothing,
+    useOutputState(outNothing,
 		(LAMBDA (a:tpmAbsOutput):
 		  (LAMBDA (s:tpmAbsState):
 		    IF outKey?(a)

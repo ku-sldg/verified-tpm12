@@ -1,6 +1,9 @@
 (tpm
  (unique_hash 0
   (unique_hash-1 nil 3535917891 ("" (postpone) nil nil) nil shostak))
+ (IMP_StateMonad_TCC1 0
+  (IMP_StateMonad_TCC1-1 nil 3551011507 ("" (existence-tcc) nil nil)
+   nil nil))
  (tpmPostInit_TCC1 0
   (tpmPostInit_TCC1-1 nil 3550353288 ("" (subtype-tcc) nil nil)
    ((ekVal const-decl "KEY" tpm nil)) nil))
@@ -20,6 +23,9 @@
    ((afterInit? const-decl "bool" tpm nil)
     (afterStartup? const-decl "bool" tpm nil))
    nil))
+ (certOut_TCC1 0
+  (certOut_TCC1-1 nil 3551011507 ("" (subtype-tcc) nil nil)
+   ((caKey const-decl "KEY" tpm nil)) nil))
  (monotonic_locality 0
   (monotonic_locality-1 nil 3548612399 ("" (grind) nil nil)
    ((changeLocalityState const-decl "tpmAbsState" tpm nil)
@@ -270,7 +276,7 @@
     (>>= const-decl "State" StateMonad nil))
    shostak))
  (quoteMonad_TCC1 0
-  (quoteMonad_TCC1-1 nil 3549372787 ("" (grind) nil nil) nil nil))
+  (quoteMonad_TCC1-1 nil 3549372787 ("" (grind) nil nil) (nil) nil))
  (quoteMonad 0
   (quoteMonad-1 nil 3549040969 ("" (assert) (("" (grind) nil nil)) nil)
    ((>>= const-decl "State" StateMonad nil)
@@ -280,7 +286,7 @@
     (output const-decl "State" StateMonad nil)
     (outputCom const-decl "tpmAbsOutput" tpm nil)
     (quoteOut const-decl "tpmAbsOutput" tpm nil)
-    (getPCRs const-decl "list[PCR]" pcr nil)
+    (getPCRs const-decl "list[PCR]" pcr nil) nil
     (checkKey const-decl "bool" key nil)
     (member const-decl "bool" sets nil)
     (TPM_Extend const-decl "State" tpm nil)
@@ -333,14 +339,14 @@
     (key adt-accessor-decl "[(wrapKey?) -> (asymKey?)]" key nil)
     (int nonempty-type-eq-decl nil integers nil)
     (nat nonempty-type-eq-decl nil naturalnumbers nil)
-    (PCRINDEX type-eq-decl nil pcr nil)
+    (PCRINDEX type-eq-decl nil pcr nil) nil
     (non adt-accessor-decl "[(outQuote?) -> BLOB[B, K, HV]]" tpm nil)
     (pcrs adt-accessor-decl "[(outQuote?) -> list[PCR]]" tpm nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
     (wrapKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
     (number nonempty-type-decl nil numbers nil)
     (PRED type-eq-decl nil defined_types nil)
-    (list type-decl nil list_adt nil)
+    (list type-decl nil list_adt nil) nil
     (AND const-decl "[bool, bool -> bool]" booleans nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
@@ -389,13 +395,13 @@
     (key adt-accessor-decl "[(wrapKey?) -> (asymKey?)]" key nil)
     (int nonempty-type-eq-decl nil integers nil)
     (nat nonempty-type-eq-decl nil naturalnumbers nil)
-    (PCRINDEX type-eq-decl nil pcr nil)
+    (PCRINDEX type-eq-decl nil pcr nil) nil
     (non adt-accessor-decl "[(outQuote?) -> BLOB[B, K, HV]]" tpm nil)
     (pcrs adt-accessor-decl "[(outQuote?) -> list[PCR]]" tpm nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
     (number nonempty-type-decl nil numbers nil)
     (PRED type-eq-decl nil defined_types nil)
-    (list type-decl nil list_adt nil)
+    (list type-decl nil list_adt nil) nil
     (AND const-decl "[bool, bool -> bool]" booleans nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
@@ -480,7 +486,7 @@
     (number_field nonempty-type-from-decl nil number_fields nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
-    (AND const-decl "[bool, bool -> bool]" booleans nil)
+    (AND const-decl "[bool, bool -> bool]" booleans nil) nil
     (list type-decl nil list_adt nil)
     (PRED type-eq-decl nil defined_types nil)
     (number nonempty-type-decl nil numbers nil)
@@ -534,7 +540,7 @@
     (wrapKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
     (number nonempty-type-decl nil numbers nil)
     (PRED type-eq-decl nil defined_types nil)
-    (list type-decl nil list_adt nil)
+    (list type-decl nil list_adt nil) nil
     (AND const-decl "[bool, bool -> bool]" booleans nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
@@ -1151,7 +1157,7 @@
     (addKey const-decl "KEYSET" key nil)
     (installKeyState const-decl "tpmAbsState" tpm nil)
     (TPM_InstallPrev const-decl "[tpmAbsOutput -> State]" tpm nil)
-    (useOutput const-decl "[A -> State]" StateMonad nil)
+    (useOutputState const-decl "[A -> State]" StateMonad nil)
     (emptyset const-decl "set" sets nil)
     (>>= const-decl "State" StateMonad nil)
     (unit const-decl "State" StateMonad nil)
@@ -1200,7 +1206,6 @@
     (member const-decl "bool" sets nil)
     (addKey const-decl "KEYSET" key nil)
     (installKeyState const-decl "tpmAbsState" tpm nil)
-    (useOutput const-decl "[A -> State]" StateMonad nil)
     (emptyset const-decl "set" sets nil)
     (>>= const-decl "State" StateMonad nil)
     (add const-decl "(nonempty?)" sets nil)
@@ -1246,7 +1251,7 @@
     (output const-decl "State" StateMonad nil)
     (TPM_Seal const-decl "State" tpm nil)
     (TPM_UnsealPrev const-decl "[tpmAbsOutput -> State]" tpm nil)
-    (useOutput const-decl "[A -> State]" StateMonad nil)
+    (useOutputState const-decl "[A -> State]" StateMonad nil)
     (>>= const-decl "State" StateMonad nil)
     (unit const-decl "State" StateMonad nil))
    nil))
@@ -1290,7 +1295,7 @@
     (output const-decl "State" StateMonad nil)
     (TPM_Seal const-decl "State" tpm nil)
     (TPM_UnsealPrev const-decl "[tpmAbsOutput -> State]" tpm nil)
-    (useOutput const-decl "[A -> State]" StateMonad nil)
+    (useOutputState const-decl "[A -> State]" StateMonad nil)
     (>>= const-decl "State" StateMonad nil)
     (unit const-decl "State" StateMonad nil))
    nil))
@@ -1331,7 +1336,7 @@
     (output const-decl "State" StateMonad nil)
     (TPM_Seal const-decl "State" tpm nil)
     (TPM_UnsealPrev const-decl "[tpmAbsOutput -> State]" tpm nil)
-    (useOutput const-decl "[A -> State]" StateMonad nil)
+    (useOutputState const-decl "[A -> State]" StateMonad nil)
     (>>= const-decl "State" StateMonad nil)
     (unit const-decl "State" StateMonad nil))
    shostak))
@@ -1376,7 +1381,7 @@
     (output const-decl "State" StateMonad nil)
     (TPM_Seal const-decl "State" tpm nil)
     (TPM_UnsealPrev const-decl "[tpmAbsOutput -> State]" tpm nil)
-    (useOutput const-decl "[A -> State]" StateMonad nil)
+    (useOutputState const-decl "[A -> State]" StateMonad nil)
     (>>= const-decl "State" StateMonad nil)
     (unit const-decl "State" StateMonad nil))
    nil))
@@ -1421,7 +1426,7 @@
     (output const-decl "State" StateMonad nil)
     (TPM_Seal const-decl "State" tpm nil)
     (TPM_UnsealPrev const-decl "[tpmAbsOutput -> State]" tpm nil)
-    (useOutput const-decl "[A -> State]" StateMonad nil)
+    (useOutputState const-decl "[A -> State]" StateMonad nil)
     (>>= const-decl "State" StateMonad nil)
     (unit const-decl "State" StateMonad nil))
    nil))
@@ -1511,7 +1516,7 @@
     (output const-decl "State" StateMonad nil)
     (TPM_Seal const-decl "State" tpm nil)
     (TPM_UnsealPrev const-decl "[tpmAbsOutput -> State]" tpm nil)
-    (useOutput const-decl "[A -> State]" StateMonad nil)
+    (useOutputState const-decl "[A -> State]" StateMonad nil)
     (>>= const-decl "State" StateMonad nil)
     (finite_emptyset name-judgement "finite_set" finite_sets nil))
    shostak))
@@ -1562,8 +1567,7 @@
     (wrapKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
     (number nonempty-type-decl nil numbers nil)
     (PRED type-eq-decl nil defined_types nil)
-    (list type-decl nil list_adt nil)
-    (every adt-def-decl "boolean" list_adt nil)
+    (list type-decl nil list_adt nil) nil
     (AND const-decl "[bool, bool -> bool]" booleans nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
@@ -1575,6 +1579,29 @@
     (integer_pred const-decl "[rational -> boolean]" integers nil)
     (>= const-decl "bool" reals nil) (<= const-decl "bool" reals nil)
     (PCRMASK type-eq-decl nil pcr nil))
+   shostak))
+ (gen_cert 0
+  (gen_cert-1 nil 3551011510 ("" (grind) nil nil)
+   ((caKey const-decl "KEY" tpm nil)
+    (certOut const-decl "tpmAbsOutput" tpm nil)
+    (outputCom const-decl "tpmAbsOutput" tpm nil)
+    (tpmAbsState type-eq-decl nil tpm nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (PCRS type-eq-decl nil pcr nil) (LOCALITY type-eq-decl nil tpm nil)
+    (KEYSET type-eq-decl nil key nil)
+    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
+    (boolean nonempty-type-decl nil booleans nil)
+    (KEY type-decl nil key nil)
+    (HV formal-nonempty-type-decl nil tpm nil)
+    (K formal-nonempty-type-decl nil tpm nil)
+    (B formal-nonempty-type-decl nil tpm nil)
+    (tpmAbsOutput type-decl nil tpm nil)
+    (output const-decl "State" StateMonad nil)
+    (CA_certify const-decl "State" tpm nil)
+    (unit const-decl "State" StateMonad nil)
+    (>>= const-decl "State" StateMonad nil)
+    (srkVal const-decl "KEY" tpm nil) (ekVal const-decl "KEY" tpm nil)
+    (tpmStartup const-decl "tpmAbsState" tpm nil))
    shostak))
  (TPM_QuotePrev_TCC1 0
   (TPM_QuotePrev_TCC1-1 nil 3551008513 ("" (subtype-tcc) nil nil) nil
