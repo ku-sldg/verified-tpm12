@@ -108,8 +108,11 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
   KEYSET : TYPE = set[(asymKey?)];
 
+  checkKey(k:(wrapKey?),rk:(asymKey?),ks:KEYSET):bool =
+    member(wrappingKey(k),ks) OR wrappingKey(k)=rk;
+
   addKey(k:(wrapKey?),rk:(asymKey?),ks:KEYSET):KEYSET =
-    IF member(wrappingKey(k),ks) OR wrappingKey(k)=rk
+    IF checkKey(k,rk,ks)
     THEN add(key(k),ks)
     ELSE ks
     ENDIF;
