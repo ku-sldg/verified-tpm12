@@ -48,11 +48,14 @@ tpm [ B:TYPE+, % BLOB
     ABS_SaveState : ABS_SaveState? % unimplemented
     %% PCRs, quotes, seals and keys
     ABS_Extend(h:HV,i:PCRINDEX) : ABS_Extend?
-    ABS_Quote(nonce:BLOB,pm:PCRMASK) : ABS_Quote? % partially implemented
     ABS_Unseal(s:(seal?),uk:(asymKey?)) : ABS_Unseal?   
     ABS_Seal(sk:(asymKey?),data:BLOB) : ABS_Seal?
     ABS_LoadKey2(lk:(wrapKey?)): ABS_LoadKey2? 
     ABS_CreateWrapKey(wk,parentk:(asymKey?)): ABS_CreateWrapKey?
+    %% Quotes and Identities
+    ABS_Quote(nonce:BLOB,pm:PCRMASK) : ABS_Quote? % partially implemented
+    ABS_MakeIdentity(naik:(wrapKey?)) : ABS_MakeIdentity?
+    ABS_UseIdentity(aik:(wrapKey?)) : ABS_UseIdentity? % unimplemented
     %% Ownership management
     ABS_TakeOwnership : ABS_TakeOwnership?
     ABS_OwnerClear : ABS_OwnerClear? % unimplemented
