@@ -457,27 +457,33 @@ tpm [ B:TYPE+, % BLOB
       		  (tpmUnknown)
       IN s = changeLocalityState(changeLocalityState(extendState((extendState(tpmStartup,0,hash(sinit))),0,hash(mle)))))
 
-  %% Prove that quote generation returns the correct PCR
-  %% unproven - Tue Jul  3 21:20:21 CDT 2012
+  %% Prove that quote generation returns the correct PCR.  This theorem
+  %% needs to be updated with something cleaner.
+  %% proven - Wed Jul 11 10:40:28 EDT 2012
   quoteMonad: THEOREM (FORALL (k:(wrapKey?),hv:HV,n:BLOB) :
-    runState(
-      TPM_Init
-      >> TPM_Startup
-      >> CPU_senter
-      >> CPU_sinit
-      >> TPM_Extend(hv,0)
-      >> TPM_Quote(k,n,cons(0,null))
-      >>= unit)
-      (tpmUnknown)
-    =
-    (outQuote(private(key(k)),n,cons(extend(extend(extend(reset,hash(sinit)),hash(mle)),hv),null)),
-      changeLocalityState(changeLocalityState(extendState(extendState(extendState(tpmStartup,0,hash(sinit)),0,hash(mle)),0,hv)))))
+        LET (a,s) = runState(
+          TPM_Init
+          >> TPM_Startup
+      	  >> CPU_senter
+	  >> CPU_sinit
+      	  >> TPM_Extend(hv,0)
+      	  >> TPM_Quote(k,n,cons(0,null))
+      	  >>= unit)
+      	  (tpmUnknown)
+	IN wrappingKey(k) = private(asymKey(srkKeyVal)) =>
+        a = outQuote(private(key(k)),
+	             n,
+		     cons(
+		       extend(
+		     	 extend(
+		       	   extend(reset,hash(sinit)),hash(mle)),hv),null)))
 
  
-  %% If nonces don't match, quotes don't match
+  %% If nonces don't match, quotes don't match.  We don't care about this
+  %% if the a quote cannot be produced.
   %% proved - Fri Jun 22 16:55:16 CDT 2012
   badNonce: THEOREM (FORALL(k:(wrapKey?), n1,n2:BLOB, pm:PCRMASK, s:tpmAbsState) :
-     n1/=n2 =>
+     n1/=n2 AND checkKey(k,srk(s),keys(s)) =>
        runState(
          TPM_Quote(k,n1,pm))
 	 (s)
@@ -486,30 +492,34 @@ tpm [ B:TYPE+, % BLOB
 	 TPM_Quote(k,n2,pm))
 	 (s));
   
-  %% Bad Signing Key - Man in the Middle Attack
+  %% Bad Signing Key - Man in the Middle Attack - we don't care about this
+  %% if either key won't produce a quote.
   %% proved - Fri Jun 22 16:55:56 CDT 2012
   badSigningKey: THEOREM (FORALL(n:BLOB, pm:PCRMASK, k0,k1:(wrapKey?), s:tpmAbsState) :
      LET (a0,s0) = runState(TPM_Quote(k0,n,pm))(s) IN
        LET (a1,s1) = runState(TPM_Quote(k1,n,pm))(s) IN
          private(key(k0)) /= private(key(k1)) 
-         => a0 /= a1);
+	 AND checkKey(k0,srk(s),keys(s))
+	 AND checkKey(k1,srk(s),keys(s))
+         =>
+	 a0 /= a1);
      
   %% Output after going through tpm commands is same as grabbing pcrs
+  %% This is one of those theorems where assert must be called before grind
   %% proved - Fri Jun 22 16:56:08 CDT 2012
   checkPCRS: THEOREM (FORALL(k:(wrapKey?),hv:HV,pm:PCRMASK,n:BLOB) :
     LET (a,s) =
-    runState(
-      TPM_Init
-      >> TPM_Startup
-      >> CPU_senter
-      >> CPU_sinit
-      >> TPM_Extend(hv,0)
-      >> TPM_Quote(k,n,pm)
-      >>= unit)
+      runState(
+        TPM_Init
+        >> TPM_Startup
+        >> CPU_senter
+        >> CPU_sinit
+        >> TPM_Extend(hv,0)
+        >> TPM_Quote(k,n,pm)
+        >>= unit)
       (tpmUnknown) IN
-    a
-    =
-    outQuote(private(key(k)),n,map(s`pcrs,pm)));
+    checkKey(k,srk(s),keys(s)) => 
+      a = outQuote(private(key(k)),n,map(s`pcrs,pm)));
 
   %% Checks three parts of outQuote (key, nonce, pcrs)
   %checkQuote: THEOREM(badNonce AND badSigningKey AND checkPCRS);
