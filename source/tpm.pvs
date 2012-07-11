@@ -382,9 +382,19 @@ tpm [ B:TYPE+, % BLOB
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_CreateWrapKey(k,parent))));
 		
   %% Generate and output a quote
-  TPM_quote(n:BLOB,pm:PCRMASK) : State = 
+  TPM_Quote(n:BLOB,pm:PCRMASK) : State = 
      output(outNothing,
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_Quote(n,pm))));
+
+  %% Make a new identity and output it
+  TPM_MakeIdentity(n:(wrapKey?)) : State =
+     output(outNothing,
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_MakeIdentity(n))));
+
+  %% Use an AIK
+  TPM_UseIdentity(a:(wrapKey?)) : State =
+     output(outNothing,
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_UseIdentity(a))));
 
   %% Decrypt and output a blob (should be a key)
   TPM_Decrypt(d:(encrypt?)) : State =
@@ -453,7 +463,7 @@ tpm [ B:TYPE+, % BLOB
       >> CPU_senter
       >> CPU_sinit
       >> TPM_Extend(hv,0)
-      >> TPM_quote(n,cons(0,null))
+      >> TPM_Quote(n,cons(0,null))
       >>= unit)
       (tpmUnknown)
     =
@@ -466,17 +476,17 @@ tpm [ B:TYPE+, % BLOB
   badNonce: THEOREM (FORALL(n1,n2:BLOB, pm:PCRMASK, s:tpmAbsState) :
      n1/=n2 =>
        runState(
-         TPM_quote(n1,pm))
+         TPM_Quote(n1,pm))
 	 (s)
        /=
        runState(
-	 TPM_quote(n2,pm))
+	 TPM_Quote(n2,pm))
 	 (s));
   
   %% Bad Signing Key - Man in the Middle Attack
   %% proved - Fri Jun 22 16:55:56 CDT 2012
   badSigningKey: THEOREM (FORALL(n:BLOB, pm:PCRMASK, k:(asymKey?), s:tpmAbsState) :
-     LET(a,s) = runState(TPM_quote(n,pm))(s) IN
+     LET(a,s) = runState(TPM_Quote(n,pm))(s) IN
      private(k) /= private(ekVal) 
      =>
      outQuote(private(k),n,getPCRs(s`pcrs,pm))
@@ -493,7 +503,7 @@ tpm [ B:TYPE+, % BLOB
       >> CPU_senter
       >> CPU_sinit
       >> TPM_Extend(hv,0)
-      >> TPM_quote(n,pm)
+      >> TPM_Quote(n,pm)
       >>= unit)
       (tpmUnknown) IN
     a
@@ -513,14 +523,14 @@ tpm [ B:TYPE+, % BLOB
       >> CPU_senter
       >> CPU_sinit
       >> TPM_Extend(hv,0)
-      >> TPM_quote(n,pcrMask)
+      >> TPM_Quote(n,pcrMask)
       >>= unit)
       (tpmUnknown)
     /=
     runState(
       TPM_Init
       >> TPM_Extend(hv,0)
-      >> TPM_quote(n,pcrMask)
+      >> TPM_Quote(n,pcrMask)
       >>= unit)
       (tpmUnknown))
 
