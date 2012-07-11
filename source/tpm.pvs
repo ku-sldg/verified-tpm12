@@ -53,7 +53,7 @@ tpm [ B:TYPE+, % BLOB
     ABS_LoadKey2(lk:(wrapKey?)): ABS_LoadKey2? 
     ABS_CreateWrapKey(wk,parentk:(asymKey?)): ABS_CreateWrapKey?
     %% Quotes and Identities
-    ABS_Quote(nonce:BLOB,pm:PCRMASK) : ABS_Quote? % partially implemented
+    ABS_Quote(aik:(wrapKey?),nonce:BLOB,pm:PCRMASK) : ABS_Quote? % partially implemented
     ABS_MakeIdentity(naik:(wrapKey?)) : ABS_MakeIdentity?
     ABS_UseIdentity(caik:(wrapKey?)) : ABS_UseIdentity? % unimplemented
     %% Ownership management
@@ -207,7 +207,7 @@ tpm [ B:TYPE+, % BLOB
       ABS_senter : 
         changeLocalityState(extendState(pcrsResetSenterState(s),0,hash(sinit))),
       ABS_sinit : changeLocalityState(extendState(s,0,hash(mle))),
-      ABS_Quote(n,pm) : s,
+      ABS_Quote(k,n,pm) : s,
       decryptKeyCom(d) : s,
       ABS_Unseal(d,k) : s,
       ABS_Seal(k,data) : s,
@@ -233,8 +233,8 @@ tpm [ B:TYPE+, % BLOB
      outKey(srkVal);
   
   % Output PCRs from a state as quote
-  quoteOut(s:tpmAbsState,n:BLOB,pm:PCRMASK) : tpmAbsOutput =
-    outQuote(private(ek(s)),n,getPCRs(s`pcrs,pm));
+  quoteOut(s:tpmAbsState,k:(wrapKey?),n:BLOB,pm:PCRMASK) : tpmAbsOutput =
+    outQuote(private(key(k)),n,getPCRs(s`pcrs,pm));
 
   % Output a newly generated AIK.  Note that a simulates the new aik.
   makeIdentityOut(s:tpmAbsState,a:(wrapKey?)) : tpmAbsOutput =
@@ -267,7 +267,7 @@ tpm [ B:TYPE+, % BLOB
       ABS_Init : outNothing,
       ABS_senter : outNothing,
       ABS_sinit : outNothing,
-      ABS_Quote(n,pm) : quoteOut(s,n,pm),
+      ABS_Quote(k,n,pm) : quoteOut(s,k,n,pm),
       ABS_MakeIdentity(a) : makeIdentityOut(s,a), 
       ABS_UseIdentity(a) : useIdentityOut(s,a),
       decryptKeyCom(d) : decryptKeyOut(s,d),
@@ -382,9 +382,9 @@ tpm [ B:TYPE+, % BLOB
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_CreateWrapKey(k,parent))));
 		
   %% Generate and output a quote
-  TPM_Quote(n:BLOB,pm:PCRMASK) : State = 
+  TPM_Quote(k:(wrapKey?),n:BLOB,pm:PCRMASK) : State = 
      output(outNothing,
-            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_Quote(n,pm))));
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_Quote(k,n,pm))));
 
   %% Make a new identity and output it
   TPM_MakeIdentity(n:(wrapKey?)) : State =
@@ -456,46 +456,44 @@ tpm [ B:TYPE+, % BLOB
 
   %% Prove that quote generation returns the correct PCR
   %% unproven - Tue Jul  3 21:20:21 CDT 2012
-  quoteMonad: THEOREM (FORALL (hv:HV,n:BLOB) :
+  quoteMonad: THEOREM (FORALL (k:(wrapKey?),hv:HV,n:BLOB) :
     runState(
       TPM_Init
       >> TPM_Startup
       >> CPU_senter
       >> CPU_sinit
       >> TPM_Extend(hv,0)
-      >> TPM_Quote(n,cons(0,null))
+      >> TPM_Quote(k,n,cons(0,null))
       >>= unit)
       (tpmUnknown)
     =
-    (outQuote(private(ekVal),n,cons(extend(extend(extend(reset,hash(sinit)),hash(mle)),hv),null)),
+    (outQuote(private(key(k)),n,cons(extend(extend(extend(reset,hash(sinit)),hash(mle)),hv),null)),
       changeLocalityState(changeLocalityState(extendState(extendState(extendState(tpmStartup,0,hash(sinit)),0,hash(mle)),0,hv)))))
 
  
   %% If nonces don't match, quotes don't match
   %% proved - Fri Jun 22 16:55:16 CDT 2012
-  badNonce: THEOREM (FORALL(n1,n2:BLOB, pm:PCRMASK, s:tpmAbsState) :
+  badNonce: THEOREM (FORALL(k:(wrapKey?), n1,n2:BLOB, pm:PCRMASK, s:tpmAbsState) :
      n1/=n2 =>
        runState(
-         TPM_Quote(n1,pm))
+         TPM_Quote(k,n1,pm))
 	 (s)
        /=
        runState(
-	 TPM_Quote(n2,pm))
+	 TPM_Quote(k,n2,pm))
 	 (s));
   
   %% Bad Signing Key - Man in the Middle Attack
   %% proved - Fri Jun 22 16:55:56 CDT 2012
-  badSigningKey: THEOREM (FORALL(n:BLOB, pm:PCRMASK, k:(asymKey?), s:tpmAbsState) :
-     LET(a,s) = runState(TPM_Quote(n,pm))(s) IN
-     private(k) /= private(ekVal) 
-     =>
-     outQuote(private(k),n,getPCRs(s`pcrs,pm))
-     /=
-     a);
+  badSigningKey: THEOREM (FORALL(n:BLOB, pm:PCRMASK, k0,k1:(wrapKey?), s:tpmAbsState) :
+     LET (a0,s0) = runState(TPM_Quote(k0,n,pm))(s) IN
+       LET (a1,s1) = runState(TPM_Quote(k1,n,pm))(s) IN
+         private(key(k0)) /= private(key(k1)) 
+         => a0 /= a1);
      
   %% Output after going through tpm commands is same as grabbing pcrs
   %% proved - Fri Jun 22 16:56:08 CDT 2012
-  checkPCRS: THEOREM (FORALL(hv:HV,pm:PCRMASK,n:BLOB) :
+  checkPCRS: THEOREM (FORALL(k:(wrapKey?),hv:HV,pm:PCRMASK,n:BLOB) :
     LET (a,s) =
     runState(
       TPM_Init
@@ -503,12 +501,12 @@ tpm [ B:TYPE+, % BLOB
       >> CPU_senter
       >> CPU_sinit
       >> TPM_Extend(hv,0)
-      >> TPM_Quote(n,pm)
+      >> TPM_Quote(k,n,pm)
       >>= unit)
       (tpmUnknown) IN
     a
     =
-    outQuote(private(ekVal),n,map(s`pcrs,pm)));
+    outQuote(private(key(k)),n,map(s`pcrs,pm)));
 
   %% Checks three parts of outQuote (key, nonce, pcrs)
   %checkQuote: THEOREM(badNonce AND badSigningKey AND checkPCRS);
@@ -516,21 +514,21 @@ tpm [ B:TYPE+, % BLOB
   %% Prove that skipping SENTER is detectable by showing the quote following
   %% a command differs when SENTER is excluded.
   %% proved - Tue Jun 12 15:34:24 CDT 2012
-  noSenter: THEOREM (FORALL (hv:HV,n:BLOB,pcrMask:PCRMASK) :
+  noSenter: THEOREM (FORALL (k:(wrapKey?),hv:HV,n:BLOB,pcrMask:PCRMASK) :
     runState(
       TPM_Init
       >> TPM_Startup
       >> CPU_senter
       >> CPU_sinit
       >> TPM_Extend(hv,0)
-      >> TPM_Quote(n,pcrMask)
+      >> TPM_Quote(k,n,pcrMask)
       >>= unit)
       (tpmUnknown)
     /=
     runState(
       TPM_Init
       >> TPM_Extend(hv,0)
-      >> TPM_Quote(n,pcrMask)
+      >> TPM_Quote(k,n,pcrMask)
       >>= unit)
       (tpmUnknown))
 
