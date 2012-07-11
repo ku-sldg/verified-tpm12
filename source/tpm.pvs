@@ -762,5 +762,42 @@ tpm [ B:TYPE+, % BLOB
 	=> blob(bl(out))=b
      % ELSE out=outBlob(nothing)
 
+  %% TPMs will not lie about who they are.  If the AIK cannot be installed
+  %% then no quote will be generated
+  %% proved - Wed Jul 11 11:28:46 EDT 2012
+  aik_binding : THEOREM FORALL (aik:(wrapKey?),b:BLOB,pm:PCRMASK) :
+    LET (out,s) = runState(
+                  TPM_Init
+      		  >> TPM_Startup
+		  >> CPU_senter
+		  >> CPU_sinit
+		  >> TPM_Quote(aik,b,pm)
+		  >>= unit)
+		  (tpmUnknown) IN
+       NOT checkKey(aik,srk(s),keys(s)) => out=outNothing;    
+
+  %% Generate a key and use it to generate a quote.  Need to write something
+  %% like useOutput that will generate a new output from the previously
+  %% generated output.
+  %% unproved
+  TPM_QuotePrev(n:BLOB,pm:PCRMASK):[tpmAbsOutput->State] =
+    useOutput(outNothing,
+		(LAMBDA (a:tpmAbsOutput):
+		  (LAMBDA (s:tpmAbsState):
+		    IF outKey?(a)
+		    THEN executeCom(s,ABS_Quote(k(a),n,pm))
+		    ELSE executeCom(s,noopCom)
+		    ENDIF)));
+
+  quote_with_prev_key: THEOREM FORALL (k:(asymKey?),s:tpmAbsState,n:BLOB,pm:PCRMASK) :
+     LET (out,s) = runState(
+                   TPM_Init
+		   >> TPM_Startup
+		   >> CPU_senter
+		   >> CPU_sinit
+		   >> TPM_MakeIdentity(k)
+		   >>= TPM_QuotePrev(n,pm))
+		   (tpmUnknown) IN
+        out = outNothing;
 
 END tpm
