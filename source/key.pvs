@@ -31,8 +31,8 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   
   KEY : DATATYPE
   BEGIN
-    symKey(key:KVAL,a:AUTHDATA) : symKey?
-    asymKey(key:KVAL,a:AUTHDATA) : asymKey?
+    symKey(key:KVAL) : symKey?
+    asymKey(key:KVAL) : asymKey?
     wrapKey(wrappingKey:(asymKey?),key:(asymKey?),a:AUTHDATA) : wrapKey?
   END KEY;		
 
@@ -78,8 +78,8 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   %% Decryption for all key types
   decrypt(b:(encrypt?),k:KEY):BLOB = 
     CASES k OF 
-      symKey(k0,a) : decryptSym(b,k),
-      asymKey(k0,a) : decryptAsym(b,k),
+      symKey(k0) : decryptSym(b,k),
+      asymKey(k0) : decryptAsym(b,k),
       wrapKey(k0,k1,a) : nothing
   ENDCASES;
 
@@ -103,8 +103,8 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   %% Signature checking for all keys
   sigCheck(b:(sign?),k:KEY):boolean =
     CASES k OF
-      symKey(k0,a) : sigCheckSym(b,k),
-      asymKey(k0,a) : sigCheckAsym(b,k),
+      symKey(k0) : sigCheckSym(b,k),
+      asymKey(k0) : sigCheckAsym(b,k),
       wrapKey(k0,k1,a) : FALSE
     ENDCASES;
 

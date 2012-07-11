@@ -52,7 +52,7 @@ tpm [ B:TYPE+, % BLOB
     ABS_Unseal(s:(seal?),uk:(asymKey?)) : ABS_Unseal?   
     ABS_Seal(sk:(asymKey?),data:BLOB) : ABS_Seal?
     ABS_LoadKey2(lk:(wrapKey?)): ABS_LoadKey2? 
-    ABS_CreateWrapKey(wk,parentk:(asymKey?)): ABS_CreateWrapKey?
+    ABS_CreateWrapKey(parentk,wk:(asymKey?),wk_auth:AUTHDATA): ABS_CreateWrapKey?
     %% Quotes and Identities
     ABS_Quote(aik:(wrapKey?),nonce:BLOB,pm:PCRMASK) : ABS_Quote? % partially implemented
     ABS_MakeIdentity(naik:(asymKey?)) : ABS_MakeIdentity?
@@ -66,7 +66,7 @@ tpm [ B:TYPE+, % BLOB
     ABS_senter : ABS_senter? % implemented all actions as one senter
     ABS_sinit : ABS_sinit? % partially implemented
     %% CA Commands
-    ABS_certify(ek:(asymKey?),aik:(wrapKey?),sessk:(symKey?)) : AVS_certify? % Certify an AIK
+    ABS_certify(ek:(asymKey?),aik:(wrapKey?),sessk:(symKey?)) : ABS_certify? % Certify an AIK
     %% Invented, imaginary Commands
     noopCom : noopCom?
     offCom : offCom?
@@ -100,13 +100,12 @@ tpm [ B:TYPE+, % BLOB
   caKeyVal : K
   ekAuthdata : AUTHDATA;
   srkAuthdata : AUTHDATA;
+  caAuthdata : AUTHDATA;
 
   %% Key definitions that make ek and srk values asymmetric keys.
   ekVal : KEY = asymKey(ekKeyVal);
   srkVal : KEY = asymKey(srkKeyVal);
   caKey : KEY = asymKey(caKeyVal); % Certificate Authority key
-  ekVal : KEY = asymKey(ekKeyVal,ekAuthdata);
-  srkVal : KEY = asymKey(srkKeyVal,srkAuthdata);
 
   %% Abstract TPM State with keys, PCR array and locality
   tpmAbsState : TYPE = [#
@@ -185,7 +184,7 @@ tpm [ B:TYPE+, % BLOB
   %% Decrypt a secret encrypted with a wrapped key
   decryptKeyState(s:tpmAbsState,d:(encrypt?)) : BLOB =
     CASES key(d) OF
-      wrapKey(w,k) : IF member(private(w),add(srk(s),keys(s)))
+      wrapKey(w,k,a) : IF member(private(w),add(srk(s),keys(s)))
                         THEN blob(d)
 			ELSE nothing ENDIF
       ELSE nothing
@@ -222,7 +221,7 @@ tpm [ B:TYPE+, % BLOB
       ABS_Unseal(d,k) : s,
       ABS_Seal(k,data) : s,
       ABS_TakeOwnership : s,
-      ABS_CreateWrapKey(k,parent,k_auth): s
+      ABS_CreateWrapKey(parent,k,k_auth): s
       ELSE s
   ENDCASES;
   
@@ -235,7 +234,7 @@ tpm [ B:TYPE+, % BLOB
     ENDIF;
 
   % Generate a NEW RANDOM key pair.
-  createWrapKeyOut(k,parent:(asymKey?),k_auth:AUTHDATA):tpmAbsOutput = 
+  createWrapKeyOut(parent,k:(asymKey?),k_auth:AUTHDATA):tpmAbsOutput = 
      outKey(wrapKey(parent,k,k_auth));
 
   % NEED TO ENSURE NEW, RANDOM SRK KEY PAIR
@@ -251,7 +250,7 @@ tpm [ B:TYPE+, % BLOB
 
   % Output a newly generated AIK.  Note that a simulates the new aik.
   makeIdentityOut(s:tpmAbsState,a:(asymKey?)) : tpmAbsOutput =
-    outKey(wrapKey(srk(s),a));
+    outKey(wrapKey(srk(s),a,caAuthdata));
 
   % Use an AIK.  This is currently unimplemented.
   useIdentityOut(s:tpmAbsState,a:(wrapKey?)) : tpmAbsOutput =
@@ -292,7 +291,7 @@ tpm [ B:TYPE+, % BLOB
       ABS_Unseal(d,k) : unsealOut(s,d,k),
       ABS_Seal(k,data) : sealOut(s,k,data),
       ABS_TakeOwnership : takeOwnershipOut,
-      ABS_CreateWrapKey(k,parent) : createWrapKeyOut(k,parent),
+      ABS_CreateWrapKey(parent,k,k_auth) : createWrapKeyOut(parent,k,k_auth),
       ABS_certify(ek,aik,sesk) : certOut(s,ek,aik,sesk)
       ELSE outNothing
   ENDCASES;
@@ -396,9 +395,9 @@ tpm [ B:TYPE+, % BLOB
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_TakeOwnership)));
 
   %% Wrap new key k with parent key
-  TPM_CreateWrapKey(k,parent:(asymKey?),k_auth:AUTHDATA) : State = 
+  TPM_CreateWrapKey(parent,k:(asymKey?),k_auth:AUTHDATA) : State = 
      output(outNothing,
-            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_CreateWrapKey(k,parent,k_auth))));
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_CreateWrapKey(parent,k,k_auth))));
 		
   %% Generate and output a quote
   TPM_Quote(k:(wrapKey?),n:BLOB,pm:PCRMASK) : State = 
@@ -713,7 +712,7 @@ tpm [ B:TYPE+, % BLOB
       		  >> TPM_Startup
 		  >> CPU_senter
 		  >> CPU_sinit
-                  >> TPM_CreateWrapKey(k,p,a)
+                  >> TPM_CreateWrapKey(p,k,a)
 		  >>= TPM_InstallPrev
 		  >>= unit)
 		  (tpmUnknown)
@@ -728,9 +727,9 @@ tpm [ B:TYPE+, % BLOB
 		   >> CPU_senter
 		   >> CPU_sinit
 		   >> TPM_TakeOwnership
-		   >> TPM_CreateWrapKey(k,p,a1)
+		   >> TPM_CreateWrapKey(p,k,a1)
 		   >>= TPM_InstallPrev
-		   >> TPM_CreateWrapKey(j,k,a2)
+		   >> TPM_CreateWrapKey(k,j,a2)
 		   >>= TPM_InstallPrev
 		   >>= unit)
 		   (tpmUnknown) IN
