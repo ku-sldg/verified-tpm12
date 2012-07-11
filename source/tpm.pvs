@@ -13,6 +13,7 @@
 %%  pcr.pvs
 %%
 %% Todo: (key - => pending, + => done)
+%%  - AIKs are all wrapped by EK - no chaining allowed
 %% ----
 
 tpm [ B:TYPE+, % BLOB
@@ -238,7 +239,7 @@ tpm [ B:TYPE+, % BLOB
   
   % Output PCRs from a state as quote
   quoteOut(s:tpmAbsState,k:(wrapKey?),n:BLOB,pm:PCRMASK) : tpmAbsOutput =
-    IF checkKey(k,srk(s),keys(s))
+    IF checkKeyRoot(k,srk(s))
     THEN outQuote(private(key(k)),n,getPCRs(s`pcrs,pm))
     ELSE outNothing
     ENDIF;
@@ -498,7 +499,7 @@ tpm [ B:TYPE+, % BLOB
   %% if the a quote cannot be produced.
   %% proved - Fri Jun 22 16:55:16 CDT 2012
   badNonce: THEOREM (FORALL(k:(wrapKey?), n1,n2:BLOB, pm:PCRMASK, s:tpmAbsState) :
-     n1/=n2 AND checkKey(k,srk(s),keys(s)) =>
+     n1/=n2 AND checkKeyRoot(k,srk(s)) =>
        runState(
          TPM_Quote(k,n1,pm))
 	 (s)
@@ -514,8 +515,8 @@ tpm [ B:TYPE+, % BLOB
      LET (a0,s0) = runState(TPM_Quote(k0,n,pm))(s) IN
        LET (a1,s1) = runState(TPM_Quote(k1,n,pm))(s) IN
          private(key(k0)) /= private(key(k1)) 
-	 AND checkKey(k0,srk(s),keys(s))
-	 AND checkKey(k1,srk(s),keys(s))
+	 AND checkKeyRoot(k0,srk(s))
+	 AND checkKeyRoot(k1,srk(s))
          =>
 	 a0 /= a1);
      
@@ -533,7 +534,7 @@ tpm [ B:TYPE+, % BLOB
         >> TPM_Quote(k,n,pm)
         >>= unit)
       (tpmUnknown) IN
-    checkKey(k,srk(s),keys(s)) => 
+    checkKeyRoot(k,srk(s)) => 
       a = outQuote(private(key(k)),n,map(s`pcrs,pm)));
 
   %% Checks three parts of outQuote (key, nonce, pcrs)
@@ -789,7 +790,7 @@ tpm [ B:TYPE+, % BLOB
 		  >> TPM_Quote(aik,b,pm)
 		  >>= unit)
 		  (tpmUnknown) IN
-       NOT checkKey(aik,srk(s),keys(s)) => out=outNothing;    
+       NOT checkKeyRoot(aik,srk(s)) => out=outNothing;    
 
   %% Assure the CA generates an appropriate cert from the AIK and Ek
   %% proved - Wed Jul 11 13:14:11 EDT 2012
@@ -830,15 +831,15 @@ tpm [ B:TYPE+, % BLOB
 	               n,
                        map((pcrsReset WITH [(0) := extend(extend(reset, hash(sinit)),hash(mle))]),pm));
 
-  %% Certify the previous key
-  TPM_QuotePrev(n:BLOB,pm:PCRMASK):[tpmAbsOutput->State] =
-    useOutputOutput(outNothing,
-		(LAMBDA (a:tpmAbsOutput):
-		  (LAMBDA (s:tpmAbsState):
-		    IF outKey?(a)
-		    THEN outputCom(s,ABS_Quote(k(a),n,pm))
-		    ELSE outputCom(s,noopCom)
-		    ENDIF)));
+  % %% Certify the previous key
+%   TPM_QuotePrev(n:BLOB,pm:PCRMASK):[tpmAbsOutput->State] =
+%     useOutputOutput(outNothing,
+% 		(LAMBDA (a:tpmAbsOutput):
+% 		  (LAMBDA (s:tpmAbsState):
+% 		    IF outKey?(a)
+% 		    THEN outputCom(s,ABS_Quote(k(a),n,pm))
+% 		    ELSE outputCom(s,noopCom)
+% 		    ENDIF)));
 
 
   %% Generate a new key, certify it, generate a quote, and send it along.
@@ -846,19 +847,19 @@ tpm [ B:TYPE+, % BLOB
   %% Use the pair to grab blobs from the output and output them again with 
   %% new results.  At the end of the command sequence, you should have the
   %% pair that gets sent to the appraiser with the AIK cert and the TPM quote.
-  cert_and_quote_with_prev_key:
-    THEOREM FORALL (k:(asymKey?),s:tpmAbsState,n:BLOB,pm:PCRMASK) :
-     LET (out,s) = runState(
-                   TPM_Init
-		   >> TPM_Startup
-		   >> CPU_senter
-		   >> CPU_sinit
-		   >> TPM_MakeIdentity(k)
-		   >>= TPM_QuotePrev(n,pm))
-		   (tpmUnknown) IN
-        out = outQuote(private(k),
-	               n,
-                       map((pcrsReset WITH [(0) := extend(extend(reset, hash(sinit)),hash(mle))]),pm));
+%   cert_and_quote_with_prev_key:
+%     THEOREM FORALL (k:(asymKey?),s:tpmAbsState,n:BLOB,pm:PCRMASK) :
+%      LET (out,s) = runState(
+%                    TPM_Init
+% 		   >> TPM_Startup
+% 		   >> CPU_senter
+% 		   >> CPU_sinit
+% 		   >> TPM_MakeIdentity(k)
+% 		   >>= TPM_QuotePrev(n,pm))
+% 		   (tpmUnknown) IN
+%         out = outQuote(private(k),
+% 	               n,
+%                        map((pcrsReset WITH [(0) := extend(extend(reset, hash(sinit)),hash(mle))]),pm));
 
 
 END tpm
