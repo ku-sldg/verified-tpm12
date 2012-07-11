@@ -108,6 +108,9 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
   KEYSET : TYPE = set[(asymKey?)];
 
+  checkKeyRoot(k:(wrapKey?),rk:(asymKey?)):bool =
+    wrappingKey(k)=rk;
+
   checkKey(k:(wrapKey?),rk:(asymKey?),ks:KEYSET):bool =
     member(wrappingKey(k),ks) OR wrappingKey(k)=rk;
 
