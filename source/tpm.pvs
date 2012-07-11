@@ -51,8 +51,8 @@ tpm [ B:TYPE+, % BLOB
     ABS_Quote(nonce:BLOB,pm:PCRMASK) : ABS_Quote? % partially implemented
     ABS_Unseal(s:(seal?),uk:(asymKey?)) : ABS_Unseal?   
     ABS_Seal(sk:(asymKey?),data:BLOB) : ABS_Seal?
-    ABS_LoadKey2(lk:(wrapKey?)): ABS_LoadKey2? 
-    ABS_CreateWrapKey(k,parentk:(asymKey?),k_a:AUTHDATA): ABS_CreateWrapKey?
+    ABS_LoadKey2(inKey:(wrapKey?)): ABS_LoadKey2? 
+    ABS_CreateWrapKey(k,parentk:(asymKey?),k_auth:AUTHDATA): ABS_CreateWrapKey?
     ABS_UnBind : ABS_UnBind? % unimplemented encrypt???
     %% Ownership management
     ABS_TakeOwnership : ABS_TakeOwnership?
@@ -213,7 +213,7 @@ tpm [ B:TYPE+, % BLOB
       ABS_Unseal(d,k) : s,
       ABS_Seal(k,data) : s,
       ABS_TakeOwnership : s,
-      ABS_CreateWrapKey(k,parent,a): s
+      ABS_CreateWrapKey(k,parent,k_auth): s
       ELSE s
   ENDCASES;
   
@@ -226,8 +226,8 @@ tpm [ B:TYPE+, % BLOB
     ENDIF;
 
   % Generate a NEW RANDOM key pair.
-  createWrapKeyOut(k,parent:(asymKey?),a:AUTHDATA):tpmAbsOutput = 
-     outKey(wrapKey(parent,k,a));
+  createWrapKeyOut(k,parent:(asymKey?),k_auth:AUTHDATA):tpmAbsOutput = 
+     outKey(wrapKey(parent,k,k_auth));
 
   % NEED TO ENSURE NEW, RANDOM SRK KEY PAIR
   takeOwnershipOut : tpmAbsOutput =
@@ -265,7 +265,7 @@ tpm [ B:TYPE+, % BLOB
       ABS_Unseal(d,k) : unsealOut(s,d,k),
       ABS_Seal(k,data) : sealOut(s,k,data),
       ABS_TakeOwnership : takeOwnershipOut,
-      ABS_CreateWrapKey(k,parent,a) : createWrapKeyOut(k,parent,a)
+      ABS_CreateWrapKey(k,parent,k_auth) : createWrapKeyOut(k,parent,k_auth)
       ELSE outNothing
   ENDCASES;
 
@@ -368,9 +368,9 @@ tpm [ B:TYPE+, % BLOB
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_TakeOwnership)));
 
   %% Wrap new key k with parent key
-  TPM_CreateWrapKey(k,parent:(asymKey?),a:AUTHDATA) : State = 
+  TPM_CreateWrapKey(k,parent:(asymKey?),k_auth:AUTHDATA) : State = 
      output(outNothing,
-            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_CreateWrapKey(k,parent,a))));
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_CreateWrapKey(k,parent,k_auth))));
 		
   %% Generate and output a quote
   TPM_quote(n:BLOB,pm:PCRMASK) : State = 
