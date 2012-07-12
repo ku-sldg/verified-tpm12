@@ -104,7 +104,7 @@ tpm [ B:TYPE+, % BLOB
   %% Key definitions that make ek and srk values asymmetric keys.
   ekVal : KEY = asymKey(ekKeyVal);
   srkVal : KEY = asymKey(srkKeyVal);
-  caKey : KEY = asymKey(caKeyVal); % Certificate Authority key
+  caVal : KEY = asymKey(caKeyVal); % Certificate Authority key
 
   %% Abstract TPM State with keys, PCR array and locality
   tpmAbsState : TYPE = [#
@@ -254,7 +254,7 @@ tpm [ B:TYPE+, % BLOB
 
   % Output a newly generated AIK.  Note that a simulates the new aik.
   makeIdentityOut(s:tpmAbsState,a:(asymKey?)) : tpmAbsOutput =
-    outBlob(pair(key(wrapKey(srk(s),a)),makeCertReq(a,ekVal,caKey)));
+    outBlob(pair(key(wrapKey(srk(s),a)),makCeertReq(a,ekVal,caVal)));
 
   % Use an AIK.  This is currently unimplemented.
   activateIdentityOut(s:tpmAbsState,a:(wrapKey?)) : tpmAbsOutput =
@@ -275,7 +275,7 @@ tpm [ B:TYPE+, % BLOB
   % Generate a certified AIK from an AIK.  Certification assumes that the
   % EK really does belong to the TPM.  We're abstracting away that check.
   certOut(s:tpmAbsState,ek:(asymKey?),aik:(wrapKey?),k:(symKey?)) : tpmAbsOutput =
-    outBlob(pair(encrypt(k,cert(private(caKey),key(aik))),encrypt(ek,key(k))));
+    outBlob(pair(encrypt(k,cert(private(caVal),key(aik))),encrypt(ek,key(k))));
 
   %% Generate output from a command and state
   outputCom(s:tpmAbsState,c:tpmInput) : tpmAbsOutput = 
