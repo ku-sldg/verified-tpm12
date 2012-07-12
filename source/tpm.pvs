@@ -72,6 +72,7 @@ tpm [ B:TYPE+, % BLOB
     %% CA Commands
     ABS_certify(cr:(certReq?)) : AVS_certify?
     %% Invented, imaginary Commands
+    ABS_Save(i:nat,b:BLOB) : ABS_Save?
     noopCom : noopCom?
     offCom : offCom?
     revokeKeyCom(rk:(wrapKey?)): revokeKeyCom?
@@ -197,6 +198,10 @@ tpm [ B:TYPE+, % BLOB
   activateIdentityState(s:tpmAbsState,a:(wrapKey?),k:(symKey?)) : tpmAbsState =
     installKeyState(s,a);
 
+  % save a value to external memory
+  saveState(s:tpmAbsState,i:nat,v:BLOB) : tpmAbsState =
+    s WITH [`memory := updateLoc(memory(s),i,v)];
+
   %% What we want to generate with each command is a pair of type
   %% [tpmAbsOut,tpmAbsState].  executeCom generates the the state
   %% from a TPM state and command while the upcoming outputCom
@@ -229,7 +234,8 @@ tpm [ B:TYPE+, % BLOB
       ABS_Seal(k,data) : s,
       ABS_TakeOwnership : s,
       ABS_CreateWrapKey(k,parent): s,
-      ABS_ActivateIdentity(a,k) : activateIdentityState(s,a,k)
+      ABS_ActivateIdentity(a,k) : activateIdentityState(s,a,k),
+      ABS_Save(i,v) : saveState(s,i,v)
       ELSE s
   ENDCASES;
   
@@ -437,6 +443,17 @@ tpm [ B:TYPE+, % BLOB
   TPM_Seal(k:(asymKey?),data:BLOB) : State = 
      output(outNothing,
             (LAMBDA (s:tpmAbsState): outputCom(s,ABS_Seal(k,data))));
+
+  %% Requires use of bind
+  CPU_SaveOutput(i:nat) : [tpmAbsOutput -> State] =
+      useOutputState(outNothing,
+               (LAMBDA (a:tpmAbsOutput):
+                  (LAMBDA (s:tpmAbsState):
+		    IF outBlob?(a)
+		    THEN executeCom(s,ABS_Save(i,bl(a)))
+		    ELSE executeCom(s,noopCom)
+		    ENDIF)));
+  
 
   %% Invoke the certification authority
   CA_certify(cr:(certReq?)) : State =
