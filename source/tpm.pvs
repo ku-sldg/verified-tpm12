@@ -58,7 +58,7 @@ tpm [ B:TYPE+, % BLOB
     ABS_CreateWrapKey(parentk,wk:(asymKey?),wk_auth:AUTHDATA): ABS_CreateWrapKey?
     %% Quotes and Identities
     ABS_Quote(aik:(wrapKey?),nonce:BLOB,pm:PCRMASK) : ABS_Quote? % partially implemented
-    ABS_MakeIdentity(naik:(asymKey?),k:(symKey?)) : ABS_MakeIdentity?
+    ABS_MakeIdentity(naik:(asymKey?),k:(symKey?),auth:AUTHDATA) : ABS_MakeIdentity?
     ABS_ActivateIdentity(caik:(wrapKey?),k:(symKey?)) : ABS_ActivateIdentity? % unimplemented
     %% Ownership management
     ABS_TakeOwnership : ABS_TakeOwnership?
@@ -192,7 +192,7 @@ tpm [ B:TYPE+, % BLOB
 
   % Use an AIK.  This is currently unimplemented.
   activateIdentityState(s:tpmAbsState,a:(wrapKey?),k:(symKey?)) : tpmAbsState =
-    installKeyState(s,a);
+    loadKey2State(s,a);
 
   %% What we want to generate with each command is a pair of type
   %% [tpmAbsOut,tpmAbsState].  executeCom generates the the state
@@ -225,7 +225,7 @@ tpm [ B:TYPE+, % BLOB
       ABS_Unseal(d,k) : s,
       ABS_Seal(k,data) : s,
       ABS_TakeOwnership : s,
-      ABS_CreateWrapKey(k,parent): s,
+      ABS_CreateWrapKey(k,parent,a): s,
       ABS_ActivateIdentity(a,k) : activateIdentityState(s,a,k)
       ELSE s
   ENDCASES;
@@ -254,8 +254,8 @@ tpm [ B:TYPE+, % BLOB
     ENDIF;
 
   % Output a newly generated AIK.  Note that a simulates the new aik.
-  makeIdentityOut(s:tpmAbsState,a:(asymKey?),k:(symKey?)) : tpmAbsOutput =
-    LET waik:(wrapKey?) = wrapKey(srk(s),a) IN
+  makeIdentityOut(s:tpmAbsState,a:(asymKey?),k:(symKey?),auth:AUTHDATA) : tpmAbsOutput =
+    LET waik:(wrapKey?) = wrapKey(srk(s),a,auth) IN
       outBlob(identity(waik,certReq(waik,ekVal,k)));
 
   % Output decypted key
@@ -291,13 +291,13 @@ tpm [ B:TYPE+, % BLOB
       ABS_senter : outNothing,
       ABS_sinit : outNothing,
       ABS_Quote(k,n,pm) : quoteOut(s,k,n,pm),
-      ABS_MakeIdentity(a,k) : makeIdentityOut(s,a,k), 
+      ABS_MakeIdentity(a,k,auth) : makeIdentityOut(s,a,k,auth), 
       ABS_ActivateIdentity(a,k) : activateIdentityOut(s,a,k),
       decryptKeyCom(d) : decryptKeyOut(s,d),
       ABS_Unseal(d,k) : unsealOut(s,d,k),
       ABS_Seal(k,data) : sealOut(s,k,data),
       ABS_TakeOwnership : takeOwnershipOut,
-      ABS_CreateWrapKey(k,parent) : createWrapKeyOut(k,parent),
+      ABS_CreateWrapKey(k,parent,a) : createWrapKeyOut(k,parent,a),
       ABS_certify(cr) : certOut(s,cr)
     ELSE outNothing
   ENDCASES;
@@ -411,9 +411,9 @@ tpm [ B:TYPE+, % BLOB
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_Quote(k,n,pm))));
 
   %% Make a new identity and output it
-  TPM_MakeIdentity(n:(asymKey?),k:(symKey?)) : State =
+  TPM_MakeIdentity(n:(asymKey?),k:(symKey?),a:AUTHDATA) : State =
      output(outNothing,
-            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_MakeIdentity(n,k))));
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_MakeIdentity(n,k,a))));
 
   %% Use an AIK
   TPM_ActivateIdentity(a:(wrapKey?),k:(symKey?)) : State =
@@ -841,13 +841,13 @@ tpm [ B:TYPE+, % BLOB
   %% Generate an AIK and use it for a quote.
   %% proved - Wed Jul 11 13:47:33 EDT 2012
   quote_with_prev_key:
-    THEOREM FORALL (k:(asymKey?),s:tpmAbsState,n:BLOB,pm:PCRMASK,sessk:(symKey?)) :
+    THEOREM FORALL (k:(asymKey?),s:tpmAbsState,n:BLOB,pm:PCRMASK,sessk:(symKey?),a:AUTHDATA) :
      LET (out,s) = runState(
                    TPM_Init
 		   >> TPM_Startup
 		   >> CPU_senter
 		   >> CPU_sinit
-		   >> TPM_MakeIdentity(k,sessk)
+		   >> TPM_MakeIdentity(k,sessk,a)
 		   >>= TPM_QuotePrev(n,pm))
 		   (tpmUnknown) IN
         out = outQuote(private(k),
@@ -873,13 +873,13 @@ tpm [ B:TYPE+, % BLOB
   %% new results.  At the end of the command sequence, you should have the
   %% pair that gets sent to the appraiser with the AIK cert and the TPM quote.
    cert_and_quote_with_prev_key:
-     THEOREM FORALL (aik:(asymKey?),s:tpmAbsState,n:BLOB,pm:PCRMASK,k:(symKey?)) :
+     THEOREM FORALL (aik:(asymKey?),s:tpmAbsState,n:BLOB,pm:PCRMASK,k:(symKey?),a:AUTHDATA) :
       LET (out,s) = runState(
                     TPM_Init
  		   >> TPM_Startup
  		   >> CPU_senter
  		   >> CPU_sinit
- 		   >> TPM_MakeIdentity(aik,k)
+ 		   >> TPM_MakeIdentity(aik,k,a)
  		   >>= CA_CertPrev(n,pm,k)
 %		   >>= TPM_QuotePrev(n,pm)
 		   )
