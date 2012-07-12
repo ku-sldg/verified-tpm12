@@ -55,7 +55,8 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
     seal(key:KEY,pcrs:PCRS,blob:BLOB) : seal?
     pair(left,right : BLOB) : pair?
     cert(key:KEY,blob:BLOB) : cert?
-    certReq(aik:(asymKey?),ek:(asymKey?),k:(asymKey?)) : certReq?
+    certReq(aik:(wrapKey?),ek:(asymKey?),k:(symKey?)) : certReq?
+    identity(aik:(wrapKey?),c:(certReq?)) : identity?
   END BLOB;
 
   %% Decryption for specific key types.  Key types not matching automatically

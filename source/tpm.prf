@@ -1,9 +1,6 @@
 (tpm
  (unique_hash 0
   (unique_hash-1 nil 3535917891 ("" (postpone) nil nil) nil shostak))
- (IMP_StateMonad_TCC1 0
-  (IMP_StateMonad_TCC1-1 nil 3551011507 ("" (existence-tcc) nil nil)
-   nil nil))
  (tpmPostInit_TCC1 0
   (tpmPostInit_TCC1-1 nil 3550353288 ("" (subtype-tcc) nil nil)
    ((ekVal const-decl "KEY" tpm nil)) nil))
@@ -23,8 +20,10 @@
    ((afterInit? const-decl "bool" tpm nil)
     (afterStartup? const-decl "bool" tpm nil))
    nil))
- (makeIdentityOut_TCC1 0
-  (makeIdentityOut_TCC1-1 nil 3551051920 ("" (subtype-tcc) nil nil)
+ (certOut_TCC1 0
+  (certOut_TCC1-1 nil 3551056939 ("" (subtype-tcc) nil nil) nil nil))
+ (certOut_TCC2 0
+  (certOut_TCC2-1 nil 3551056939 ("" (subtype-tcc) nil nil)
    ((caVal const-decl "KEY" tpm nil)) nil))
  (monotonic_locality 0
   (monotonic_locality-1 nil 3548612399 ("" (grind) nil nil)
@@ -276,7 +275,8 @@
     (>>= const-decl "State" StateMonad nil))
    shostak))
  (quoteMonad_TCC1 0
-  (quoteMonad_TCC1-1 nil 3549372787 ("" (grind) nil nil) nil nil))
+  (quoteMonad_TCC1-1 nil 3549372787 ("" (grind) nil nil)
+   ((every adt-def-decl "boolean" list_adt nil)) nil))
  (quoteMonad 0
   (quoteMonad-1 nil 3549040969 ("" (assert) (("" (grind) nil nil)) nil)
    ((>>= const-decl "State" StateMonad nil)
@@ -1580,7 +1580,8 @@
    shostak))
  (gen_cert 0
   (gen_cert-1 nil 3551011510 ("" (grind) nil nil)
-   (nil (certOut const-decl "tpmAbsOutput" tpm nil)
+   ((caVal const-decl "KEY" tpm nil)
+    (certOut const-decl "tpmAbsOutput" tpm nil)
     (outputCom const-decl "tpmAbsOutput" tpm nil)
     (tpmAbsState type-eq-decl nil tpm nil)
     (bool nonempty-type-eq-decl nil booleans nil)
@@ -1602,9 +1603,6 @@
    shostak))
  (TPM_QuotePrev_TCC1 0
   (TPM_QuotePrev_TCC1-1 nil 3551008513 ("" (subtype-tcc) nil nil) nil
-   nil))
- (TPM_QuotePrev_TCC2 0
-  (TPM_QuotePrev_TCC2-1 nil 3551051920 ("" (subtype-tcc) nil nil) nil
    nil))
  (quote_with_prev_key 0
   (quote_with_prev_key-1 nil 3551008516 ("" (grind) nil nil)
@@ -1638,8 +1636,6 @@
     (changeLocalityState const-decl "tpmAbsState" tpm nil)
     (CPU_senter const-decl "State" tpm nil)
     (CPU_sinit const-decl "State" tpm nil)
-    (caVal const-decl "KEY" tpm nil)
-    (makeCertReq const-decl "BLOB" tpm nil)
     (makeIdentityOut const-decl "tpmAbsOutput" tpm nil)
     (outputCom const-decl "tpmAbsOutput" tpm nil)
     (output const-decl "State" StateMonad nil)
@@ -1652,7 +1648,7 @@
     (>>= const-decl "State" StateMonad nil))
    shostak))
  (CA_CertPrev_TCC1 0
-  (CA_CertPrev_TCC1-1 nil 3551051920 ("" (subtype-tcc) nil nil) nil
+  (CA_CertPrev_TCC1-1 nil 3551057931 ("" (subtype-tcc) nil nil) nil
    nil))
  (cert_and_quote_with_prev_key 0
   (cert_and_quote_with_prev_key-1 nil 3551028543
@@ -1688,7 +1684,6 @@
     (output const-decl "State" StateMonad nil)
     (outputCom const-decl "tpmAbsOutput" tpm nil)
     (makeIdentityOut const-decl "tpmAbsOutput" tpm nil)
-    (makeCertReq const-decl "BLOB" tpm nil)
     (caVal const-decl "KEY" tpm nil)
     (changeLocalityState const-decl "tpmAbsState" tpm nil)
     (extendState const-decl "tpmAbsState" tpm nil)
@@ -1721,7 +1716,6 @@
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
     (AND const-decl "[bool, bool -> bool]" booleans nil)
-    (every adt-def-decl "boolean" list_adt nil)
     (PRED type-eq-decl nil defined_types nil)
     (bool nonempty-type-eq-decl nil booleans nil)
     (list type-decl nil list_adt nil)
