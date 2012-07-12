@@ -35,6 +35,7 @@ tpm [ B:TYPE+, % BLOB
 
   IMPORTING pcr[HV];
   IMPORTING key[B,K,HV];
+  IMPORTING memory[BLOB,nothing];
 
   %% State monad input type.  All inputs are in the form of a command with
   %% parameters.
@@ -108,6 +109,7 @@ tpm [ B:TYPE+, % BLOB
 
   %% Abstract TPM State with keys, PCR array and locality
   tpmAbsState : TYPE = [#
+                       memory : mem,
                        postInit : bool,
                        srk : (asymKey?),
 		       ek : (asymKey?),
@@ -131,6 +133,7 @@ tpm [ B:TYPE+, % BLOB
 			 , keys:=emptyset
 			 , srk:=private(srkVal)
 			 , ek:=private(ekVal)
+			 , memory:=empty
 			 #);
 
   %% Standard initial state following startup command.  Technically, there
@@ -142,6 +145,7 @@ tpm [ B:TYPE+, % BLOB
 			 , keys:=emptyset
 			 , srk:=private(srkVal)
 			 , ek:=private(ekVal)
+			 , memory:=empty
 			 #);
 
   %% Predicate to determine if startup has occured.  Used as types
