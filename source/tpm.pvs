@@ -58,9 +58,9 @@ tpm [ B:TYPE+, % BLOB
     ABS_LoadKey2(lk:(wrapKey?)): ABS_LoadKey2? 
     ABS_CreateWrapKey(wk,parentk:(asymKey?)): ABS_CreateWrapKey?
     %% Quotes and Identities
-    ABS_Quote(aik:(wrapKey?),nonce:BLOB,pm:PCRMASK) : ABS_Quote? % partially implemented
+    ABS_Quote(aik:(wrapKey?),nonce:BLOB,pm:PCRMASK) : ABS_Quote?
     ABS_MakeIdentity(naik:(asymKey?),k:(symKey?)) : ABS_MakeIdentity?
-    ABS_ActivateIdentity(caik:(wrapKey?),k:(symKey?)) : ABS_ActivateIdentity? % unimplemented
+    ABS_ActivateIdentity(caik:(wrapKey?),k:(symKey?)) : ABS_ActivateIdentity?
     %% Ownership management
     ABS_TakeOwnership : ABS_TakeOwnership?
     ABS_OwnerClear : ABS_OwnerClear? % unimplemented
@@ -73,6 +73,7 @@ tpm [ B:TYPE+, % BLOB
     ABS_certify(cr:(certReq?)) : AVS_certify?
     %% Invented, imaginary Commands
     ABS_Save(i:nat,b:BLOB) : ABS_Save?
+    ABS_Read(i:nat) : ABS_Read?
     noopCom : noopCom?
     offCom : offCom?
     revokeKeyCom(rk:(wrapKey?)): revokeKeyCom?
@@ -288,6 +289,10 @@ tpm [ B:TYPE+, % BLOB
   activateIdentityOut(s:tpmAbsState,a:(wrapKey?),k:(symKey?)) : tpmAbsOutput =
     IF checkKeyRoot(a,srk(s)) THEN outBlob(key(k)) ELSE outNothing ENDIF;
 
+  % Read a value and output
+  readOut(s:tpmAbsState,i:nat) : tpmAbsOutput =
+    outBlob(memory(s)(i));
+
   %% Generate output from a command and state
   outputCom(s:tpmAbsState,c:tpmInput) : tpmAbsOutput = 
     CASES c OF
@@ -307,7 +312,9 @@ tpm [ B:TYPE+, % BLOB
       ABS_Seal(k,data) : sealOut(s,k,data),
       ABS_TakeOwnership : takeOwnershipOut,
       ABS_CreateWrapKey(k,parent) : createWrapKeyOut(k,parent),
-      ABS_certify(cr) : certOut(s,cr)
+      ABS_certify(cr) : certOut(s,cr),
+      ABS_Read(i) : readOut(s,i)
+
     ELSE outNothing
   ENDCASES;
 
@@ -453,6 +460,10 @@ tpm [ B:TYPE+, % BLOB
 		    THEN executeCom(s,ABS_Save(i,bl(a)))
 		    ELSE executeCom(s,noopCom)
 		    ENDIF)));
+
+  CPU_Read(i:nat) : State =
+     output(outNothing,
+            (LAMBDA (s:tpmAbsState): outputCom(s,ABS_Read(i))));
   
 
   %% Invoke the certification authority
@@ -887,11 +898,18 @@ tpm [ B:TYPE+, % BLOB
  		    ELSE outputCom(s,noopCom)
  		    ENDIF)));
 
-  %% Generate a new key, certify it, generate a quote, and send it along.
-  %% Somehow need to get two bound outputs.  This is nowhere close to working
-  %% Use the pair to grab blobs from the output and output them again with 
-  %% new results.  At the end of the command sequence, you should have the
-  %% pair that gets sent to the appraiser with the AIK cert and the TPM quote.
+   TPM_ActivateIdentityPrev(k:(symKey?)):[tpmAbsOutput->State] =
+     useOutputOutput(outNothing,
+           (LAMBDA (a:tpmAbsOutput) :
+            (LAMBDA (s:tpmAbsState) : 
+	      outputCom(s,ABS_ActivateIdentity(bl(a),k)))));
+
+
+   %% This is getting much closer.  Initiatize the TPM and make an
+   %% identity.  Store the identity for later use. Then certify the
+   %% identity via the CA Now restore the identity and request a
+   %% quote.  What I want to do is activate the identity before doing
+   %% the quote
    cert_and_quote_with_prev_key:
      THEOREM FORALL (aik:(asymKey?),s:tpmAbsState,n:BLOB,pm:PCRMASK,k:(symKey?)) :
       LET (out,s) = runState(
@@ -900,8 +918,12 @@ tpm [ B:TYPE+, % BLOB
  		   >> CPU_senter
  		   >> CPU_sinit
  		   >> TPM_MakeIdentity(aik,k)
+		   >>= CPU_SaveOutput(0)
  		   >>= CA_CertPrev(n,pm,k)
-%		   >>= TPM_QuotePrev(n,pm)
+		   >>= CPU_SaveOutput(1)
+		   >> CPU_Read(0)
+		   >>= TPM_QuotePrev(n,pm)
+		   >> CPU_Read(1)
 		   )
  		   (tpmUnknown) IN
          out = outNothing;
