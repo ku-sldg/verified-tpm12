@@ -80,4 +80,8 @@ BEGIN
  useOutputOutput(a:A,f:[A->[S->A]]) : [A->State] =
     (LAMBDA (a:A):state(LAMBDA(s0:S):(f(a)(s0),s0)))
 
+ % Generate an entier new state with previous output and current state.
+ useOutputStateOutput(a:A,f:[A->[S->[A,S]]]) : [A->State] =
+    (LAMBDA (a:A):state(LAMBDA(s0:S):f(a)(s0)))
+
 END StateMonad
