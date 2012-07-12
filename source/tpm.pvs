@@ -860,8 +860,8 @@ tpm [ B:TYPE+, % BLOB
  		   >> CPU_senter
  		   >> CPU_sinit
  		   >> TPM_MakeIdentity(aik,k)
- 		   >>= CA_CertPrev(n,pm,k))
-		   >>= TPM_QuotePrev(n,pm)
+ 		   >>= CA_CertPrev(n,pm,k)
+		   >>= TPM_QuotePrev(n,pm))
  		   (tpmUnknown) IN
          out = outNothing;
 
