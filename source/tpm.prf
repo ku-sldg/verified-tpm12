@@ -28,6 +28,8 @@
  (certOut_TCC2 0
   (certOut_TCC2-1 nil 3551056939 ("" (subtype-tcc) nil nil)
    ((caVal const-decl "KEY" tpm nil)) nil))
+ (certOut_TCC3 0
+  (certOut_TCC3-1 nil 3551091914 ("" (subtype-tcc) nil nil) nil nil))
  (monotonic_locality 0
   (monotonic_locality-1 nil 3548612399 ("" (grind) nil nil)
    ((changeLocalityState const-decl "tpmAbsState" tpm nil)
@@ -278,7 +280,7 @@
     (>>= const-decl "State" StateMonad nil))
    shostak))
  (quoteMonad_TCC1 0
-  (quoteMonad_TCC1-1 nil 3549372787 ("" (grind) nil nil) (nil) nil))
+  (quoteMonad_TCC1-1 nil 3549372787 ("" (grind) nil nil) nil nil))
  (quoteMonad 0
   (quoteMonad-1 nil 3549040969 ("" (assert) (("" (grind) nil nil)) nil)
    ((>>= const-decl "State" StateMonad nil)
@@ -287,7 +289,7 @@
     (output const-decl "State" StateMonad nil)
     (outputCom const-decl "tpmAbsOutput" tpm nil)
     (quoteOut const-decl "tpmAbsOutput" tpm nil)
-    (getPCRs const-decl "list[PCR]" pcr nil) nil
+    (getPCRs const-decl "list[PCR]" pcr nil)
     (checkKeyRoot const-decl "bool" key nil)
     (TPM_Extend const-decl "State" tpm nil)
     (CPU_sinit const-decl "State" tpm nil)
@@ -339,14 +341,14 @@
     (key adt-accessor-decl "[(wrapKey?) -> (asymKey?)]" key nil)
     (int nonempty-type-eq-decl nil integers nil)
     (nat nonempty-type-eq-decl nil naturalnumbers nil)
-    (PCRINDEX type-eq-decl nil pcr nil) nil
+    (PCRINDEX type-eq-decl nil pcr nil)
     (non adt-accessor-decl "[(outQuote?) -> BLOB[B, K, HV]]" tpm nil)
     (pcrs adt-accessor-decl "[(outQuote?) -> list[PCR]]" tpm nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
     (wrapKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
     (number nonempty-type-decl nil numbers nil)
     (PRED type-eq-decl nil defined_types nil)
-    (list type-decl nil list_adt nil) nil
+    (list type-decl nil list_adt nil)
     (AND const-decl "[bool, bool -> bool]" booleans nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
@@ -394,13 +396,13 @@
     (key adt-accessor-decl "[(wrapKey?) -> (asymKey?)]" key nil)
     (int nonempty-type-eq-decl nil integers nil)
     (nat nonempty-type-eq-decl nil naturalnumbers nil)
-    (PCRINDEX type-eq-decl nil pcr nil) nil
+    (PCRINDEX type-eq-decl nil pcr nil)
     (non adt-accessor-decl "[(outQuote?) -> BLOB[B, K, HV]]" tpm nil)
     (pcrs adt-accessor-decl "[(outQuote?) -> list[PCR]]" tpm nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
     (number nonempty-type-decl nil numbers nil)
     (PRED type-eq-decl nil defined_types nil)
-    (list type-decl nil list_adt nil) nil
+    (list type-decl nil list_adt nil)
     (AND const-decl "[bool, bool -> bool]" booleans nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
@@ -482,7 +484,7 @@
     (number_field nonempty-type-from-decl nil number_fields nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
-    (AND const-decl "[bool, bool -> bool]" booleans nil) nil
+    (AND const-decl "[bool, bool -> bool]" booleans nil)
     (list type-decl nil list_adt nil)
     (PRED type-eq-decl nil defined_types nil)
     (number nonempty-type-decl nil numbers nil)
@@ -534,7 +536,7 @@
     (wrapKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
     (number nonempty-type-decl nil numbers nil)
     (PRED type-eq-decl nil defined_types nil)
-    (list type-decl nil list_adt nil) nil
+    (list type-decl nil list_adt nil)
     (AND const-decl "[bool, bool -> bool]" booleans nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
@@ -1559,7 +1561,7 @@
     (wrapKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
     (number nonempty-type-decl nil numbers nil)
     (PRED type-eq-decl nil defined_types nil)
-    (list type-decl nil list_adt nil) nil
+    (list type-decl nil list_adt nil)
     (AND const-decl "[bool, bool -> bool]" booleans nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
@@ -1594,6 +1596,44 @@
     (>>= const-decl "State" StateMonad nil)
     (srkVal const-decl "KEY" tpm nil) (ekVal const-decl "KEY" tpm nil)
     (tpmStartup const-decl "tpmAbsState" tpm nil))
+   shostak))
+ (activate_identity_TCC1 0
+  (activate_identity_TCC1-1 nil 3551091914 ("" (subtype-tcc) nil nil)
+   nil nil))
+ (activate_identity_TCC2 0
+  (activate_identity_TCC2-1 nil 3551091914 ("" (subtype-tcc) nil nil)
+   nil nil))
+ (activate_identity_TCC3 0
+  (activate_identity_TCC3-1 nil 3551091914 ("" (subtype-tcc) nil nil)
+   nil nil))
+ (activate_identity 0
+  (activate_identity-1 nil 3551091916
+   ("" (assert) (("" (grind) nil nil)) nil)
+   ((emptyset const-decl "set" sets nil)
+    (singleton_elt const-decl "T" sets nil)
+    (member const-decl "bool" sets nil)
+    (tpmStartup const-decl "tpmAbsState" tpm nil)
+    (ekVal const-decl "KEY" tpm nil) (srkVal const-decl "KEY" tpm nil)
+    (>>= const-decl "State" StateMonad nil)
+    (unit const-decl "State" StateMonad nil)
+    (TPM_ActivateIdentity const-decl "State" tpm nil)
+    (output const-decl "State" StateMonad nil)
+    (tpmAbsOutput type-decl nil tpm nil) (KEY type-decl nil key nil)
+    (boolean nonempty-type-decl nil booleans nil)
+    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
+    (KEYSET type-eq-decl nil key nil)
+    (LOCALITY type-eq-decl nil tpm nil) (PCRS type-eq-decl nil pcr nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (tpmAbsState type-eq-decl nil tpm nil)
+    (outputCom const-decl "tpmAbsOutput" tpm nil)
+    (activateIdentityOut const-decl "tpmAbsOutput" tpm nil)
+    (checkKeyRoot const-decl "bool" key nil)
+    (B formal-nonempty-type-decl nil tpm nil)
+    (K formal-nonempty-type-decl nil tpm nil)
+    (HV formal-nonempty-type-decl nil tpm nil)
+    (NOT const-decl "[bool -> bool]" booleans nil)
+    (wrapKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
+    (symKey? adt-recognizer-decl "[KEY -> boolean]" key nil))
    shostak))
  (TPM_QuotePrev_TCC1 0
   (TPM_QuotePrev_TCC1-1 nil 3551008513 ("" (subtype-tcc) nil nil) nil
@@ -1641,6 +1681,12 @@
     (useOutputOutput const-decl "[A -> State]" StateMonad nil)
     (>>= const-decl "State" StateMonad nil))
    shostak))
+ (CA_CertPrev_TCC1 0
+  (CA_CertPrev_TCC1-1 nil 3551091914 ("" (subtype-tcc) nil nil) nil
+   nil))
+ (CA_CertPrev_TCC2 0
+  (CA_CertPrev_TCC2-1 nil 3551091914 ("" (subtype-tcc) nil nil) nil
+   nil))
  (cert_and_quote_with_prev_key 0
   (cert_and_quote_with_prev_key-1 nil 3551028543
    ("" (skosimp*)
