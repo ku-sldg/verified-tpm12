@@ -1,0 +1,49 @@
+%% ----
+%%
+%% Memory Theory
+%%
+%% Author: Perry Alexander
+%% Date: Thu Jul 12 14:28:07 EDT 2012
+%%
+%% Description: Basic model of memory
+%% 
+%% Dependencies:
+%%  None
+%%
+%% Todo: (key - => pending, + => done)
+%% ----
+
+memory [ C:type+,e:C ]
+		: THEORY
+
+  BEGIN
+
+  % ASSUMING
+   % assuming declarations
+  % ENDASSUMING
+
+  % memory type
+  mem : TYPE = [nat -> C];
+
+  %% initial empty memory
+  empty : mem = (LAMBDA (i:nat) : e);
+
+  %% update a memory location
+  updateLoc(m:mem,i:nat,v:C):mem =
+    (LAMBDA (x:nat) : IF x=i THEN v ELSE m(x) ENDIF);
+
+  %% empty contains nothing
+  empty_empty: THEOREM FORALL (x:nat) : empty(x)=e;
+
+  %% Updated memory returns the right value for the udpated location
+  update1: THEOREM FORALL (m:mem,i:nat,c:C) :
+    (updateLoc(m,i,c)(i)=c);
+
+  %% Updated memoery returns the old value for everyting except the updated
+  %% location
+  update2: THEOREM FORALL (m:mem,i,j:nat,c:C) :
+    i/=j => updateLoc(m,i,c)(j)=m(j);
+
+  END memory
+
+
