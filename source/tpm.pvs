@@ -59,7 +59,7 @@ tpm [ B:TYPE+, % BLOB
     %% Quotes and Identities
     ABS_Quote(aik:(wrapKey?),nonce:BLOB,pm:PCRMASK) : ABS_Quote? % partially implemented
     ABS_MakeIdentity(naik:(asymKey?),k:(symKey?)) : ABS_MakeIdentity?
-    ABS_ActivateIdentity(caik:(wrapKey?)) : ABS_ActivateIdentity? % unimplemented
+    ABS_ActivateIdentity(caik:(wrapKey?),k:(symKey?)) : ABS_ActivateIdentity? % unimplemented
     %% Ownership management
     ABS_TakeOwnership : ABS_TakeOwnership?
     ABS_OwnerClear : ABS_OwnerClear? % unimplemented
@@ -189,6 +189,10 @@ tpm [ B:TYPE+, % BLOB
       ELSE nothing
     ENDCASES;
 
+  % Use an AIK.  This is currently unimplemented.
+  activateIdentityState(s:tpmAbsState,a:(wrapKey?),k:(symKey?)) : tpmAbsState =
+    installKeyState(s,a);
+
   %% What we want to generate with each command is a pair of type
   %% [tpmAbsOut,tpmAbsState].  executeCom generates the the state
   %% from a TPM state and command while the upcoming outputCom
@@ -220,7 +224,8 @@ tpm [ B:TYPE+, % BLOB
       ABS_Unseal(d,k) : s,
       ABS_Seal(k,data) : s,
       ABS_TakeOwnership : s,
-      ABS_CreateWrapKey(k,parent): s
+      ABS_CreateWrapKey(k,parent): s,
+      ABS_ActivateIdentity(a,k) : activateIdentityState(s,a,k)
       ELSE s
   ENDCASES;
   
@@ -252,10 +257,6 @@ tpm [ B:TYPE+, % BLOB
     LET waik:(wrapKey?) = wrapKey(srk(s),a) IN
       outBlob(identity(waik,certReq(waik,ekVal,k)));
 
-  % Use an AIK.  This is currently unimplemented.
-  activateIdentityOut(s:tpmAbsState,a:(wrapKey?)) : tpmAbsOutput =
-    outNothing;
-
   % Output decypted key
   decryptKeyOut(s:tpmAbsState,d:(encrypt?)) : tpmAbsOutput = 
     outBlob(decryptKeyState(s,d));
@@ -273,6 +274,10 @@ tpm [ B:TYPE+, % BLOB
   certOut(s:tpmAbsState,cr:(certReq?)) : tpmAbsOutput =
     outBlob(identActivation(cert(private(caVal),key(aik(cr))),k(cr),ek(cr)))
 
+  % Retrieve a key if a can be installed
+  activateIdentityOut(s:tpmAbsState,a:(wrapKey?),k:(symKey?)) : tpmAbsOutput =
+    IF checkKeyRoot(a,srk(s)) THEN outBlob(key(k)) ELSE outNothing ENDIF;
+
   %% Generate output from a command and state
   outputCom(s:tpmAbsState,c:tpmInput) : tpmAbsOutput = 
     CASES c OF
@@ -286,14 +291,14 @@ tpm [ B:TYPE+, % BLOB
       ABS_sinit : outNothing,
       ABS_Quote(k,n,pm) : quoteOut(s,k,n,pm),
       ABS_MakeIdentity(a,k) : makeIdentityOut(s,a,k), 
-      ABS_ActivateIdentity(a) : activateIdentityOut(s,a),
+      ABS_ActivateIdentity(a,k) : activateIdentityOut(s,a,k),
       decryptKeyCom(d) : decryptKeyOut(s,d),
       ABS_Unseal(d,k) : unsealOut(s,d,k),
       ABS_Seal(k,data) : sealOut(s,k,data),
       ABS_TakeOwnership : takeOwnershipOut,
       ABS_CreateWrapKey(k,parent) : createWrapKeyOut(k,parent),
       ABS_certify(cr) : certOut(s,cr)
-      ELSE outNothing
+    ELSE outNothing
   ENDCASES;
 
   %% Monotonicity of locality
@@ -410,9 +415,9 @@ tpm [ B:TYPE+, % BLOB
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_MakeIdentity(n,k))));
 
   %% Use an AIK
-  TPM_UseIdentity(a:(wrapKey?)) : State =
+  TPM_ActivateIdentity(a:(wrapKey?),k:(symKey?)) : State =
      output(outNothing,
-            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_ActivateIdentity(a))));
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_ActivateIdentity(a,k))));
 
   %% Decrypt and output a blob (should be a key)
   TPM_Decrypt(d:(encrypt?)) : State =
@@ -817,8 +822,7 @@ tpm [ B:TYPE+, % BLOB
 		    ELSE outputCom(s,noopCom)
 		    ENDIF)));
 
-  %% Generate an AIK and use it for a quote.  No certification authority
-  %% yet.
+  %% Generate an AIK and use it for a quote.
   %% proved - Wed Jul 11 13:47:33 EDT 2012
   quote_with_prev_key:
     THEOREM FORALL (k:(asymKey?),s:tpmAbsState,n:BLOB,pm:PCRMASK,sessk:(symKey?)) :
@@ -861,7 +865,8 @@ tpm [ B:TYPE+, % BLOB
  		   >> CPU_sinit
  		   >> TPM_MakeIdentity(aik,k)
  		   >>= CA_CertPrev(n,pm,k)
-		   >>= TPM_QuotePrev(n,pm))
+%		   >>= TPM_QuotePrev(n,pm)
+		   )
  		   (tpmUnknown) IN
          out = outNothing;
 
