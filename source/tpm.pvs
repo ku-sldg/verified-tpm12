@@ -842,7 +842,7 @@ tpm [ B:TYPE+, % BLOB
      useOutputOutput(outNothing,
  		(LAMBDA (a:tpmAbsOutput):
  		  (LAMBDA (s:tpmAbsState):
- 		    IF identity?(bl(a))
+ 		    IF outBlob?(a) AND identity?(bl(a))
  		    THEN outputCom(s,ABS_certify(c(bl(a))))
  		    ELSE outputCom(s,noopCom)
  		    ENDIF)));
