@@ -47,15 +47,14 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   BLOB : DATATYPE
   BEGIN
     nothing : nothing?
-    data(d:DVAL) : data?
     key(k:KEY) : key?
     hash(h:HVAL) : hash?
     encrypt(key:KEY,blob:BLOB) : encrypt?
     sign(key:KEY,blob:BLOB) : sign?
     seal(key:KEY,pcrs:PCRS,blob:BLOB) : seal?
-    pair(left,right : BLOB) : pair?
     cert(key:KEY,blob:BLOB) : cert?
-    certReq(aik:(wrapKey?),ek:(asymKey?),k:(symKey?)) : certReq?
+    pair(left,right : BLOB) : pair?
+    certReq(aik:(wrapKey?),ek:(asymKey?),freshk:(symKey?)) : certReq?
     identity(aik:(wrapKey?),c:(certReq?)) : identity?
     identActivation(c:(cert?),k:(symKey?),ek:(asymKey?)) : identActivation?
   END BLOB;

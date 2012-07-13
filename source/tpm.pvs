@@ -41,42 +41,38 @@ tpm [ B:TYPE+, % BLOB
   %% parameters.
   tpmInput : DATATYPE
   BEGIN
-    decryptKeyCom(d:(encrypt?)) : decryptKeyCom?
-    encryptCom(en:BLOB) : encryptCom? % unimplemented
-    %% Startup commands
-    ABS_Init : ABS_Init? % TPM goes into a state where only ABS_startup
-                         % is allowed.  This is a hardware signal and cannot
-			 % be invoked by software
-    ABS_Startup : ABS_Startup? % clear - all variables back to default values
-                               % save - restore from ABS_SaveState
-			       % deactivated - turn off and wait for ABS_init
+  %% Startup commands
+    ABS_Init : ABS_Init? 
+    ABS_Startup : ABS_Startup? % Only clear implemented
     ABS_SaveState : ABS_SaveState? % unimplemented
-    %% PCRs, quotes, seals and keys
+  %% PCRs, seals and keys
     ABS_Extend(h:HV,i:PCRINDEX) : ABS_Extend?
     ABS_Unseal(s:(seal?),uk:(asymKey?)) : ABS_Unseal?   
     ABS_Seal(sk:(asymKey?),data:BLOB) : ABS_Seal?
     ABS_LoadKey2(lk:(wrapKey?)): ABS_LoadKey2? 
     ABS_CreateWrapKey(wk,parentk:(asymKey?)): ABS_CreateWrapKey?
-    %% Quotes and Identities
+  %% Quotes and Identities
     ABS_Quote(aik:(wrapKey?),nonce:BLOB,pm:PCRMASK) : ABS_Quote?
     ABS_MakeIdentity(naik:(asymKey?),k:(symKey?)) : ABS_MakeIdentity?
     ABS_ActivateIdentity(caik:(wrapKey?),k:(symKey?)) : ABS_ActivateIdentity?
-    %% Ownership management
+  %% Ownership management
     ABS_TakeOwnership : ABS_TakeOwnership?
     ABS_OwnerClear : ABS_OwnerClear? % unimplemented
     ABS_ForceClear : ABS_ForceClear? % unimplemented
     ABS_DisableOwnerClear : ABS_DisabelOwnerClear? % unimplemented
-    %% Software Commands
+  %% Software Commands
     ABS_senter : ABS_senter? % implemented all actions as one senter
     ABS_sinit : ABS_sinit? % partially implemented
-    %% CA Commands
+  %% CA Commands
     ABS_certify(cr:(certReq?)) : AVS_certify?
-    %% Invented, imaginary Commands
+  %% Invented, imaginary Commands
     ABS_Save(i:nat,b:BLOB) : ABS_Save?
     ABS_Read(i:nat) : ABS_Read?
     noopCom : noopCom?
     offCom : offCom?
     revokeKeyCom(rk:(wrapKey?)): revokeKeyCom?
+    decryptKeyCom(d:(encrypt?)) : decryptKeyCom?
+    encryptCom(en:BLOB) : encryptCom? % unimplemented
   END tpmInput;
 
   %% State monad output type
@@ -283,7 +279,7 @@ tpm [ B:TYPE+, % BLOB
   % Generate a certified AIK from an AIK.  Certification assumes that the
   % EK really does belong to the TPM.  We're abstracting away that check.
   certOut(s:tpmAbsState,cr:(certReq?)) : tpmAbsOutput =
-    outBlob(identActivation(cert(private(caVal),key(aik(cr))),k(cr),ek(cr)))
+    outBlob(identActivation(cert(private(caVal),key(aik(cr))),freshk(cr),ek(cr)))
 
   % Retrieve a key if a can be installed
   activateIdentityOut(s:tpmAbsState,a:(wrapKey?),k:(symKey?)) : tpmAbsOutput =
@@ -853,7 +849,7 @@ tpm [ B:TYPE+, % BLOB
 		  >>= unit)
 		  (tpmStartup) IN
       out = IF checkKeyRoot(aik,srk(s))
-            THEN outKey(key(symKey?))
+            THEN outKey(k)
 	    ELSE outNothing
 	    ENDIF
       AND checkKeyRoot(aik,srk(s)) => member(aik,keys(s));
@@ -893,16 +889,20 @@ tpm [ B:TYPE+, % BLOB
      useOutputOutput(outNothing,
  		(LAMBDA (a:tpmAbsOutput):
  		  (LAMBDA (s:tpmAbsState):
- 		    IF outBlob?(a) AND identity?(bl(a))
+ 		    IF outBlob?(a) AND identity?(bl(a)) AND certReq?(c(bl(a)))
  		    THEN outputCom(s,ABS_certify(c(bl(a))))
  		    ELSE outputCom(s,noopCom)
  		    ENDIF)));
 
-   TPM_ActivateIdentityPrev(k:(symKey?)):[tpmAbsOutput->State] =
+   TPM_ActivateIdentityPrev(sessk:(symKey?)):[tpmAbsOutput->State] =
      useOutputOutput(outNothing,
            (LAMBDA (a:tpmAbsOutput) :
             (LAMBDA (s:tpmAbsState) : 
-	      outputCom(s,ABS_ActivateIdentity(bl(a),k)))));
+              IF outBlob?(a) AND key?(bl(a)) AND wrapKey?(k(bl(a)))
+	      THEN outputCom(s,ABS_ActivateIdentity(k(bl(a)),sessk))
+	      ELSE outputCom(s,noopCom)
+	      ENDIF
+	      )));
 
 
    %% This is getting much closer.  Initiatize the TPM and make an
