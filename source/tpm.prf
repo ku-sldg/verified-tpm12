@@ -296,8 +296,7 @@
     (>>= const-decl "State" StateMonad nil))
    shostak))
  (quoteMonad_TCC1 0
-  (quoteMonad_TCC1-1 nil 3549372787 ("" (grind) nil nil)
-   ((every adt-def-decl "boolean" list_adt nil)) nil))
+  (quoteMonad_TCC1-1 nil 3549372787 ("" (grind) nil nil) (nil) nil))
  (quoteMonad 0
   (quoteMonad-1 nil 3549040969 ("" (assert) (("" (grind) nil nil)) nil)
    ((>>= const-decl "State" StateMonad nil)
@@ -306,8 +305,7 @@
     (output const-decl "State" StateMonad nil)
     (outputCom const-decl "tpmAbsOutput" tpm nil)
     (quoteOut const-decl "tpmAbsOutput" tpm nil)
-    (getPCRs const-decl "list[PCR]" pcr nil)
-    (map adt-def-decl "list[T1]" list_adt_map nil)
+    (getPCRs const-decl "list[PCR]" pcr nil) nil
     (checkKeyRoot const-decl "bool" key nil)
     (TPM_Extend const-decl "State" tpm nil)
     (CPU_sinit const-decl "State" tpm nil)
@@ -363,16 +361,14 @@
     (wkey adt-accessor-decl "[(wrapKey?) -> (asymKey?)]" key nil)
     (int nonempty-type-eq-decl nil integers nil)
     (nat nonempty-type-eq-decl nil naturalnumbers nil)
-    (PCRINDEX type-eq-decl nil pcr nil)
-    (map adt-def-decl "list[T1]" list_adt_map nil)
+    (PCRINDEX type-eq-decl nil pcr nil) nil
     (oqnon adt-accessor-decl "[(outQuote?) -> BLOB[B, K, HV]]" tpm nil)
     (oqpcrs adt-accessor-decl "[(outQuote?) -> list[PCR]]" tpm nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
     (wrapKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
     (number nonempty-type-decl nil numbers nil)
     (PRED type-eq-decl nil defined_types nil)
-    (list type-decl nil list_adt nil)
-    (every adt-def-decl "boolean" list_adt nil)
+    (list type-decl nil list_adt nil) nil
     (AND const-decl "[bool, bool -> bool]" booleans nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
@@ -424,15 +420,13 @@
     (wkey adt-accessor-decl "[(wrapKey?) -> (asymKey?)]" key nil)
     (int nonempty-type-eq-decl nil integers nil)
     (nat nonempty-type-eq-decl nil naturalnumbers nil)
-    (PCRINDEX type-eq-decl nil pcr nil)
-    (map adt-def-decl "list[T1]" list_adt_map nil)
+    (PCRINDEX type-eq-decl nil pcr nil) nil
     (oqnon adt-accessor-decl "[(outQuote?) -> BLOB[B, K, HV]]" tpm nil)
     (oqpcrs adt-accessor-decl "[(outQuote?) -> list[PCR]]" tpm nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
     (number nonempty-type-decl nil numbers nil)
     (PRED type-eq-decl nil defined_types nil)
-    (list type-decl nil list_adt nil)
-    (every adt-def-decl "boolean" list_adt nil)
+    (list type-decl nil list_adt nil) nil
     (AND const-decl "[bool, bool -> bool]" booleans nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
@@ -522,8 +516,7 @@
     (number_field nonempty-type-from-decl nil number_fields nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
-    (AND const-decl "[bool, bool -> bool]" booleans nil)
-    (every adt-def-decl "boolean" list_adt nil)
+    (AND const-decl "[bool, bool -> bool]" booleans nil) nil
     (list type-decl nil list_adt nil)
     (PRED type-eq-decl nil defined_types nil)
     (number nonempty-type-decl nil numbers nil)
@@ -579,8 +572,7 @@
     (wrapKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
     (number nonempty-type-decl nil numbers nil)
     (PRED type-eq-decl nil defined_types nil)
-    (list type-decl nil list_adt nil)
-    (every adt-def-decl "boolean" list_adt nil)
+    (list type-decl nil list_adt nil) nil
     (AND const-decl "[bool, bool -> bool]" booleans nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
@@ -1390,8 +1382,7 @@
     (wrapKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
     (number nonempty-type-decl nil numbers nil)
     (PRED type-eq-decl nil defined_types nil)
-    (list type-decl nil list_adt nil)
-    (every adt-def-decl "boolean" list_adt nil)
+    (list type-decl nil list_adt nil) nil
     (AND const-decl "[bool, bool -> bool]" booleans nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
@@ -1568,20 +1559,139 @@
    ("" (skosimp*)
     (("" (rewrite "TPM_Init")
       (("" (rewrite "TPM_Startup")
-        (("" (rewrite "TPM_MakeIdentity")
-          (("" (rewrite "CPU_senter")
-            (("" (rewrite "CPU_sinit")
-              (("" (rewrite "CA_CertPrev")
-                (("" (rewrite "outputCom")
-                  (("" (assert)
-                    (("" (rewrite "executeCom")
+        (("" (rewrite "CPU_senter")
+          (("" (rewrite "CPU_sinit")
+            (("" (rewrite "TPM_MakeIdentity")
+              (("" (rewrite "CPU_SaveOutput")
+                (("" (rewrite "CPU_Read")
+                  (("" (rewrite "CA_CertPrev")
+                    (("" (rewrite "TPM_ActivateIdentityPrev")
                       (("" (assert)
-                        (("" (rewrite "executeComPostInit")
-                          (("" (rewrite "executeComStartup")
-                            (("" (assert)
+                        (("" (rewrite ">>")
+                          (("" (rewrite ">>=")
+                            (("" (rewrite ">>")
                               ((""
-                                (grind)
-                                (("" (postpone) nil nil))
+                                (rewrite ">>")
+                                ((""
+                                  (assert)
+                                  ((""
+                                    (rewrite "outputCom")
+                                    ((""
+                                      (assert)
+                                      ((""
+                                        (expand "activateIdentityOut")
+                                        ((""
+                                          (assert)
+                                          ((""
+                                            (rewrite "output")
+                                            ((""
+                                              (rewrite "output")
+                                              ((""
+                                                (assert)
+                                                ((""
+                                                  (rewrite ">>")
+                                                  ((""
+                                                    (rewrite ">>=")
+                                                    ((""
+                                                      (assert)
+                                                      ((""
+                                                        (rewrite ">>=")
+                                                        ((""
+                                                          (assert)
+                                                          ((""
+                                                            (rewrite
+                                                             ">>")
+                                                            ((""
+                                                              (assert)
+                                                              ((""
+                                                                (rewrite
+                                                                 ">>")
+                                                                ((""
+                                                                  (assert)
+                                                                  ((""
+                                                                    (rewrite
+                                                                     ">>=")
+                                                                    ((""
+                                                                      (assert)
+                                                                      ((""
+                                                                        (rewrite
+                                                                         "executeCom")
+                                                                        ((""
+                                                                          (rewrite
+                                                                           "executeComStartup")
+                                                                          ((""
+                                                                            (assert)
+                                                                            ((""
+                                                                              (rewrite
+                                                                               "executeComPostInit")
+                                                                              ((""
+                                                                                (assert)
+                                                                                ((""
+                                                                                  (assert)
+                                                                                  ((""
+                                                                                    (rewrite
+                                                                                     "useOutputOutput")
+                                                                                    ((""
+                                                                                      (assert)
+                                                                                      ((""
+                                                                                        (rewrite
+                                                                                         "put")
+                                                                                        ((""
+                                                                                          (assert)
+                                                                                          ((""
+                                                                                            (rewrite
+                                                                                             "modify")
+                                                                                            ((""
+                                                                                              (rewrite
+                                                                                               "modify")
+                                                                                              ((""
+                                                                                                (rewrite
+                                                                                                 "modify")
+                                                                                                ((""
+                                                                                                  (assert)
+                                                                                                  ((""
+                                                                                                    (assert)
+                                                                                                    ((""
+                                                                                                      (grind)
+                                                                                                      ((""
+                                                                                                        (postpone)
+                                                                                                        nil
+                                                                                                        nil))
+                                                                                                      nil))
+                                                                                                    nil))
+                                                                                                  nil))
+                                                                                                nil))
+                                                                                              nil))
+                                                                                            nil))
+                                                                                          nil))
+                                                                                        nil))
+                                                                                      nil))
+                                                                                    nil))
+                                                                                  nil))
+                                                                                nil))
+                                                                              nil))
+                                                                            nil))
+                                                                          nil))
+                                                                        nil))
+                                                                      nil))
+                                                                    nil))
+                                                                  nil))
+                                                                nil))
+                                                              nil))
+                                                            nil))
+                                                          nil))
+                                                        nil))
+                                                      nil))
+                                                    nil))
+                                                  nil))
+                                                nil))
+                                              nil))
+                                            nil))
+                                          nil))
+                                        nil))
+                                      nil))
+                                    nil))
+                                  nil))
                                 nil))
                               nil))
                             nil))

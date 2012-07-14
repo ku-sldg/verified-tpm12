@@ -427,10 +427,13 @@ tpm [ B:TYPE+, % BLOB
 
   %% Requires use of bind
   CPU_SaveOutput(i:nat) : [tpmAbsOutput -> State] =
-      useOutputState(outNothing,
+      useOutputStateOutput(outNothing,
                (LAMBDA (a:tpmAbsOutput):
                   (LAMBDA (s:tpmAbsState):
-		    executeCom(s,ABS_Save(i,a)))));
+		    executeCom(s,ABS_Save(i,a)))),
+               (LAMBDA (a:tpmAbsOutput):
+                  (LAMBDA (s:tpmAbsState):
+		    a)));
 
   CPU_Read(i:nat) : State =
      output(outNothing,
@@ -849,6 +852,7 @@ tpm [ B:TYPE+, % BLOB
  		   >> CPU_sinit
  		   >> TPM_MakeIdentity(aik,k)
 		   >>= CPU_SaveOutput(0)
+%		   >> CPU_Read(0)
  		   >>= CA_CertPrev(n,pm,k)
 		   >>= TPM_ActivateIdentityPrev(k)
 		   >> CPU_Read(0)
