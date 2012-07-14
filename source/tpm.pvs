@@ -17,6 +17,7 @@
 %%  - AIKs need to be installed, not just checked, when used
 %%  + MakeIdentity creates a pair
 %%  - data sent to the CA is encrypted with the CA public key
+%%  - noop needs to generate a message when used in error cases
 %% ----
 
 tpm [ B:TYPE+, % BLOB
@@ -79,11 +80,11 @@ tpm [ B:TYPE+, % BLOB
   %% Software Commands
     ABS_senter : ABS_senter? % implemented all actions as one senter
     ABS_sinit : ABS_sinit? % partially implemented
+    ABS_Save(i:nat,v:tpmAbsOutput) : ABS_Save?
+    ABS_Read(i:nat) : ABS_Read?
   %% CA Commands
     ABS_certify(aik:(wrapKey?),ek:(asymKey?),freshk:(symKey?)) : ABS_certify?
   %% Invented, imaginary Commands
-    ABS_Save(i:nat,v:tpmAbsOutput) : ABS_Save?
-    ABS_Read(i:nat) : ABS_Read?
     noopCom : noopCom?
   END tpmInput;
 
@@ -213,7 +214,7 @@ tpm [ B:TYPE+, % BLOB
       ELSE s
     ENDCASES;
 
-  %% Run if ABS_Startup has run
+  %% Run if ABS_Startup has run after TPM_Init
   executeComStartup(s:(afterStartup?),c:tpmInput) : tpmAbsState = 
     CASES c OF
       ABS_Extend(h,n) : extendState(s,n,h),
@@ -339,7 +340,7 @@ tpm [ B:TYPE+, % BLOB
     modify(outNothing,
            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_LoadKey2(k))));
 
-  %% Noe-op - not a real TPM command
+  %% No-op - not a real TPM command
   TPM_Noop : [tpmAbsOutput -> State] =
     (LAMBDA (a:tpmAbsOutput): state((LAMBDA(s:tpmAbsState) : (a,s))));
 
@@ -849,10 +850,9 @@ tpm [ B:TYPE+, % BLOB
  		   >> TPM_MakeIdentity(aik,k)
 		   >>= CPU_SaveOutput(0)
  		   >>= CA_CertPrev(n,pm,k)
-		   >>= CPU_SaveOutput(1)
+		   >>= TPM_ActivateIdentityPrev(k)
 		   >> CPU_Read(0)
 		   >>= TPM_QuotePrev(n,pm)
-		   >> CPU_Read(1)
 		   )
  		   (tpmUnknown) IN
          out = outNothing;
