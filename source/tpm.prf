@@ -296,7 +296,7 @@
     (>>= const-decl "State" StateMonad nil))
    shostak))
  (quoteMonad_TCC1 0
-  (quoteMonad_TCC1-1 nil 3549372787 ("" (grind) nil nil) (nil) nil))
+  (quoteMonad_TCC1-1 nil 3549372787 ("" (grind) nil nil) nil nil))
  (quoteMonad 0
   (quoteMonad-1 nil 3549040969 ("" (assert) (("" (grind) nil nil)) nil)
    ((>>= const-decl "State" StateMonad nil)
@@ -305,7 +305,7 @@
     (output const-decl "State" StateMonad nil)
     (outputCom const-decl "tpmAbsOutput" tpm nil)
     (quoteOut const-decl "tpmAbsOutput" tpm nil)
-    (getPCRs const-decl "list[PCR]" pcr nil) nil
+    (getPCRs const-decl "list[PCR]" pcr nil)
     (checkKeyRoot const-decl "bool" key nil)
     (TPM_Extend const-decl "State" tpm nil)
     (CPU_sinit const-decl "State" tpm nil)
@@ -361,14 +361,14 @@
     (wkey adt-accessor-decl "[(wrapKey?) -> (asymKey?)]" key nil)
     (int nonempty-type-eq-decl nil integers nil)
     (nat nonempty-type-eq-decl nil naturalnumbers nil)
-    (PCRINDEX type-eq-decl nil pcr nil) nil
+    (PCRINDEX type-eq-decl nil pcr nil)
     (oqnon adt-accessor-decl "[(outQuote?) -> BLOB[B, K, HV]]" tpm nil)
     (oqpcrs adt-accessor-decl "[(outQuote?) -> list[PCR]]" tpm nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
     (wrapKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
     (number nonempty-type-decl nil numbers nil)
     (PRED type-eq-decl nil defined_types nil)
-    (list type-decl nil list_adt nil) nil
+    (list type-decl nil list_adt nil)
     (AND const-decl "[bool, bool -> bool]" booleans nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
@@ -420,13 +420,13 @@
     (wkey adt-accessor-decl "[(wrapKey?) -> (asymKey?)]" key nil)
     (int nonempty-type-eq-decl nil integers nil)
     (nat nonempty-type-eq-decl nil naturalnumbers nil)
-    (PCRINDEX type-eq-decl nil pcr nil) nil
+    (PCRINDEX type-eq-decl nil pcr nil)
     (oqnon adt-accessor-decl "[(outQuote?) -> BLOB[B, K, HV]]" tpm nil)
     (oqpcrs adt-accessor-decl "[(outQuote?) -> list[PCR]]" tpm nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
     (number nonempty-type-decl nil numbers nil)
     (PRED type-eq-decl nil defined_types nil)
-    (list type-decl nil list_adt nil) nil
+    (list type-decl nil list_adt nil)
     (AND const-decl "[bool, bool -> bool]" booleans nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
@@ -516,7 +516,7 @@
     (number_field nonempty-type-from-decl nil number_fields nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
-    (AND const-decl "[bool, bool -> bool]" booleans nil) nil
+    (AND const-decl "[bool, bool -> bool]" booleans nil)
     (list type-decl nil list_adt nil)
     (PRED type-eq-decl nil defined_types nil)
     (number nonempty-type-decl nil numbers nil)
@@ -572,7 +572,7 @@
     (wrapKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
     (number nonempty-type-decl nil numbers nil)
     (PRED type-eq-decl nil defined_types nil)
-    (list type-decl nil list_adt nil) nil
+    (list type-decl nil list_adt nil)
     (AND const-decl "[bool, bool -> bool]" booleans nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
@@ -1382,7 +1382,7 @@
     (wrapKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
     (number nonempty-type-decl nil numbers nil)
     (PRED type-eq-decl nil defined_types nil)
-    (list type-decl nil list_adt nil) nil
+    (list type-decl nil list_adt nil)
     (AND const-decl "[bool, bool -> bool]" booleans nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)
@@ -1555,213 +1555,64 @@
     (>>= const-decl "State" StateMonad nil))
    shostak))
  (cert_and_quote_with_prev_key 0
-  (cert_and_quote_with_prev_key-1 nil 3551028543
-   ("" (skosimp*)
-    (("" (rewrite "TPM_Init")
-      (("" (rewrite "TPM_Startup")
-        (("" (rewrite "CPU_senter")
-          (("" (rewrite "CPU_sinit")
-            (("" (rewrite "TPM_MakeIdentity")
-              (("" (rewrite "CPU_SaveOutput")
-                (("" (rewrite "CPU_Read")
-                  (("" (rewrite "CA_CertPrev")
-                    (("" (rewrite "TPM_ActivateIdentityPrev")
-                      (("" (assert)
-                        (("" (rewrite ">>")
-                          (("" (rewrite ">>=")
-                            (("" (rewrite ">>")
-                              ((""
-                                (rewrite ">>")
-                                ((""
-                                  (assert)
-                                  ((""
-                                    (rewrite "outputCom")
-                                    ((""
-                                      (assert)
-                                      ((""
-                                        (expand "activateIdentityOut")
-                                        ((""
-                                          (assert)
-                                          ((""
-                                            (rewrite "output")
-                                            ((""
-                                              (rewrite "output")
-                                              ((""
-                                                (assert)
-                                                ((""
-                                                  (rewrite ">>")
-                                                  ((""
-                                                    (rewrite ">>=")
-                                                    ((""
-                                                      (assert)
-                                                      ((""
-                                                        (rewrite ">>=")
-                                                        ((""
-                                                          (assert)
-                                                          ((""
-                                                            (rewrite
-                                                             ">>")
-                                                            ((""
-                                                              (assert)
-                                                              ((""
-                                                                (rewrite
-                                                                 ">>")
-                                                                ((""
-                                                                  (assert)
-                                                                  ((""
-                                                                    (rewrite
-                                                                     ">>=")
-                                                                    ((""
-                                                                      (assert)
-                                                                      ((""
-                                                                        (rewrite
-                                                                         "executeCom")
-                                                                        ((""
-                                                                          (rewrite
-                                                                           "executeComStartup")
-                                                                          ((""
-                                                                            (assert)
-                                                                            ((""
-                                                                              (rewrite
-                                                                               "executeComPostInit")
-                                                                              ((""
-                                                                                (assert)
-                                                                                ((""
-                                                                                  (assert)
-                                                                                  ((""
-                                                                                    (rewrite
-                                                                                     "useOutputOutput")
-                                                                                    ((""
-                                                                                      (assert)
-                                                                                      ((""
-                                                                                        (rewrite
-                                                                                         "put")
-                                                                                        ((""
-                                                                                          (assert)
-                                                                                          ((""
-                                                                                            (rewrite
-                                                                                             "modify")
-                                                                                            ((""
-                                                                                              (rewrite
-                                                                                               "modify")
-                                                                                              ((""
-                                                                                                (rewrite
-                                                                                                 "modify")
-                                                                                                ((""
-                                                                                                  (assert)
-                                                                                                  ((""
-                                                                                                    (assert)
-                                                                                                    ((""
-                                                                                                      (grind)
-                                                                                                      ((""
-                                                                                                        (postpone)
-                                                                                                        nil
-                                                                                                        nil))
-                                                                                                      nil))
-                                                                                                    nil))
-                                                                                                  nil))
-                                                                                                nil))
-                                                                                              nil))
-                                                                                            nil))
-                                                                                          nil))
-                                                                                        nil))
-                                                                                      nil))
-                                                                                    nil))
-                                                                                  nil))
-                                                                                nil))
-                                                                              nil))
-                                                                            nil))
-                                                                          nil))
-                                                                        nil))
-                                                                      nil))
-                                                                    nil))
-                                                                  nil))
-                                                                nil))
-                                                              nil))
-                                                            nil))
-                                                          nil))
-                                                        nil))
-                                                      nil))
-                                                    nil))
-                                                  nil))
-                                                nil))
-                                              nil))
-                                            nil))
-                                          nil))
-                                        nil))
-                                      nil))
-                                    nil))
-                                  nil))
-                                nil))
-                              nil))
-                            nil))
-                          nil))
-                        nil))
-                      nil))
-                    nil))
-                  nil))
-                nil))
-              nil))
-            nil))
-          nil))
-        nil))
-      nil))
-    nil)
-   ((TPM_Init const-decl "State" tpm nil)
-    (CPU_senter const-decl "State" tpm nil)
-    (TPM_MakeIdentity const-decl "State" tpm nil)
-    (B formal-nonempty-type-decl nil tpm nil)
-    (K formal-nonempty-type-decl nil tpm nil)
-    (HV formal-nonempty-type-decl nil tpm nil)
-    (KEY type-decl nil key nil)
-    (boolean nonempty-type-decl nil booleans nil)
-    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
-    (finite_emptyset name-judgement "finite_set" finite_sets nil)
-    (>>= const-decl "State" StateMonad nil)
-    (useOutputOutput const-decl "[A -> State]" StateMonad nil)
-    (certOut const-decl "tpmAbsOutput" tpm nil)
-    (output const-decl "State" StateMonad nil)
-    (outputCom const-decl "tpmAbsOutput" tpm nil)
-    (makeIdentityOut const-decl "tpmAbsOutput" tpm nil)
-    (caVal const-decl "KEY" tpm nil)
-    (changeLocalityState const-decl "tpmAbsState" tpm nil)
-    (extendState const-decl "tpmAbsState" tpm nil)
-    (pcrsExtend const-decl "PCRS" pcr nil)
-    (pcrsReset const-decl "PCRS" pcr nil)
-    (pcrsResetSenterState const-decl "tpmAbsState" tpm nil)
-    (>> const-decl "State" StateMonad nil)
-    (modify const-decl "State" StateMonad nil)
-    (executeCom const-decl "tpmAbsState" tpm nil)
-    (executeComStartup const-decl "tpmAbsState" tpm nil)
-    (executeComPostInit const-decl "tpmAbsState" tpm nil)
-    (tpmStartup const-decl "tpmAbsState" tpm nil)
-    (afterInit? const-decl "bool" tpm nil)
-    (put const-decl "State" StateMonad nil)
-    (tpmAbsOutput type-decl nil tpm nil)
-    (KEYSET type-eq-decl nil key nil)
-    (LOCALITY type-eq-decl nil tpm nil) (PCRS type-eq-decl nil pcr nil)
-    (tpmAbsState type-eq-decl nil tpm nil)
+  (cert_and_quote_with_prev_key-1 nil 3551028543 ("" (grind) nil nil)
+   ((srkVal const-decl "KEY" tpm nil) (ekVal const-decl "KEY" tpm nil)
     (tpmPostInit const-decl "tpmAbsState" tpm nil)
-    (ekVal const-decl "KEY" tpm nil) (srkVal const-decl "KEY" tpm nil)
-    (symKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
-    (PCRMASK type-eq-decl nil pcr nil) (<= const-decl "bool" reals nil)
-    (>= const-decl "bool" reals nil)
-    (integer_pred const-decl "[rational -> boolean]" integers nil)
-    (rational nonempty-type-from-decl nil rationals nil)
-    (rational_pred const-decl "[real -> boolean]" rationals nil)
-    (real nonempty-type-from-decl nil reals nil)
-    (real_pred const-decl "[number_field -> boolean]" reals nil)
-    (number_field nonempty-type-from-decl nil number_fields nil)
-    (number_field_pred const-decl "[number -> boolean]" number_fields
-     nil)
-    (AND const-decl "[bool, bool -> bool]" booleans nil)
-    (PRED type-eq-decl nil defined_types nil)
+    (tpmAbsState type-eq-decl nil tpm nil)
     (bool nonempty-type-eq-decl nil booleans nil)
-    (list type-decl nil list_adt nil)
-    (number nonempty-type-decl nil numbers nil)
-    (BLOB type-decl nil key nil)
-    (CA_CertPrev const-decl "[tpmAbsOutput -> State]" tpm nil)
+    (PCRS type-eq-decl nil pcr nil) (mem type-eq-decl nil memory nil)
+    (outNothing adt-constructor-decl "(outNothing?)" tpm nil)
+    (outNothing? adt-recognizer-decl "[tpmAbsOutput -> boolean]" tpm
+     nil)
+    (LOCALITY type-eq-decl nil tpm nil)
+    (KEYSET type-eq-decl nil key nil)
+    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
+    (boolean nonempty-type-decl nil booleans nil)
+    (KEY type-decl nil key nil)
+    (HV formal-nonempty-type-decl nil tpm nil)
+    (K formal-nonempty-type-decl nil tpm nil)
+    (B formal-nonempty-type-decl nil tpm nil)
+    (tpmAbsOutput type-decl nil tpm nil)
+    (put const-decl "State" StateMonad nil)
+    (TPM_Init const-decl "State" tpm nil)
+    (afterInit? const-decl "bool" tpm nil)
+    (tpmStartup const-decl "tpmAbsState" tpm nil)
+    (executeComPostInit const-decl "tpmAbsState" tpm nil)
+    (executeComStartup const-decl "tpmAbsState" tpm nil)
+    (executeCom const-decl "tpmAbsState" tpm nil)
+    (modify const-decl "State" StateMonad nil)
+    (TPM_Startup const-decl "State" tpm nil)
+    (>> const-decl "State" StateMonad nil)
+    (pcrsResetSenterState const-decl "tpmAbsState" tpm nil)
+    (pcrsReset const-decl "PCRS" pcr nil)
+    (pcrsExtend const-decl "PCRS" pcr nil)
+    (extendState const-decl "tpmAbsState" tpm nil)
+    (changeLocalityState const-decl "tpmAbsState" tpm nil)
+    (CPU_senter const-decl "State" tpm nil)
     (CPU_sinit const-decl "State" tpm nil)
-    (TPM_Startup const-decl "State" tpm nil))
+    (makeIdentityOut const-decl "tpmAbsOutput" tpm nil)
+    (outputCom const-decl "tpmAbsOutput" tpm nil)
+    (output const-decl "State" StateMonad nil)
+    (TPM_MakeIdentity const-decl "State" tpm nil)
+    (saveState const-decl "tpmAbsState" tpm nil)
+    (CPU_SaveOutput const-decl "[tpmAbsOutput -> State]" tpm nil)
+    (useOutputStateOutput const-decl "[A -> State]" StateMonad nil)
+    (>>= const-decl "State" StateMonad nil)
+    (caVal const-decl "KEY" tpm nil)
+    (certOut const-decl "tpmAbsOutput" tpm nil)
+    (CA_CertPrev const-decl "[tpmAbsOutput -> State]" tpm nil)
+    (useOutputOutput const-decl "[A -> State]" StateMonad nil)
+    (checkKeyRoot const-decl "bool" key nil)
+    (activateIdentityOut const-decl "tpmAbsOutput" tpm nil)
+    (TPM_ActivateIdentityPrev const-decl "[tpmAbsOutput -> State]" tpm
+     nil)
+    (readOut const-decl "tpmAbsOutput" tpm nil)
+    (CPU_Read const-decl "State" tpm nil)
+    (updateLoc const-decl "mem" memory nil)
+    (getPCRs const-decl "list[PCR]" pcr nil)
+    (quoteOut const-decl "tpmAbsOutput" tpm nil)
+    (TPM_QuotePrev const-decl "[tpmAbsOutput -> State]" tpm nil)
+    (buildQuote const-decl "tpmAbsOutput" tpm nil)
+    (CPU_BuildQuoteFromMem const-decl "State" tpm nil))
    shostak)))
 

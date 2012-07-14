@@ -20,6 +20,11 @@
 %%  - noop needs to generate a message when used in error cases
 %% ----
 
+%%  0 = "Bad identity record"
+%%  1 = "Bad input key"
+%%  2 = "bad session key"
+%%  4 = "bad quote parts"
+
 tpm [ B:TYPE+, % BLOB
       HV:TYPE+,% Hash value
       hash:[B->HV], % Hash function
@@ -37,11 +42,13 @@ tpm [ B:TYPE+, % BLOB
   IMPORTING pcr[HV];
   IMPORTING key[B,K,HV];
 
+  SML : TYPE = list[HV];
+
   %% State monad output type
   tpmAbsOutput : DATATYPE
   BEGIN
     outNothing : outNothing?
-    outError(errorVal:string) : outError?
+    outError(errorVal:nat) : outError?
     outQuote(oqk:KEY,oqnon:BLOB,oqpcrs:list[PCR]) : outQuote?
     outWrapKey(owk:KEY) : outWrapKey?
     outAsymKey(oask:KEY) : outAsymKey?
@@ -49,7 +56,8 @@ tpm [ B:TYPE+, % BLOB
     outBlob(obl:BLOB) : outBlob?
     outCertReq(ocertaik:(wrapKey?),ocertek:(asymKey?),ofreshk:(symKey?)) : outCertReq?
     outIdentity(oidentaik:(wrapKey?),oidentc:(outCertReq?)) : outIdentity?
-    outIdentActivation(oactc:(certBlob?),osessk:(symKey?),oactek:(asymKey?)) :outIdentActivation?
+    outIdentActivation(oactc:(certBlob?),osessk:(symKey?),oactek:(asymKey?)) : outIdentActivation?
+    outFullQuote(ofullqc:(certBlob?),ofullqsml:SML,ofullqq:(outQuote?)) : outFullQuote?
   END tpmAbsOutput;
 
   IMPORTING memory[tpmAbsOutput,outNothing];
@@ -826,38 +834,87 @@ tpm [ B:TYPE+, % BLOB
  		    THEN outputCom(s,ABS_certify(ocertaik(oidentc(a)),
                                                  ocertek(oidentc(a)),
                                                  ofreshk(oidentc(a))))
- 		    ELSE outError("Bad identity record")
+ 		    ELSE outError(0)
  		    ENDIF)));
 
+   %% Run ActivateIdentity on the previous output
    TPM_ActivateIdentityPrev(freshk:(symKey?)):[tpmAbsOutput->State] =
      useOutputOutput(outNothing,
            (LAMBDA (a:tpmAbsOutput) :
             (LAMBDA (s:tpmAbsState) : 
 	      IF outWrapKey?(a) AND wrapKey?(owk(a))
 	      THEN outputCom(s,ABS_ActivateIdentity(owk(a),freshk))
-	      ELSE outError("Bad input key")
+	      ELSE outError(1)
 	      ENDIF)));
 
-   %% This is getting much closer.  Initiatize the TPM and make an
-   %% identity.  Store the identity for later use. Then certify the
-   %% identity via the CA Now restore the identity and request a
-   %% quote.  What I want to do is activate the identity before doing
-   %% the quote
+
+   %% Build a quote for the appraiser from the quote, cert, and log
+   buildQuote(q:(outQuote?),ca:(outIdentActivation?),sml:SML,sessk:(symKey?)):tpmAbsOutput =
+     IF sessk=osessk(ca)
+     THEN outFullQuote(oactc(ca),sml,q)
+     ELSE outError(2)
+     ENDIF;          
+
+   CPU_BuildQuoteFromMem(q,ca,sessk:nat,sml:SML):State =
+     output(outNothing,
+            (LAMBDA (s:tpmAbsState) :
+	       LET theMem = memory(s) IN
+	         IF outIdentActivation?(theMem(sessk))
+		    AND outIdentActivation?(theMem(ca))
+		    AND outQuote?(theMem(q))
+                 THEN buildQuote(theMem(q),theMem(ca),sml,osessk(theMem(sessk)))
+		 ELSE outError(4)
+		 ENDIF));
+
+   %% Simple verification of the quote generation process from init
+   %% through generation of the appraiser's quote.  Yay.  This is what
+   %% I was after!!
+   %%
+   %% Memory map:  
+   %% 0 -> identity
+   %% 1 -> CA cert
+   %% 2 -> TPM quote
+   %%
+   %% Note that the identity is not used in building the final
+   %% appraiser's quote
+   %% proved Sat Jul 14 11:19:56 CDT 2012
    cert_and_quote_with_prev_key: THEOREM
-     FORALL (aik:(asymKey?),s:tpmAbsState,n:BLOB,pm:PCRMASK,k:(symKey?)) :
+     FORALL (aik:(asymKey?),
+             s:tpmAbsState,
+	     n:BLOB,
+	     pm:PCRMASK,
+	     k:(symKey?),
+	     sml:SML) :
        LET (out,s) = runState(
-                    TPM_Init
+                   TPM_Init
  		   >> TPM_Startup
  		   >> CPU_senter
  		   >> CPU_sinit
- 		   >> TPM_MakeIdentity(aik,k)
-		   >>= CPU_SaveOutput(0)
-%		   >> CPU_Read(0)
- 		   >>= CA_CertPrev(n,pm,k)
-		   >>= TPM_ActivateIdentityPrev(k)
-		   >> CPU_Read(0)
-		   >>= TPM_QuotePrev(n,pm)
+ 		   >> TPM_MakeIdentity(aik,k) % identity is output
+		   >>= CPU_SaveOutput(0) % identity is saved in 0
+ 		   >>= CA_CertPrev(n,pm,k) % CA cert is output
+                   >>= CPU_SaveOutput(1) % CA cert is saved in 1
+		   >>= TPM_ActivateIdentityPrev(k) % session key is output
+		   >> CPU_Read(0) % identity is output
+		   >>= TPM_QuotePrev(n,pm) % quote signed by AIK is output
+		   >>= CPU_SaveOutput(2) % Quote is saved in 2
+		   >> CPU_BuildQuoteFromMem(2,1,1,sml) % Build the quote
 		   )
  		   (tpmUnknown) IN
-         out = outNothing;
+         out = outFullQuote(certBlob(private(asymKey(caKeyVal)),
+                                        keyBlob
+                                        (wrapKey
+                                         (private(asymKey(srkKeyVal)),
+                                          aik))),
+                               sml,
+                               outQuote(private(aik),
+                                        n,
+                                        map
+                                        ((pcrsReset
+                                          WITH [(0)
+                                                := extend
+                                                   (extend
+                                                    (reset, hash(sinit)),
+                                                    hash(mle))]),
+                                         pm)));
 END tpm
