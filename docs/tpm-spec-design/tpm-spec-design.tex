@@ -81,6 +81,7 @@ Figure~\ref{fig:tpm-command} is the PVS data type used to represent
 the abstract syntax of the TPM command set.
 
 \begin{figure}
+\begin{footnotesize}
 \begin{alltt}
   tpmInput : DATATYPE
   BEGIN
@@ -114,6 +115,7 @@ the abstract syntax of the TPM command set.
     noopCom : noopCom?
   END tpmInput;
 \end{alltt}
+\end{footnotesize}
 \caption{TPM command data type.}
 \label{fig:tpm-command}
 \end{figure}
@@ -127,23 +129,27 @@ abstract PVS representations.
     \hline
     \emph{TPM} & \emph{Abstract PVS} & \emph{Concrete PVS} \\
     \emph{Command} & \emph{Command} & \emph{Command} \\ \hline
+    \multicolumn{3}{l}{\emph{Startup}}  \\ \hline
     \textsf{TPM\_Init} & \verb+ABS_Init+ & \\ 
     \textsf{TPM\_Startup} & \verb+ABS_Startup+ & \\
-    \textsf{TPM\_SaveState} & \verb+ABS_SaveState+ & \\
-    \textsf{TPM\_CreateWrapKey} & \verb+ABS_CreateWrapKey(wk,parentk)+ & \\
-    \textsf{TPM\_LoadKey2} & \verb+ABS_LoadKey2(k)+ & \\
-    \textsf{TPM\_Seal} & \verb+ABS_Seal(sk,data)+& \\
-    \textsf{TPM\_Unseal} & \verb+ABS_Unseal(s,uk)+ & \\
+    \textsf{TPM\_SaveState} & \verb+ABS_SaveState+ & \\ \hline
+    \multicolumn{3}{l}{\emph{PCRs, seals and keys}}  \\ \hline
     \textsf{TPM\_Extend} & \verb+ABS_Extend(h,i)+ & \\
+    \textsf{TPM\_Seal} & \verb+ABS_Seal(sk,data)+& \\
+    \textsf{TPM\_Bind} & & \\
+    \textsf{TPM\_Unbind} & & \\
+    \textsf{TPM\_Unseal} & \verb+ABS_Unseal(s,uk)+ & \\
+    \textsf{TPM\_CreateWrapKey} & \verb+ABS_CreateWrapKey(wk,parentk)+ & \\
+    \textsf{TPM\_LoadKey2} & \verb+ABS_LoadKey2(k)+ & \\ \hline
+    \multicolumn{3}{l}{\emph{Quotes and Identities}}  \\ \hline
     \textsf{TPM\_Quote} & \verb+ABS_Quote(aik,b,pm)+ & \\
     \textsf{TPM\_MakeIdentity} & \verb+ABS_MakeIdentity(naik,k)+ & \\
     \textsf{TPM\_ActivateIdentity} & \verb+ABS_ActivateIdentity(caik,k)+ & \\
-    \textsf{TPM\_TakeOwnership} & \verb+ABS_TakeOwnership+ & \\
+    \multicolumn{3}{l}{\emph{Ownership}}  \\ \hline
+    \textsf{TPM\_TakeOwnership} & \verb+ABS_TakeOwnership+ & \\ \hline
     \textsf{TPM\_OwnerClear} & & \\
     \textsf{TPM\_ForceClear} & & \\ 
     \textsf{TPM\_DisableOwnerClear} & & \\
-    \textsf{TPM\_Bind} & & \\
-    \textsf{TPM\_Unbind} & & \\
     \hline
   \end{tabular}
   \caption{TPM command mapping to PVS command representation.}
