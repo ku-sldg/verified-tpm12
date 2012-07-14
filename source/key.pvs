@@ -106,20 +106,25 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
       wrapKey(k0,k1) : FALSE
     ENDCASES;
 
+  %% A keyset is simply a set of asymetric keys
   KEYSET : TYPE = set[(asymKey?)];
 
+  %% Check against the root key passed in as rk
   checkKeyRoot(k:(wrapKey?),rk:(asymKey?)):bool =
     wrappingKey(k)=rk;
 
+  %% Check against the set of installed keys and the root key
   checkKey(k:(wrapKey?),rk:(asymKey?),ks:KEYSET):bool =
     member(wrappingKey(k),ks) OR wrappingKey(k)=rk;
 
+  %% Add a key to a set of it checks out
   addKey(k:(wrapKey?),rk:(asymKey?),ks:KEYSET):KEYSET =
     IF checkKey(k,rk,ks)
     THEN add(wkey(k),ks)
     ELSE ks
     ENDIF;
 
+  %% Remove a key - this is not currently used
   removeKey(k:(wrapKey?),ks:KEYSET):KEYSET =
     remove(wkey(k),ks);
 
@@ -130,8 +135,7 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   %% Signature checks
   
   test0: THEOREM FORALL (k0,k1:(symKey?),b:BLOB) :
-  
-  k0=k1 IFF sigCheck(signBlob(k0,b),k1);
+    k0=k1 IFF sigCheck(signBlob(k0,b),k1);
 
   test1: THEOREM FORALL (k0,k1:(asymKey?),b:BLOB) :
     private(k0)=k1 IFF sigCheck(signBlob(k0,b),k1);
