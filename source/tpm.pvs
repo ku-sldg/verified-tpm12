@@ -218,17 +218,10 @@ tpm [ B:TYPE+, % BLOB
     CASES c OF
       ABS_Extend(h,n) : extendState(s,n,h),
       ABS_LoadKey2(k): installKeyState(s,k), 
-      noopCom : s,
       ABS_Init : tpmPostInit,
-      ABS_Startup : s,
       ABS_senter : 
         changeLocalityState(extendState(pcrsResetSenterState(s),0,hash(sinit))),
       ABS_sinit : changeLocalityState(extendState(s,0,hash(mle))),
-      ABS_Quote(k,n,pm) : s,
-      ABS_Unseal(d,k) : s,
-      ABS_Seal(k,data) : s,
-      ABS_TakeOwnership : s,
-      ABS_CreateWrapKey(k,parent): s,
       ABS_ActivateIdentity(a,k) : activateIdentityState(s,a,k),
       ABS_Save(i,v) : saveState(s,i,v)
       ELSE s
@@ -290,12 +283,6 @@ tpm [ B:TYPE+, % BLOB
   %% Generate output from a command and state
   outputCom(s:tpmAbsState,c:tpmInput) : tpmAbsOutput = 
     CASES c OF
-      ABS_Extend(h,n) : outNothing,
-      ABS_LoadKey2(k): outNothing, 
-      noopCom : outNothing,
-      ABS_Init : outNothing,
-      ABS_senter : outNothing,
-      ABS_sinit : outNothing,
       ABS_Quote(k,n,pm) : quoteOut(s,k,n,pm),
       ABS_MakeIdentity(a,k) : makeIdentityOut(s,a,k), 
       ABS_ActivateIdentity(a,k) : activateIdentityOut(s,a,k),
@@ -305,7 +292,6 @@ tpm [ B:TYPE+, % BLOB
       ABS_CreateWrapKey(k,parent) : createWrapKeyOut(k,parent),
       ABS_certify(aik,ek,freshk) : certOut(s,aik,ek,freshk),
       ABS_Read(i) : readOut(s,i)
-
     ELSE outNothing
   ENDCASES;
 
@@ -419,8 +405,10 @@ tpm [ B:TYPE+, % BLOB
 
   %% Use an AIK
   TPM_ActivateIdentity(a:(wrapKey?),k:(symKey?)) : State =
-     output(outNothing,
-            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_ActivateIdentity(a,k))));
+     modifyOutput(outNothing,
+            (LAMBDA (s:tpmAbsState) : executeCom(s,ABS_ActivateIdentity(a,k))),
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_ActivateIdentity(a,k)))
+	    );
 
   %% Unseal and output a blob (should be binary or data)
   TPM_Unseal(d:(sealBlob?),k:(asymKey?)) : State = 

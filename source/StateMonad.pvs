@@ -70,7 +70,10 @@ BEGIN
  modify(a:A,f:[S->S]) : State = state(LAMBDA(s0:S):(a,f(s0)))
 
  % Generate output with no state modification
- output(a:A,f:[S->A]) : State = state(LAMBDA(s0:S):(f(s0),s0))
+ output(a:A,g:[S->A]) : State = state(LAMBDA(s0:S):(g(s0),s0))
+
+ % Modify state and generate output
+ modifyOutput(a:A,f:[S->S],g:[S->A]) : State = state(LAMBDA(s0:S):(g(s0),f(s0)))
 
  % Modify state with previous output and current state.
  useOutputState(a:A,f:[A->[S->S]]) : [A->State] =
@@ -81,7 +84,7 @@ BEGIN
     (LAMBDA (a:A):state(LAMBDA(s0:S):(f(a)(s0),s0)))
 
  % Generate an entier new state with previous output and current state.
- useOutputStateOutput(a:A,f:[A->[S->[A,S]]]) : [A->State] =
-    (LAMBDA (a:A):state(LAMBDA(s0:S):f(a)(s0)))
+ useOutputStateOutput(a:A,f:[A->[S->S]],g:[A->[S->A]]) : [A->State] =
+    (LAMBDA (a:A):state(LAMBDA(s0:S):(g(a)(s0),f(a)(s0))))
 
 END StateMonad
