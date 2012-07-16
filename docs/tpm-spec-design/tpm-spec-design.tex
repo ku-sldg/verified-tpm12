@@ -62,6 +62,8 @@ represent the internal state of the TPM.
 \begin{figure}
 \begin{alltt}
   tpmAbsState : TYPE = [#
+                       memory : mem,
+                       postInit : bool,
                        srk : (asymKey?),
                        ek : (asymKey?),
                        keys : KEYSET,
@@ -69,7 +71,7 @@ represent the internal state of the TPM.
                        locality : LOCALITY
                        #];
 \end{alltt}
-\caption{Abstract TPM state record data structure.}
+\caption{Abstract TPM and system state record data structure.}
 \label{fig:tpm-abs-state}
 \end{figure}
 
@@ -79,25 +81,41 @@ Figure~\ref{fig:tpm-command} is the PVS data type used to represent
 the abstract syntax of the TPM command set.
 
 \begin{figure}
+\begin{footnotesize}
 \begin{alltt}
   tpmInput : DATATYPE
   BEGIN
-    decryptKeyCom(d:(encrypt?)) : decryptKeyCom?
-    encryptCom(b:BLOB) : encryptCom? % unimplemented
-    extendCom(h:HV,n:PCRINDEX) : extendCom?
-    installKeyCom(k:(wrapKey?)): installKeyCom?
+  %% Startup commands
+    ABS_Init : ABS_Init? 
+    ABS_Startup : ABS_Startup? % Only clear implemented
+    ABS_SaveState : ABS_SaveState? % unimplemented
+  %% PCRs, seals and keys
+    ABS_Extend(h:HV,i:PCRINDEX) : ABS_Extend?
+    ABS_Unseal(s:(sealBlob?),uk:(asymKey?)) : ABS_Unseal?   
+    ABS_Seal(sk:(asymKey?),data:BLOB) : ABS_Seal?
+    ABS_LoadKey2(lk:(wrapKey?)): ABS_LoadKey2? 
+    ABS_CreateWrapKey(wk,parentk:(asymKey?)): ABS_CreateWrapKey?
+  %% Quotes and Identities
+    ABS_Quote(aik:(wrapKey?),nonce:BLOB,pm:PCRMASK) : ABS_Quote?
+    ABS_MakeIdentity(naik:(asymKey?),k:(symKey?)) : ABS_MakeIdentity?
+    ABS_ActivateIdentity(caik:(wrapKey?),k:(symKey?)) : ABS_ActivateIdentity?
+  %% Ownership management
+    ABS_TakeOwnership : ABS_TakeOwnership?
+    ABS_OwnerClear : ABS_OwnerClear? % unimplemented
+    ABS_ForceClear : ABS_ForceClear? % unimplemented
+    ABS_DisableOwnerClear : ABS_DisabelOwnerClear? % unimplemented
+  %% Software Commands
+    ABS_senter : ABS_senter? % implemented all actions as one senter
+    ABS_sinit : ABS_sinit? % partially implemented
+    ABS_Save(i:nat,v:tpmAbsOutput) : ABS_Save?
+    ABS_Read(i:nat) : ABS_Read?
+  %% CA Commands
+    ABS_certify(aik:(wrapKey?),ek:(asymKey?),freshk:(symKey?)) : ABS_certify?
+  %% Invented, imaginary Commands
     noopCom : noopCom?
-    offCom : offCom?
-    powerCom : powerCom?
-    quoteCom(n:BLOB,pm:PCRMASK) : quoteCom? % partially implemented
-    revokeKeyCom(k:(wrapKey?)): revokeKeyCom?
-    senterCom : senterCom? % implemented all actions as one senter
-    sinitCom : sinitCom? % partially implemented
-    unsealCom(d:(seal?),k:(asymKey?)) : unsealCom?   
-    takeOwnershipCom : takeOwnershipCom?
-    createWrapKeyCom(k,parent:(asymKey?)): createWrapKeyCom?
   END tpmInput;
 \end{alltt}
+\end{footnotesize}
 \caption{TPM command data type.}
 \label{fig:tpm-command}
 \end{figure}
@@ -111,15 +129,27 @@ abstract PVS representations.
     \hline
     \emph{TPM} & \emph{Abstract PVS} & \emph{Concrete PVS} \\
     \emph{Command} & \emph{Command} & \emph{Command} \\ \hline
-    \textsf{TPM\_CreateWrapKey} & \verb+createWrapKeyCom+ & \\
-    \textsf{TPM\_LoadKey2} & \verb+instalKeyCom(k)+ & \\
-    \textsf{TPM\_Seal} & & \\
-    \textsf{TPM\_Unseal} & \verb+unsealCom(d,k)+ & \\
-    \textsf{TPM\_Extend} & \verb+extendCom(h,n)+ & \\
-    \textsf{TPM\_Quote} & \verb+quoteCom(b,pm)+ & \\
-    \textsf{TPM\_MakeIdentity} & & \\
-    \textsf{TPM\_ActivateIdentity} & & \\
-    \textsf{TPM\_TakeOwnership} & \verb+takeOwnershipCom(k,parent)+ & \\
+    \multicolumn{3}{l}{\emph{Startup}}  \\ \hline
+    \textsf{TPM\_Init} & \verb+ABS_Init+ & \\ 
+    \textsf{TPM\_Startup} & \verb+ABS_Startup+ & \\
+    \textsf{TPM\_SaveState} & \verb+ABS_SaveState+ & \\ \hline
+    \multicolumn{3}{l}{\emph{PCRs, seals and keys}}  \\ \hline
+    \textsf{TPM\_Extend} & \verb+ABS_Extend(h,i)+ & \\
+    \textsf{TPM\_Seal} & \verb+ABS_Seal(sk,data)+& \\
+    \textsf{TPM\_Bind} & & \\
+    \textsf{TPM\_Unbind} & & \\
+    \textsf{TPM\_Unseal} & \verb+ABS_Unseal(s,uk)+ & \\
+    \textsf{TPM\_CreateWrapKey} & \verb+ABS_CreateWrapKey(wk,parentk)+ & \\
+    \textsf{TPM\_LoadKey2} & \verb+ABS_LoadKey2(k)+ & \\ \hline
+    \multicolumn{3}{l}{\emph{Quotes and Identities}}  \\ \hline
+    \textsf{TPM\_Quote} & \verb+ABS_Quote(aik,b,pm)+ & \\
+    \textsf{TPM\_MakeIdentity} & \verb+ABS_MakeIdentity(naik,k)+ & \\
+    \textsf{TPM\_ActivateIdentity} & \verb+ABS_ActivateIdentity(caik,k)+ & \\
+    \multicolumn{3}{l}{\emph{Ownership}}  \\ \hline
+    \textsf{TPM\_TakeOwnership} & \verb+ABS_TakeOwnership+ & \\ \hline
+    \textsf{TPM\_OwnerClear} & & \\
+    \textsf{TPM\_ForceClear} & & \\ 
+    \textsf{TPM\_DisableOwnerClear} & & \\
     \hline
   \end{tabular}
   \caption{TPM command mapping to PVS command representation.}
@@ -135,8 +165,11 @@ with the TPM to their PVS representations.
     \hline
     \emph{External}& \emph{Abstract PVS} & \emph{Concrete PVS} \\
     \emph{Command} & \emph{Command} & \emph{Command} \\ \hline
-    \textsf{senter} & \verb+senterCom+ & \\
-    \textsf{sinit} & \verb+sinitCom+ & \\
+    \textsf{senter} & \verb+ABS_senterCom+ & \\
+    \textsf{sinit} & \verb+ABS_sinitCom+ & \\
+    Save to memory & \verb+ABS_Save(i,v)+ & \\
+    Read from memory & \verb+ABS_Read(i)+ & \\
+    CA certification & \verb+ABS_certify(aik,ek,freshk)+ & \\
     Power On & \verb+powerCom+ & \\
     Power Off  & \verb+offCom+ & \\
     \hline

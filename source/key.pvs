@@ -15,7 +15,6 @@
 %%  + Add key installation and revocation from sets
 %%  - Add regression tests for key installation and revocation functions
 %% ----
-
 key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
   BEGIN
@@ -31,9 +30,9 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   
   KEY : DATATYPE
   BEGIN
-    symKey(key:KVAL) : symKey?
-    asymKey(key:KVAL) : asymKey?
-    wrapKey(wrappingKey:(asymKey?),key:(asymKey?),a:AUTHDATA) : wrapKey?
+    symKey(skey:KVAL) : symKey?
+    asymKey(askey:KVAL) : asymKey?
+    wrapKey(wrappingKey:(asymKey?),wkey:(asymKey?)) : wrapKey?
   END KEY;		
 
   private(k:(asymKey?)):(asymKey?)
@@ -41,45 +40,43 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   %% This theorem does NOT say that the private key of a private key is
   %% a key.  It says that everything - signing and encrypting - can be done
   %% in reverse if you swap the keys around.
+
   double_private: AXIOM FORALL (k:(asymKey?)) : private(private(k))=k;
 
   %% Basic blob types - data, keys, hashs, encrypted blobs, signed blobs
   %% Blobs in this context are things that can be encrypted or signed
   %% Note that encrypted and signed things can be encrypted and signed
+
   BLOB : DATATYPE
   BEGIN
     nothing : nothing?
-    data(d:DVAL) : data?
-    key(k:KEY) : key?
-    hash(h:HVAL) : hash?
-    encrypt(key:KEY,blob:BLOB) : encrypt?
-    sign(key:KEY,blob:BLOB) : sign?
-    seal(key:KEY,pcrs:PCRS,blob:BLOB) : seal?
-    pair(left,right : BLOB) : pair?
-    cert(key:KEY,blob:BLOB) : cert?
-    certReq(aik:(wrapKey?),ek:(asymKey?),k:(symKey?)) : certReq?
-    identity(aik:(wrapKey?),c:(certReq?)) : identity?
-    identActivation(c:(cert?),k:(symKey?),ek:(asymKey?)) : identActivation?
+    keyBlob(key:KEY) : keyBlob?
+    hashBlob(h:HVAL) : hashBlob?
+    encryptBlob(key:KEY,blob:BLOB) : encryptBlob?
+    signBlob(key:KEY,blob:BLOB) : signBlob?
+    sealBlob(key:KEY,pcrs:PCRS,blob:BLOB) : sealBlob?
+    certBlob(key:KEY,blob:BLOB) : certBlob?
+    pairBlob(left,right : BLOB) : pairBlob?
   END BLOB;
 
   %% Decryption for specific key types.  Key types not matching automatically
   %% is a failure
-  decryptSym(b:(encrypt?),k:(symKey?)):BLOB =
+  decryptSym(b:(encryptBlob?),k:(symKey?)):BLOB =
     IF symKey?(key(b)) AND symKey?(k) AND key(b) = k
        THEN blob(b)
        ELSE nothing
     ENDIF;
 
-  decryptAsym(b:(encrypt?),k:(asymKey?)):BLOB =
+  decryptAsym(b:(encryptBlob?),k:(asymKey?)):BLOB =
     IF asymKey?(key(b)) AND asymKey?(k) AND key(b) = private(k)
        THEN blob(b)
        ELSE nothing
     ENDIF;
 
-  decryptWrapped(b:(encrypt?),k:(wrapKey?)):BLOB = nothing;
+  decryptWrapped(b:(encryptBlob?),k:(wrapKey?)):BLOB = nothing;
   
   %% Decryption for all key types
-  decrypt(b:(encrypt?),k:KEY):BLOB = 
+  decrypt(b:(encryptBlob?),k:KEY):BLOB = 
     CASES k OF 
       symKey(k0) : decryptSym(b,k),
       asymKey(k0) : decryptAsym(b,k),
@@ -87,7 +84,7 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   ENDCASES;
 
   %% Unseal for aysmetric keys
-  unseal(b:(seal?),pcrs:PCRS,k:(asymKey?)):BLOB =
+  unseal(b:(sealBlob?),pcrs:PCRS,k:(asymKey?)):BLOB =
     IF pcrs(b) = pcrs AND key(b)=private(k)
        THEN blob(b)
        ELSE nothing
@@ -95,38 +92,43 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
   %% Signature check for specific key types
   %% This could (and should) be implemented with decryption function
-  sigCheckSym(b:(sign?),k:(symKey?)):boolean =
+  sigCheckSym(b:(signBlob?),k:(symKey?)):boolean =
     symKey?(key(b)) AND symKey?(k) AND key(b) = k;
 
-  sigCheckAsym(b:(sign?),k:(asymKey?)):boolean =
+  sigCheckAsym(b:(signBlob?),k:(asymKey?)):boolean =
     asymKey?(key(b)) AND asymKey?(k) AND key(b) = private(k);
 
-  sigCheckWrapped(b:(sign?),k:(wrapKey?)):boolean = FALSE;
+  sigCheckWrapped(b:(signBlob?),k:(wrapKey?)):boolean = FALSE;
 
   %% Signature checking for all keys
-  sigCheck(b:(sign?),k:KEY):boolean =
+  sigCheck(b:(signBlob?),k:KEY):boolean =
     CASES k OF
       symKey(k0) : sigCheckSym(b,k),
       asymKey(k0) : sigCheckAsym(b,k),
       wrapKey(k0,k1,a) : FALSE
     ENDCASES;
 
+  %% A keyset is simply a set of asymetric keys
   KEYSET : TYPE = set[(asymKey?)];
 
+  %% Check against the root key passed in as rk
   checkKeyRoot(k:(wrapKey?),rk:(asymKey?)):bool =
     wrappingKey(k)=rk;
 
+  %% Check against the set of installed keys and the root key
   checkKey(k:(wrapKey?),rk:(asymKey?),ks:KEYSET):bool =
     member(wrappingKey(k),ks) OR wrappingKey(k)=rk;
 
+  %% Add a key to a set of it checks out
   addKey(k:(wrapKey?),rk:(asymKey?),ks:KEYSET):KEYSET =
     IF checkKey(k,rk,ks)
-    THEN add(key(k),ks)
+    THEN add(wkey(k),ks)
     ELSE ks
     ENDIF;
 
+  %% Remove a key - this is not currently used
   removeKey(k:(wrapKey?),ks:KEYSET):KEYSET =
-    remove(key(k),ks);
+    remove(wkey(k),ks);
 
   %% Lemmas
 
@@ -135,35 +137,34 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   %% Signature checks
   
   test0: THEOREM FORALL (k0,k1:(symKey?),b:BLOB) :
-  
-  k0=k1 IFF sigCheck(sign(k0,b),k1);
+    k0=k1 IFF sigCheck(signBlob(k0,b),k1);
 
   test1: THEOREM FORALL (k0,k1:(asymKey?),b:BLOB) :
-    private(k0)=k1 IFF sigCheck(sign(k0,b),k1);
+    private(k0)=k1 IFF sigCheck(signBlob(k0,b),k1);
 
   %% Decryption
 
   test2: THEOREM FORALL (k0,k1:(symKey?),b:BLOB) :
-    k0=k1 IMPLIES decrypt(encrypt(k0,b),k1) = b;
+    k0=k1 IMPLIES decrypt(encryptBlob(k0,b),k1) = b;
 
   test3: THEOREM FORALL (k0,k1:(asymKey?),b:BLOB) :
-    k0=k1 IMPLIES decrypt(encrypt(k0,b),private(k1)) = b;
+    k0=k1 IMPLIES decrypt(encryptBlob(k0,b),private(k1)) = b;
 
   test4: THEOREM FORALL (k0,k1:(symKey?),b:BLOB) :
-    k0/=k1 IMPLIES decrypt(encrypt(k0,b),k1) = nothing;
+    k0/=k1 IMPLIES decrypt(encryptBlob(k0,b),k1) = nothing;
 
   test5: THEOREM FORALL (k0,k1:(asymKey?),b:BLOB) :
-    k0/=k1 IMPLIES decrypt(encrypt(k0,b),private(k1)) = nothing;
+    k0/=k1 IMPLIES decrypt(encryptBlob(k0,b),private(k1)) = nothing;
 
   %% Key installation
 
   test6: THEOREM FORALL (k:(wrapKey?),rk:(asymKey?),ks:KEYSET) : 
     IF member(wrappingKey(k),ks) OR wrappingKey(k)=rk
-       THEN member(key(k),addKey(k,rk,ks))
+       THEN member(wkey(k),addKey(k,rk,ks))
        ELSE ks=addKey(k,rk,ks)
     ENDIF;
 
   test7: THEOREM FORALL (k:(wrapKey?),rk:(asymKey?),ks:KEYSET) :
-    NOT(member(key(k),removeKey(k,ks)));
+    NOT(member(wkey(k),removeKey(k,ks)));
 
 END key
