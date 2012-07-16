@@ -75,10 +75,10 @@ tpm [ B:TYPE+, % BLOB
     ABS_Unseal(s:(sealBlob?),uk:(asymKey?)) : ABS_Unseal?   
     ABS_Seal(sk:(asymKey?),data:BLOB) : ABS_Seal?
     ABS_LoadKey2(lk:(wrapKey?)): ABS_LoadKey2? 
-    ABS_CreateWrapKey(wk,parentk:(asymKey?)): ABS_CreateWrapKey?
+    ABS_CreateWrapKey(parentk,wk:(asymKey?),wk_auth:AUTHDATA): ABS_CreateWrapKey?
   %% Quotes and Identities
     ABS_Quote(aik:(wrapKey?),nonce:BLOB,pm:PCRMASK) : ABS_Quote?
-    ABS_MakeIdentity(naik:(asymKey?),k:(symKey?)) : ABS_MakeIdentity?
+    ABS_MakeIdentity(naik:(asymKey?),k:(symKey?),auth:AUTHDATA) : ABS_MakeIdentity?
     ABS_ActivateIdentity(caik:(wrapKey?),k:(symKey?)) : ABS_ActivateIdentity?
   %% Ownership management
     ABS_TakeOwnership : ABS_TakeOwnership?
@@ -226,7 +226,7 @@ tpm [ B:TYPE+, % BLOB
   executeComStartup(s:(afterStartup?),c:tpmInput) : tpmAbsState = 
     CASES c OF
       ABS_Extend(h,n) : extendState(s,n,h),
-      ABS_LoadKey2(k): installKeyState(s,k), 
+      ABS_LoadKey2(k): loadKey2State(s,k), 
       ABS_Init : tpmPostInit,
       ABS_senter : 
         changeLocalityState(extendState(pcrsResetSenterState(s),0,hash(sinit))),
@@ -245,8 +245,8 @@ tpm [ B:TYPE+, % BLOB
     ENDIF;
 
   % Generate a NEW RANDOM key pair.
-  createWrapKeyOut(k,parent:(asymKey?)):tpmAbsOutput = 
-     outWrapKey(wrapKey(parent,k));
+  createWrapKeyOut(parent,k:(asymKey?),a:AUTHDATA):tpmAbsOutput = 
+     outWrapKey(wrapKey(parent,k,a));
 
   % NEED TO ENSURE NEW, RANDOM SRK KEY PAIR
   takeOwnershipOut : tpmAbsOutput =
@@ -260,8 +260,8 @@ tpm [ B:TYPE+, % BLOB
     ENDIF;
 
   % Output a newly generated AIK.  Note that a simulates the new aik.
-  makeIdentityOut(s:tpmAbsState,a:(asymKey?),k:(symKey?)) : tpmAbsOutput =
-    LET waik:(wrapKey?) = wrapKey(srk(s),a) IN
+  makeIdentityOut(s:tpmAbsState,a:(asymKey?),k:(symKey?),auth:AUTHDATA) : tpmAbsOutput =
+    LET waik:(wrapKey?) = wrapKey(srk(s),a,auth) IN
       outIdentity(waik,outCertReq(waik,ekVal,k));
 
   % Output decypted key
@@ -298,7 +298,7 @@ tpm [ B:TYPE+, % BLOB
       ABS_Unseal(d,k) : unsealOut(s,d,k),
       ABS_Seal(k,data) : sealOut(s,k,data),
       ABS_TakeOwnership : takeOwnershipOut,
-      ABS_CreateWrapKey(k,parent) : createWrapKeyOut(k,parent),
+      ABS_CreateWrapKey(parent,k,k_auth) : createWrapKeyOut(parent,k,k_auth),
       ABS_certify(aik,ek,freshk) : certOut(s,aik,ek,freshk),
       ABS_Read(i) : readOut(s,i)
     ELSE outNothing
@@ -404,7 +404,7 @@ tpm [ B:TYPE+, % BLOB
   TPM_CreateWrapKey(parent,k:(asymKey?),k_auth:AUTHDATA) : State = 
      output(outNothing,
             (LAMBDA (s:tpmAbsState) :
-	      outputCom(s,ABS_CreateWrapKey(k,parent))));
+	      outputCom(s,ABS_CreateWrapKey(parent,k,k_auth))));
 		
   %% Generate and output a quote
   TPM_Quote(k:(wrapKey?),n:BLOB,pm:PCRMASK) : State = 
@@ -700,7 +700,7 @@ tpm [ B:TYPE+, % BLOB
 		   >>= TPM_InstallPrev
 		   >>= unit)
 		   (tpmUnknown) IN
-	member(p,keys(s)) OR p=srk(s)
+	p=srk(s) OR member(p,keys(s))
 	=>
 	%% Does member(j,keys(s)) automatically imply member(k,keys(s))?
 	%% member(j,keys(s)) pops out with grind, but I can't get the k part to pop out.
@@ -806,7 +806,7 @@ tpm [ B:TYPE+, % BLOB
   %% proved - Wed Jul 11 13:47:33 EDT 2012
   quote_with_prev_key:
     THEOREM
-     FORALL (k:(asymKey?),s:tpmAbsState,n:BLOB,pm:PCRMASK,sessk:(symKey?)) :
+     FORALL (k:(asymKey?),s:tpmAbsState,n:BLOB,pm:PCRMASK,sessk:(symKey?),a:AUTHDATA) :
        LET (out,s) = runState(
                    TPM_Init
 		   >> TPM_Startup
@@ -884,13 +884,14 @@ tpm [ B:TYPE+, % BLOB
 	     n:BLOB,
 	     pm:PCRMASK,
 	     k:(symKey?),
-	     sml:SML) :
+	     sml:SML,
+	     a:AUTHDATA) :
        LET (out,s) = runState(
                    TPM_Init
  		   >> TPM_Startup
  		   >> CPU_senter
  		   >> CPU_sinit
- 		   >> TPM_MakeIdentity(aik,k) % identity is output
+ 		   >> TPM_MakeIdentity(aik,k,a) % identity is output
 		   >>= CPU_SaveOutput(0) % identity is saved in 0
  		   >>= CA_CertPrev(n,pm,k) % CA cert is output
                    >>= CPU_SaveOutput(1) % CA cert is saved in 1
@@ -905,7 +906,8 @@ tpm [ B:TYPE+, % BLOB
                                         keyBlob
                                         (wrapKey
                                          (private(asymKey(srkKeyVal)),
-                                          aik))),
+                                          aik,
+					  a))),
                                sml,
                                outQuote(private(aik),
                                         n,

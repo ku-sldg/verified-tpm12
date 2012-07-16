@@ -32,7 +32,7 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   BEGIN
     symKey(skey:KVAL) : symKey?
     asymKey(askey:KVAL) : asymKey?
-    wrapKey(wrappingKey:(asymKey?),wkey:(asymKey?)) : wrapKey?
+    wrapKey(wrappingKey:(asymKey?),wkey:(asymKey?),a:AUTHDATA) : wrapKey?
   END KEY;		
 
   private(k:(asymKey?)):(asymKey?)
