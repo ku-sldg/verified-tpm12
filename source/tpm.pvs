@@ -187,17 +187,17 @@ tpm [ B:TYPE+, % BLOB
 			 ENDIF];
   
   %% Revoke key operation on TPM state
-%   revokeKeyState(s:tpmAbsState,k:(wrapKey?)) : tpmAbsState =
-%     s WITH [`keys := removeKey(k,keys(s))];
+  revokeKeyState(s:tpmAbsState,k:(wrapKey?)) : tpmAbsState =
+    s WITH [`keys := removeKey(k,keys(s))];
 
   %% Decrypt a secret encrypted with a wrapped key
-  % decryptKeyState(s:tpmAbsState,d:(encryptBlob?)) : BLOB =
-%     CASES key(d) OF
-%       wrapKey(w,k,a) : IF member(private(w),add(srk(s),keys(s)))
-%                         THEN blob(d)
-% 			ELSE nothing ENDIF
-%       ELSE nothing
-%     ENDCASES;
+  decryptKeyState(s:tpmAbsState,d:(encryptBlob?)) : BLOB =
+    CASES key(d) OF
+      wrapKey(w,k,a) : IF member(private(w),add(srk(s),keys(s)))
+                        THEN blob(d)
+			ELSE nothing ENDIF
+      ELSE nothing
+    ENDCASES;
 
   %% Install key operation on TPM state.
   loadKey2State(s:tpmAbsState,k:(wrapKey?)) : tpmAbsState =
@@ -495,13 +495,21 @@ tpm [ B:TYPE+, % BLOB
 	 (tpmStartup))
 
 
-
   %% Establish SRK
   TPM_TakeOwnership : State = 
      output(outNothing,
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_TakeOwnership)));
 
-
+  take_ownership_success : THEOREM
+     LET (a,s) = runState(
+     	         TPM_Init
+		 >> TPM_Startup
+		 >> CPU_senter
+		 >> CPU_sinit
+		 >> TPM_TakeOwnership
+		 >>= unit)
+		 (tpmUnknown) IN
+      a = outAsymKey(srkVal);
 
   %% Wrap new key k with parent key
   TPM_CreateWrapKey(parent,k:(asymKey?),k_auth:AUTHDATA) : State = 
@@ -509,7 +517,16 @@ tpm [ B:TYPE+, % BLOB
             (LAMBDA (s:tpmAbsState) :
 	      outputCom(s,ABS_CreateWrapKey(parent,k,k_auth))));
 
-
+  create_wrap_key_success: THEOREM FORALL (p,k:(asymKey?),a:AUTHDATA) : 
+     LET (a,s) = runState(
+     	         TPM_Init
+		 >> TPM_Startup
+		 >> CPU_senter
+		 >> CPU_sinit
+		 >> TPM_CreateWrapKey(p,k,a)
+		 >>= unit)
+		 (tpmUnknown) IN
+      a = outWrapKey(wrapKey(p,k,a));
 
   %% Install key k in a TPM
   TPM_LoadKey2(k:(wrapKey?)):State =
