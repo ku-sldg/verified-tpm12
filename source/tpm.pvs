@@ -85,6 +85,8 @@ tpm [ B:TYPE+, % BLOB
   %% AIK Commands
     ABS_MakeIdentity(naik:(asymKey?),k:(symKey?),auth:AUTHDATA) : ABS_MakeIdentity?
     ABS_ActivateIdentity(caik:(wrapKey?),k:(symKey?)) : ABS_ActivateIdentity?
+  %% Cryptographic Commands
+    ABS_Sign(sk:KEY,sb:BLOB) : ABS_Sign?
   %% TPM Ownership Commands
     ABS_TakeOwnership : ABS_TakeOwnership?
   %% Operational Flags Commands
@@ -190,15 +192,6 @@ tpm [ B:TYPE+, % BLOB
   revokeKeyState(s:tpmAbsState,k:(wrapKey?)) : tpmAbsState =
     s WITH [`keys := removeKey(k,keys(s))];
 
-  %% Decrypt a secret encrypted with a wrapped key
-  unBindState(s:tpmAbsState,d:(encryptBlob?)) : BLOB =
-    CASES key(d) OF
-      wrapKey(w,k,a) : IF member(private(w),add(srk(s),keys(s)))
-                        THEN blob(d)
-			ELSE nothing ENDIF
-      ELSE nothing
-    ENDCASES;
-
   %% Install key operation on TPM state.
   loadKey2State(s:tpmAbsState,k:(wrapKey?)) : tpmAbsState =
     s WITH [`keys := addKey(k,srk(s),keys(s))];
@@ -261,7 +254,13 @@ tpm [ B:TYPE+, % BLOB
 
   % Output decrypted key
   unBindOut(s:tpmAbsState,d:(encryptBlob?)) : tpmAbsOutput = 
-    outBlob(unBindState(s,d));
+    CASES key(d) OF
+      wrapKey(w,k,a) : IF member(private(w),add(srk(s),keys(s)))
+                        THEN outBlob(blob(d))
+			ELSE outNothing ENDIF
+      ELSE outNothing
+    ENDCASES;
+
 
   % Generate a NEW RANDOM key pair.
   createWrapKeyOut(parent,k:(asymKey?),a:AUTHDATA):tpmAbsOutput = 
@@ -282,6 +281,14 @@ tpm [ B:TYPE+, % BLOB
   % Retrieve a key if a can be installed
   activateIdentityOut(s:tpmAbsState,a:(wrapKey?),k:(symKey?)) : tpmAbsOutput =
     IF checkKeyRoot(a,srk(s)) THEN outSymKey(k) ELSE outNothing ENDIF;
+
+  %
+  signOut(s:tpmAbsState,sk:KEY,sb:BLOB) : tpmAbsOutput 
+%     IF sk /= aik
+%      THEN outBlob(signBlob(sk,sb))
+%      ELSE outNothing
+%     ENDIF;
+    
 
   % NEED TO ENSURE NEW, RANDOM SRK KEY PAIR
   takeOwnershipOut : tpmAbsOutput =
@@ -306,6 +313,7 @@ tpm [ B:TYPE+, % BLOB
       ABS_Quote(k,n,pm) : quoteOut(s,k,n,pm),
       ABS_MakeIdentity(a,k,auth) : makeIdentityOut(s,a,k,auth), 
       ABS_ActivateIdentity(a,k) : activateIdentityOut(s,a,k),
+      ABS_Sign(sk,sb) : signOut(s,sk,sb),
       ABS_TakeOwnership : takeOwnershipOut,
       ABS_certify(aik,ek,freshk) : certOut(s,aik,ek,freshk),
       ABS_read(i) : readOut(s,i)
@@ -658,6 +666,11 @@ tpm [ B:TYPE+, % BLOB
 	      ENDIF)));
 
 
+  %% Generate and output a signature
+  TPM_Sign(k:KEY,b:BLOB) : State = 
+     output(outNothing,
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_Sign(k,b))));
+    
 
   %% Generate and output a quote
   TPM_Quote(k:(wrapKey?),n:BLOB,pm:PCRMASK) : State = 
@@ -840,15 +853,13 @@ tpm [ B:TYPE+, % BLOB
 	    (LAMBDA (s:tpmAbsState): outputCom(s,ABS_UnBind(d))));
 
   %% UnBind an encrypted blob successfully
-  unBind_success : THEOREM (FORALL(d:(encryptBlob?),hv:HV) : 
-    FORALL (j,k:(asymKey?),hv:HV,b:BLOB,s:tpmAbsState) :
+  unBind_success : THEOREM (FORALL(d:(encryptBlob?)) : 
       LET (out,s) = runState(
-     	 	  TPM_Init
+                  TPM_Init
       		  >> TPM_Startup
- 		  >> CPU_senter
- 		  >> CPU_sinit
- 		  >> TPM_Extend(hv,0)
- 		  >> TPM_UnBind(d)
+		  >> CPU_senter
+		  >> CPU_sinit
+		  >> TPM_UnBind(d)
 		  >>= unit)
  		  (tpmUnknown) IN
       member(private(wrappingKey(key(d))),keys(s))
