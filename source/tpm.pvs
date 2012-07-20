@@ -58,6 +58,7 @@ tpm [ B:TYPE+, % BLOB
     outIdentity(oidentaik:(wrapKey?),oidentc:(outCertReq?)) : outIdentity?
     outIdentActivation(oactc:(certBlob?),osessk:(symKey?),oactek:(asymKey?)) : outIdentActivation?
     outFullQuote(ofullqc:(certBlob?),ofullqsml:SML,ofullqq:(outQuote?)) : outFullQuote?
+    outPCR(pcr:PCR) : outPCR?
   END tpmAbsOutput;
 
   IMPORTING memory[tpmAbsOutput,outNothing];
@@ -81,6 +82,7 @@ tpm [ B:TYPE+, % BLOB
   %% Measurement Collection Commands
     ABS_Extend(h:HV,i:PCRINDEX) : ABS_Extend?
   %% Measurement Reporting Commands
+    ABS_PcrRead(ind:PCRINDEX) : ABS_PcrRead?
     ABS_Quote(aik:(wrapKey?),nonce:BLOB,pm:PCRMASK) : ABS_Quote?
   %% AIK Commands
     ABS_MakeIdentity(naik:(asymKey?),k:(symKey?),auth:AUTHDATA) : ABS_MakeIdentity?
@@ -266,6 +268,11 @@ tpm [ B:TYPE+, % BLOB
   createWrapKeyOut(parent,k:(asymKey?),a:AUTHDATA):tpmAbsOutput = 
      outWrapKey(wrapKey(parent,k,a));
 
+  % Output PCR of given index
+  pcrReadOut(s:tpmAbsState,ind:PCRINDEX) : tpmAbsOutput = 
+    LET p = pcrs(s) IN
+     outPCR(p(ind));
+
   % Output PCRs from a state as quote
   quoteOut(s:tpmAbsState,k:(wrapKey?),n:BLOB,pm:PCRMASK) : tpmAbsOutput =
     IF checkKeyRoot(k,srk(s))
@@ -310,6 +317,7 @@ tpm [ B:TYPE+, % BLOB
       ABS_Unseal(d,k) : unsealOut(s,d,k),
       ABS_UnBind(d) : unBindOut(s,d),
       ABS_CreateWrapKey(parent,k,k_auth) : createWrapKeyOut(parent,k,k_auth),
+      ABS_PcrRead(ind) : pcrReadOut(s,ind),
       ABS_Quote(k,n,pm) : quoteOut(s,k,n,pm),
       ABS_MakeIdentity(a,k,auth) : makeIdentityOut(s,a,k,auth), 
       ABS_ActivateIdentity(a,k) : activateIdentityOut(s,a,k),
@@ -671,6 +679,18 @@ tpm [ B:TYPE+, % BLOB
      output(outNothing,
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_Sign(k,b))));
     
+  %% Output PCR(i)
+  TPM_PcrRead(i:PCRINDEX) : State = 
+     output(outNothing,
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_PcrRead(i))));
+
+  pcrRead_success: THEOREM(FORALL(i:PCRINDEX,state:tpmAbsState) : 
+     LET(out,s) = runState(
+     		  TPM_PcrRead(i)
+		  >>=unit)
+		  (state) IN
+	out = outPCR(pcrs(s)(i)));
+
 
   %% Generate and output a quote
   TPM_Quote(k:(wrapKey?),n:BLOB,pm:PCRMASK) : State = 
@@ -853,7 +873,7 @@ tpm [ B:TYPE+, % BLOB
 	    (LAMBDA (s:tpmAbsState): outputCom(s,ABS_UnBind(d))));
 
   %% UnBind an encrypted blob successfully
-  unBind_success : THEOREM (FORALL(d:(encryptBlob?)) : 
+  unBind_success : THEOREM (FORALL(d:(encryptBlob?),state:tpmAbsState) : 
       LET (out,s) = runState(
                   TPM_Init
       		  >> TPM_Startup
@@ -861,7 +881,7 @@ tpm [ B:TYPE+, % BLOB
 		  >> CPU_sinit
 		  >> TPM_UnBind(d)
 		  >>= unit)
- 		  (tpmUnknown) IN
+ 		  (state) IN
       member(private(wrappingKey(key(d))),keys(s))
                         => out = outBlob(blob(d)))
 
