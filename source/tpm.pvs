@@ -20,6 +20,7 @@
 %%  - noop needs to generate a message when used in error cases
 %% ----
 
+%% Standard Error IDs
 %%  0 = "Bad identity record"
 %%  1 = "Bad input key"
 %%  2 = "bad session key"

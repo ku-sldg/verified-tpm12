@@ -8,3 +8,9 @@ source/.pvscontext
 *.out
 *.toc
 .DS_Store
+
+source/pvsbin/key.bin
+source/pvsbin/memory.bin
+source/pvsbin/pcr.bin
+source/pvsbin/StateMonad.bin
+source/pvsbin/tpm.bin
