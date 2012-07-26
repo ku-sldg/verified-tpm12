@@ -5,7 +5,7 @@
 \contentsline {subsection}{\numberline {2.3}TPM Abstract Outputs}{5}
 \contentsline {subsection}{\numberline {2.4}Defining Abstract TPM Command Execution}{5}
 \contentsline {subsection}{\numberline {2.5}Sequencing TPM Commands}{6}
-\contentsline {section}{\numberline {3}Verification Approach}{7}
-\contentsline {section}{\numberline {A}Trusted Platform Definitions}{8}
-\contentsline {section}{\numberline {B}Cryptography Notations}{9}
+\contentsline {section}{\numberline {3}Verification Approach}{8}
+\contentsline {section}{\numberline {A}Trusted Platform Definitions}{9}
+\contentsline {section}{\numberline {B}Cryptography Notations}{10}
 \contentsline {section}{\numberline {C}Intel Secure Boot}{10}
