@@ -76,7 +76,7 @@ tpm [ B:TYPE+, % BLOB
   %% Protected Storage Commands
     ABS_Seal(sk:(asymKey?),data:BLOB) : ABS_Seal?
     ABS_Unseal(s:(sealBlob?),uk:(asymKey?)) : ABS_Unseal?   
-    ABS_UnBind(inData:(encryptBlob?)) : ABS_UnBind?
+    ABS_UnBind(inData:(encryptBlob?),dk:(asymKey?)) : ABS_UnBind?
     ABS_CreateWrapKey(parentk,wk:(asymKey?),wk_auth:AUTHDATA): ABS_CreateWrapKey?  
   %% Key Management Commands
     ABS_LoadKey2(lk:(wrapKey?)): ABS_LoadKey2? 
@@ -101,6 +101,7 @@ tpm [ B:TYPE+, % BLOB
     ABS_sinit : ABS_sinit? % partially implemented
     ABS_save(i:nat,v:tpmAbsOutput) : ABS_save?
     ABS_read(i:nat) : ABS_read?
+    ABS_Data_Bind(k:KEY,d:BLOB) : ABS_Data_Bind?
   %% CA Commands
     ABS_certify(aik:(wrapKey?),ek:(asymKey?),freshk:(symKey?)) : ABS_certify?
   %% Invented, imaginary Commands
@@ -256,14 +257,8 @@ tpm [ B:TYPE+, % BLOB
     outBlob(unseal(d,pcrs(s),k));
 
   % Output decrypted key
-  unBindOut(s:tpmAbsState,d:(encryptBlob?)) : tpmAbsOutput = 
-    CASES key(d) OF
-      wrapKey(w,k,a) : IF member(private(w),add(srk(s),keys(s)))
-                        THEN outBlob(blob(d))
-			ELSE outNothing ENDIF
-      ELSE outNothing
-    ENDCASES;
-
+  unBindOut(s:tpmAbsState,d:(encryptBlob?),k:(asymKey?)) : tpmAbsOutput =
+     outBlob(decrypt(d,k));
 
   % Generate a NEW RANDOM key pair.
   createWrapKeyOut(parent,k:(asymKey?),a:AUTHDATA):tpmAbsOutput = 
@@ -310,13 +305,16 @@ tpm [ B:TYPE+, % BLOB
   % Read a value and output
   readOut(s:tpmAbsState,i:nat) : tpmAbsOutput =
     memory(s)(i);
+  
+  dataBindOut(s:tpmAbsState,k:KEY,d:BLOB) : tpmAbsOutput = 
+    outBlob(encryptBlob(k,d));
 
   %% Generate output from a command and state
   outputCom(s:tpmAbsState,c:tpmInput) : tpmAbsOutput = 
     CASES c OF
       ABS_Seal(k,data) : sealOut(s,k,data),
       ABS_Unseal(d,k) : unsealOut(s,d,k),
-      ABS_UnBind(d) : unBindOut(s,d),
+      ABS_UnBind(d,k) : unBindOut(s,d,k),
       ABS_CreateWrapKey(parent,k,k_auth) : createWrapKeyOut(parent,k,k_auth),
       ABS_PcrRead(ind) : pcrReadOut(s,ind),
       ABS_Quote(k,n,pm) : quoteOut(s,k,n,pm),
@@ -325,7 +323,8 @@ tpm [ B:TYPE+, % BLOB
       ABS_Sign(sk,sb) : signOut(s,sk,sb),
       ABS_TakeOwnership : takeOwnershipOut,
       ABS_certify(aik,ek,freshk) : certOut(s,aik,ek,freshk),
-      ABS_read(i) : readOut(s,i)
+      ABS_read(i) : readOut(s,i),
+      ABS_Data_Bind(k,d) : dataBindOut(s,k,d)
     ELSE outNothing
   ENDCASES;
 
@@ -674,6 +673,19 @@ tpm [ B:TYPE+, % BLOB
 	      ELSE outError(1)
 	      ENDIF)));
 
+%   activate_prev_success: THEOREM FORALL (aik:(asymKey?),k:(symKey?),a:AUTHDATA) :
+%    LET  (out,s) = runState(
+%  		  TPM_MakeIdentity(aik,k,a) % identity is output
+% 		  >>= (LAMBDA (idOut:tpmAbsOutput) : LET aikw = oidentaik(idOut) IN
+% 		  TPM_ActivateIdentity(aikw,k)) % session key is output
+% 		  >>= unit)
+% 		  (tpmStartup) IN
+%       out = IF checkKeyRoot(aikw,srk(s))
+%             THEN outSymKey(k)
+% 	    ELSE outNothing
+% 	    ENDIF
+%       AND checkKeyRoot(aikw,srk(s)) => member(wkey(aikw),keys(s));
+
 
   %% Generate and output a signature
   TPM_Sign(k:KEY,b:BLOB) : State = 
@@ -844,12 +856,12 @@ tpm [ B:TYPE+, % BLOB
   % it.  Note the use of useOutputState to create a function for bind
   % rather than sequence.
   TPM_UnsealPrev(k:(asymKey?)):[tpmAbsOutput->State] =
-    useOutputState(outNothing,
+    useOutputOutput(outNothing,
 		(LAMBDA (a:tpmAbsOutput):
 		  (LAMBDA (s:tpmAbsState):
 		    IF outBlob?(a) AND sealBlob?(obl(a))
-		    THEN executeCom(s, ABS_Unseal(obl(a),k))
-		    ELSE executeCom(s,noopCom)
+		    THEN outputCom(s,ABS_Unseal(obl(a),k))
+		    ELSE outputCom(s,noopCom)
 		    ENDIF)));
 
   %% Create a seal and immediately unseal it.
@@ -861,30 +873,61 @@ tpm [ B:TYPE+, % BLOB
 		  >> CPU_senter
 		  >> CPU_sinit
                   >> TPM_Seal(k,data)
-		  >>= TPM_UnsealPrev(j)
-		  >>= unit)
+		  >>= TPM_UnsealPrev(j))
 		  (tpmUnknown) IN  
 	(j=private(k) AND pcrs=pcrs(s))
-          => blob(obl(out)) = data
+	   => out = outBlob(data)
 	 %ELSE out = outBlob(nothing)
 
+
   %% UnBind encrypted blob (decrypt)
-  TPM_UnBind(d:(encryptBlob?)) : State = 
+  TPM_UnBind(d:(encryptBlob?),k:(asymKey?)) : State = 
      output(outNothing,
-	    (LAMBDA (s:tpmAbsState): outputCom(s,ABS_UnBind(d))));
+	    (LAMBDA (s:tpmAbsState): outputCom(s,ABS_UnBind(d,k))));
 
   %% UnBind an encrypted blob successfully
-  unBind_success : THEOREM (FORALL(d:(encryptBlob?),state:tpmAbsState) : 
+  unBind_success : THEOREM
+    FORALL (k,j:(asymKey?),b:BLOB,state:tpmAbsState) : 
       LET (out,s) = runState(
                   TPM_Init
       		  >> TPM_Startup
 		  >> CPU_senter
 		  >> CPU_sinit
-		  >> TPM_UnBind(d)
+		  >> TPM_UnBind(encryptBlob(j,b),k)
 		  >>= unit)
- 		  (state) IN
-      member(private(wrappingKey(key(d))),keys(s))
-                        => out = outBlob(blob(d)))
+		  (state) IN
+      j = private(k) =>
+       out = outBlob(b)
+
+	
+  Tspi_Data_Bind(k:KEY,d:BLOB) : State = 
+     output(outNothing,
+            (LAMBDA (s:tpmAbsState): outputCom(s,ABS_Data_Bind(k,d))));
+
+  TPM_UnBindPrev(k:(asymKey?)):[tpmAbsOutput->State] = 
+    useOutputOutput(outNothing,
+		(LAMBDA (a:tpmAbsOutput):
+		  (LAMBDA (s:tpmAbsState):
+		    IF outBlob?(a) AND encryptBlob?(obl(a))
+		    THEN outputCom(s,ABS_UnBind(obl(a),k))
+		    ELSE outputCom(s,noopCom)
+		    ENDIF)));
+  
+  %% UnBind an encrypted blob successfully
+  unBindPrev_success : THEOREM 
+    (FORALL(d:BLOB,k,j:(asymKey?),a:AUTHDATA,state:tpmAbsState) : 
+      LET (out,s) = runState(
+                  TPM_Init
+      		  >> TPM_Startup
+		  >> CPU_senter
+		  >> CPU_sinit
+		  >> TPM_CreateWrapKey(j,k,a)
+		  >>= TPM_LoadPrev
+		  >> Tspi_Data_Bind(k,d)
+		  >>= TPM_UnBindPrev(private(k)))
+ 		  (state) IN 
+ 	  j = srk(s) OR  member(j,keys(s)) => out = outBlob(d)
+	 );
 
   %% No-op - not a real TPM command
   TPM_Noop : [tpmAbsOutput -> State] =
