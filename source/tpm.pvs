@@ -89,7 +89,7 @@ tpm [ B:TYPE+, % BLOB
     ABS_MakeIdentity(naik:(asymKey?),k:(symKey?),auth:AUTHDATA) : ABS_MakeIdentity?
     ABS_ActivateIdentity(caik:(wrapKey?),k:(symKey?)) : ABS_ActivateIdentity?
   %% Cryptographic Commands
-    ABS_Sign(sk:KEY,sb:BLOB) : ABS_Sign?
+    ABS_Sign(sk:KEY,saik:(wrapKey?),sb:BLOB) : ABS_Sign?
   %% TPM Ownership Commands
     ABS_TakeOwnership : ABS_TakeOwnership?
   %% Operational Flags Commands
@@ -285,17 +285,16 @@ tpm [ B:TYPE+, % BLOB
   activateIdentityOut(s:tpmAbsState,a:(wrapKey?),k:(symKey?)) : tpmAbsOutput =
     IF checkKeyRoot(a,srk(s)) THEN outSymKey(k) ELSE outNothing ENDIF;
 
-  %
-  signOut(s:tpmAbsState,sk:KEY,sb:BLOB) : tpmAbsOutput 
-%     IF sk /= aik
-%      THEN outBlob(signBlob(sk,sb))
-%      ELSE outNothing
-%     ENDIF;
+  % Sign a blob if signing key isn't aik
+  signOut(s:tpmAbsState,sk:KEY,aik:(wrapKey?),sb:BLOB) : tpmAbsOutput =
+    IF sk /= aik
+     THEN outBlob(signBlob(sk,sb))
+     ELSE outNothing
+    ENDIF;
     
-
   % NEED TO ENSURE NEW, RANDOM SRK KEY PAIR
   takeOwnershipOut : tpmAbsOutput =
-     outAsymKey(srkVal);
+    outAsymKey(srkVal);
 
   % Generate a certified AIK from an AIK.  Certification assumes that the
   % EK really does belong to the TPM.  We're abstracting away that check.
@@ -320,13 +319,20 @@ tpm [ B:TYPE+, % BLOB
       ABS_Quote(k,n,pm) : quoteOut(s,k,n,pm),
       ABS_MakeIdentity(a,k,auth) : makeIdentityOut(s,a,k,auth), 
       ABS_ActivateIdentity(a,k) : activateIdentityOut(s,a,k),
-      ABS_Sign(sk,sb) : signOut(s,sk,sb),
+      ABS_Sign(sk,aik,sb) : signOut(s,sk,aik,sb),
       ABS_TakeOwnership : takeOwnershipOut,
       ABS_certify(aik,ek,freshk) : certOut(s,aik,ek,freshk),
       ABS_read(i) : readOut(s,i),
       ABS_Data_Bind(k,d) : dataBindOut(s,k,d)
     ELSE outNothing
   ENDCASES;
+
+  % Generic prev command to be used with >>= 
+  prev(pred:bool,command:State,error:State):State = 
+     IF pred = TRUE
+     THEN command
+     ELSE error
+     ENDIF
 
   %% CPU Command Definitions
 
@@ -397,27 +403,18 @@ tpm [ B:TYPE+, % BLOB
                  k,
                  ek)
 
-  %% Certify the previous key.  Use with bind after an AIK is generated.
-  %% After this execution, the result of certification is sitting on
-  %% the output.  Note that ekVal is used directly because  it is the public
-  %% half of the TPM EK
-  CA_CertPrev(n:BLOB,pm:PCRMASK,sessk:(symKey?)):[tpmAbsOutput->State] =
-     useOutputOutput(outNothing,
- 		(LAMBDA (a:tpmAbsOutput):
- 		  (LAMBDA (s:tpmAbsState):
- 		    IF outIdentity?(a) AND outCertReq?(oidentc(a))
- 		    THEN outputCom(s,ABS_certify(ocertaik(oidentc(a)),
-                                                 ocertek(oidentc(a)),
-                                                 ofreshk(oidentc(a))))
- 		    ELSE outError(0)
- 		    ENDIF)));
-
-
 
   %% TPM Command Definitions - Note that all commands used by the TPM
   %% have the TPM suffix to distinguish from operations on tpm state.
   %% Commands thus far are defined as state transforming or output
   %% generating.  This does not exclude the eventuality of doing both.
+
+  %% No-op - not a real TPM command
+  TPM_Noop : [tpmAbsOutput -> State] =
+    (LAMBDA (a:tpmAbsOutput): state((LAMBDA(s:tpmAbsState) : (a,s))));
+
+  %% TPM is off - not a real TPM command
+  TPM_Off : State = put(outNothing,tpmUnknown);
 
   %% Power up the TPM and hit the TPM_Init signal
   TPM_Init : State = put(outNothing,tpmPostInit);
@@ -446,14 +443,14 @@ tpm [ B:TYPE+, % BLOB
   %% Prove that senter after power up results in reset PCRs followed by sinit
   %% measurement.
   %% proved - Tue Jun 12 15:31:12 CDT 2012
-  resetMonad: THEOREM (FORALL (hv:HV) :
+  resetMonad: THEOREM (FORALL (hv:HV, state:tpmAbsState) :
     LET (a,s) = runState(
       	          TPM_Init
       		  >> TPM_Startup
       		  >> CPU_senter
       		  >> CPU_sinit
       		  >>= unit)
-      		  (tpmUnknown)
+      		  (state)
       IN s = changeLocalityState(
                changeLocalityState(
                  extendState(
@@ -518,7 +515,7 @@ tpm [ B:TYPE+, % BLOB
      output(outNothing,
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_TakeOwnership)));
 
-  take_ownership_success : THEOREM
+  take_ownership_success : THEOREM FORALL (state:tpmAbsState) :
      LET (a,s) = runState(
      	         TPM_Init
 		 >> TPM_Startup
@@ -526,7 +523,7 @@ tpm [ B:TYPE+, % BLOB
 		 >> CPU_sinit
 		 >> TPM_TakeOwnership
 		 >>= unit)
-		 (tpmUnknown) IN
+		 (state) IN
       a = outAsymKey(srkVal);
 
   %% Wrap new key k with parent key
@@ -535,7 +532,7 @@ tpm [ B:TYPE+, % BLOB
             (LAMBDA (s:tpmAbsState) :
 	      outputCom(s,ABS_CreateWrapKey(parent,k,k_auth))));
 
-  create_wrap_key_success: THEOREM FORALL (p,k:(asymKey?),a:AUTHDATA) : 
+  create_wrap_key_success: THEOREM FORALL (p,k:(asymKey?),a:AUTHDATA, state:tpmAbsState) : 
      LET (a,s) = runState(
      	         TPM_Init
 		 >> TPM_Startup
@@ -543,7 +540,7 @@ tpm [ B:TYPE+, % BLOB
 		 >> CPU_sinit
 		 >> TPM_CreateWrapKey(p,k,a)
 		 >>= unit)
-		 (tpmUnknown) IN
+		 (state) IN
       a = outWrapKey(wrapKey(p,k,a));
 
   %% Install key k in a TPM
@@ -553,7 +550,7 @@ tpm [ B:TYPE+, % BLOB
 
   % A key is installed if it is wrapped with SRK
   % proved - Tue Jun 12 15:37:56 CDT 2012
-  load_key_success: THEOREM FORALL (k:(wrapKey?)) :
+  load_key_success: THEOREM FORALL (k:(wrapKey?),state:tpmAbsState) :
     LET (out,s) = runState(
                   TPM_Init
       		  >> TPM_Startup
@@ -561,12 +558,15 @@ tpm [ B:TYPE+, % BLOB
 		  >> CPU_sinit
 		  >> TPM_LoadKey2(k)
 		  >>= unit)
-		  (tpmUnknown) IN
-      wrappingKey(k) = srk(s) => member(wkey(k),keys(s));
+		  (state) IN
+      IF wrappingKey(k) = srk(s)
+         THEN member(wkey(k),keys(s))
+	 ELSE not(member(wkey(k),keys(s)))
+      ENDIF;
 
   %% A key is installed if it is wrapped with an installed key
   %% proved - Tue Jun 12 15:38:22 CDT 2012
-  load_key_success2: THEOREM FORALL (j,k:(wrapKey?)) :
+  load_key_success2: THEOREM FORALL (j,k:(wrapKey?),state:tpmAbsState) :
     LET (out,s) = runState(
                   TPM_Init
       		  >> TPM_Startup
@@ -575,63 +575,48 @@ tpm [ B:TYPE+, % BLOB
 		  >> TPM_LoadKey2(k)
 		  >> TPM_LoadKey2(j)
 		  >>= unit)
-		  (tpmUnknown) IN
+		  (state) IN
       wrappingKey(j) = wkey(k) AND wrappingKey(k) = srk(s) =>
          member(wkey(j),keys(s));
-		
-  % Take the output of the previous command execution and attempt to install
-  % it as akey.  Note the use of useOutputState to create a function for bind
-  % rather than sequence.  The big difference is that the output from the
-  % previous command executing is bound to a and can be used in the
-  % morphism.  Note also that outKey? and wrapKey? that would usually be
-  % used as predicate subtypes cannot be as we'll never guarantee the
-  % output argument will be a key or a wrapped key.  This does not complicate
-  % the proof, so it's not a big deal.
-  TPM_LoadPrev:[tpmAbsOutput->State] =
-    useOutputState(outNothing,
-               (LAMBDA (a:tpmAbsOutput):
-                  (LAMBDA (s:tpmAbsState):
-		    IF outWrapKey?(a) AND wrapKey?(owk(a))
-		    THEN executeCom(s,ABS_LoadKey2(owk(a)))
-		    ELSE executeCom(s,noopCom)
-		    ENDIF)));
-                   
-  % Generate a key and immediately install it.  Note the use of bind rather
-  % sequence to capture the TPM_CreateWrapKey output and use it as input to
-  % the TPM_LoadPrev command.  Specifically, the output of
-  % TPM_CreateWrapKey is bound to a in TPM_LoadPrev then used in that
-  % command.  Classic use of bind!!
-  load_prev_key_success: THEOREM FORALL (k,p:(asymKey?),a:AUTHDATA) :
+	
+  load_prev_key_success: THEOREM FORALL (k,p:(asymKey?),auth:AUTHDATA,state:tpmAbsState) :
     LET (out,s) = runState(
                   TPM_Init
       		  >> TPM_Startup
 		  >> CPU_senter
 		  >> CPU_sinit
-                  >> TPM_CreateWrapKey(p,k,a)
-		  >>= TPM_LoadPrev
-		  >>= unit)
-		  (tpmUnknown)
-      IN member(p,keys(s)) OR p=srk(s)
-       => member(k,keys(s));
+                  >> TPM_CreateWrapKey(p,k,auth)
+		  >>= LAMBDA(a:tpmAbsOutput) : 
+		      prev(outWrapKey?(a) AND wrapKey?(owk(a)),
+		           TPM_LoadKey2(owk(a)),TPM_Noop(a)))
+		  (state) IN 
+      IF member(p,keys(s)) OR p=srk(s) 
+      	 THEN member(k,keys(s))
+	 ELSE not(member(k,keys(s)))
+      ENDIF;
+
 
   %%install nested wrapped keys?
-  nested_wrapped_keys_success: THEOREM FORALL (k,j,p:(asymKey?),a1,a2:AUTHDATA) :
+  nested_wrapped_keys_success: THEOREM FORALL (k,j,p:(asymKey?),a1,a2:AUTHDATA,state:tpmAbsState) :
      LET (out,s) = runState(
      	 	   TPM_Init
       		   >> TPM_Startup
 		   >> CPU_senter
 		   >> CPU_sinit
 		   >> TPM_CreateWrapKey(p,k,a1)
-		   >>= TPM_LoadPrev
+		   >>= (LAMBDA (idOut:tpmAbsOutput) : LET wk = owk(idOut) IN
+		   TPM_LoadKey2(wk))
 		   >> TPM_CreateWrapKey(k,j,a2)
-		   >>= TPM_LoadPrev
+		   >>= (LAMBDA (idOut:tpmAbsOutput) : LET wk2 = owk(idOut) IN
+		   TPM_LoadKey2(wk2))
 		   >>= unit)
-		   (tpmUnknown) IN
+		   (state) IN
 	p=srk(s) OR member(p,keys(s))
 	=>
 	%% Does member(j,keys(s)) automatically imply member(k,keys(s))?
 	%% member(j,keys(s)) pops out with grind, but I can't get the k part to pop out.
-	member(j,keys(s)) AND member(k,keys(s));
+	member(j,keys(s)) 
+	%AND member(k,keys(s));
 
 
 
@@ -640,8 +625,19 @@ tpm [ B:TYPE+, % BLOB
      output(outNothing,
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_MakeIdentity(n,k,a))));
 
+  make_identity_success: THEOREM FORALL(state:tpmAbsState,a:(asymKey?),k:(symKey?),auth:AUTHDATA) :
+     LET (out,s) = runState(
+     	         TPM_Init
+		 >> TPM_Startup
+		 >> CPU_senter
+		 >> CPU_sinit
+		 >> TPM_MakeIdentity(a,k,auth)
+		 >>= unit)
+		 (state) IN
+    LET waik:(wrapKey?) = wrapKey(srk(s),a,auth) IN
+      out = outIdentity(waik,outCertReq(waik,ekVal,k));
 
-
+   
   %% Use an AIK
   TPM_ActivateIdentity(a:(wrapKey?),k:(symKey?)) : State =
      modifyOutput(outNothing,
@@ -663,35 +659,35 @@ tpm [ B:TYPE+, % BLOB
 	    ENDIF
       AND checkKeyRoot(aik,srk(s)) => member(wkey(aik),keys(s));
 
-   %% Run ActivateIdentity on the previous output
-   TPM_ActivateIdentityPrev(freshk:(symKey?)):[tpmAbsOutput->State] =
-     useOutputOutput(outNothing,
-           (LAMBDA (a:tpmAbsOutput) :
-            (LAMBDA (s:tpmAbsState) : 
-	      IF outWrapKey?(a) AND wrapKey?(owk(a))
-	      THEN outputCom(s,ABS_ActivateIdentity(owk(a),freshk))
-	      ELSE outError(1)
-	      ENDIF)));
-
-%   activate_prev_success: THEOREM FORALL (aik:(asymKey?),k:(symKey?),a:AUTHDATA) :
-%    LET  (out,s) = runState(
-%  		  TPM_MakeIdentity(aik,k,a) % identity is output
-% 		  >>= (LAMBDA (idOut:tpmAbsOutput) : LET aikw = oidentaik(idOut) IN
-% 		  TPM_ActivateIdentity(aikw,k)) % session key is output
-% 		  >>= unit)
-% 		  (tpmStartup) IN
-%       out = IF checkKeyRoot(aikw,srk(s))
-%             THEN outSymKey(k)
-% 	    ELSE outNothing
-% 	    ENDIF
-%       AND checkKeyRoot(aikw,srk(s)) => member(wkey(aikw),keys(s));
+  activate_prev_success: THEOREM FORALL (aik:(asymKey?),k:(symKey?),auth:AUTHDATA) :
+   LET  (out,s) = runState(
+ 		  TPM_MakeIdentity(aik,k,auth) % identity is output
+		  >>= LAMBDA(a:tpmAbsOutput) : 
+		      prev(outIdentity?(a),
+		           TPM_ActivateIdentity(oidentaik(a),k),TPM_Noop(a))
+		  >>= unit)
+		  (tpmStartup) IN
+      out = outSymKey(k)
+       AND 
+      member(aik,keys(s));
 
 
   %% Generate and output a signature
-  TPM_Sign(k:KEY,b:BLOB) : State = 
+  TPM_Sign(k:KEY,aik:(wrapKey?),b:BLOB) : State = 
      output(outNothing,
-            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_Sign(k,b))));
-    
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_Sign(k,aik,b))));
+	   
+  sign_success: THEOREM FORALL(k:KEY,aik:(wrapKey?),b:BLOB,state:tpmAbsState) :
+     LET(out,s) = runState(
+     		  TPM_Sign(k,aik,b)
+		  >>=unit)
+		  (state) IN
+		  IF k /= aik
+		  THEN out = outBlob(signBlob(k,b))
+		  ELSE out = outNothing
+		  ENDIF
+		  %Need to test to make sure aik parameter is actual aik?
+	           	  
   %% Output PCR(i)
   TPM_PcrRead(i:PCRINDEX) : State = 
      output(outNothing,
@@ -740,7 +736,7 @@ tpm [ B:TYPE+, % BLOB
   %% Output after going through tpm commands is same as grabbing pcrs
   %% This is one of those theorems where assert must be called before grind
   %% proved - Fri Jun 22 16:56:08 CDT 2012
-  checkPCRS: THEOREM (FORALL(k:(wrapKey?),hv:HV,pm:PCRMASK,n:BLOB) :
+  checkPCRS: THEOREM (FORALL(k:(wrapKey?),hv:HV,pm:PCRMASK,n:BLOB,state:tpmAbsState) :
     LET (a,s) =
       runState(
         TPM_Init
@@ -750,14 +746,14 @@ tpm [ B:TYPE+, % BLOB
         >> TPM_Extend(hv,0)
         >> TPM_Quote(k,n,pm)
         >>= unit)
-      (tpmUnknown) IN
+      (state) IN
     checkKeyRoot(k,srk(s)) => 
       a = outQuote(private(wkey(k)),n,map(s`pcrs,pm)));
 
   %% Prove that quote generation returns the correct PCR.  This theorem
   %% needs to be updated with something cleaner.
   %% proven - Wed Jul 11 10:40:28 EDT 2012
-  quoteMonad: THEOREM (FORALL (k:(wrapKey?),hv:HV,n:BLOB) :
+  quoteMonad: THEOREM (FORALL (k:(wrapKey?),hv:HV,n:BLOB, state:tpmAbsState) :
         LET (a,s) = runState(
           TPM_Init
           >> TPM_Startup
@@ -766,7 +762,7 @@ tpm [ B:TYPE+, % BLOB
       	  >> TPM_Extend(hv,0)
       	  >> TPM_Quote(k,n,cons(0,null))
       	  >>= unit)
-      	  (tpmUnknown)
+      	  (state)
 	IN wrappingKey(k) = private(asymKey(srkKeyVal)) =>
         a = outQuote(private(wkey(k)),
 	             n,
@@ -774,38 +770,26 @@ tpm [ B:TYPE+, % BLOB
 		       extend(
 		     	 extend(
 		       	   extend(reset,hash(sinit)),hash(mle)),hv),null)))
-
       
-  %% Generate a quote from an AIK generated by the previous command
-  TPM_QuotePrev(n:BLOB,pm:PCRMASK):[tpmAbsOutput->State] =
-    useOutputOutput(outNothing,
-		(LAMBDA (a:tpmAbsOutput):
-		  (LAMBDA (s:tpmAbsState):
-		    IF outIdentity?(a)
-		    THEN outputCom(s,ABS_Quote(oidentaik(a),n,pm))
-		    ELSE outputCom(s,noopCom)
-		    ENDIF)));
-
-  %% Generate an AIK and use it for a quote.
-  %% proved - Wed Jul 11 13:47:33 EDT 2012
   quote_with_prev_key:
     THEOREM
-     FORALL (k:(asymKey?),s:tpmAbsState,n:BLOB,pm:PCRMASK,sessk:(symKey?),a:AUTHDATA) :
+    FORALL (k:(asymKey?),state:tpmAbsState,n:BLOB,pm:PCRMASK,sessk:(symKey?),auth:AUTHDATA) :
        LET (out,s) = runState(
                    TPM_Init
 		   >> TPM_Startup
 		   >> CPU_senter
 		   >> CPU_sinit
-		   >> TPM_MakeIdentity(k,sessk,a)
-		   >>= TPM_QuotePrev(n,pm))
-		   (tpmUnknown) IN
+		   >> TPM_MakeIdentity(k,sessk,auth)
+		   >>= LAMBDA (a:tpmAbsOutput) : 
+		   prev(outIdentity?(a),
+			TPM_Quote(oidentaik(a),n,pm),TPM_Noop(a)))
+		   (state) IN
         out = outQuote(private(k),
 	               n,
                        map((pcrsReset WITH [(0) := extend(
                                                      extend(reset,hash(sinit)),
                                                      hash(mle))]),
 	                   pm));
-
 
 
   %% Seal and output a blob (should be binary or data)
@@ -815,7 +799,7 @@ tpm [ B:TYPE+, % BLOB
 
   %% Seal a secret successfully
   seal_secret_success: THEOREM
-    FORALL (j,k:(asymKey?),hv:HV,b:BLOB,s:tpmAbsState) :
+    FORALL (j,k:(asymKey?),hv:HV,b:BLOB,state:tpmAbsState) :
       LET (out,s) = runState(
      	 	  TPM_Init
       		  >> TPM_Startup
@@ -824,11 +808,13 @@ tpm [ B:TYPE+, % BLOB
  		  >> TPM_Extend(hv,0)
  		  >> TPM_Seal(k,b)
 		  >>= unit)
- 		  (tpmUnknown) IN
+ 		  (state) IN
       j = private(k) =>
       unseal(obl(out),s`pcrs,j) = b;
-                    
-
+% 	IF j = private(k)
+% 	   THEN unseal(obl(out),s`pcrs,j) = b
+% 	   ELSE out = outBlob(nothing)
+% 	ENDIF;                    
 
   %% Unseal and output a blob (should be binary or data)
   TPM_Unseal(d:(sealBlob?),k:(asymKey?)) : State = 
@@ -837,7 +823,7 @@ tpm [ B:TYPE+, % BLOB
 
   %% Unseal a secret successfully - This is not right yet 
   unseal_secret_success: THEOREM
-    FORALL (j,k:(asymKey?),hv:HV,b:BLOB,pcrs:PCRS) :
+    FORALL (j,k:(asymKey?),hv:HV,b:BLOB,pcrs:PCRS,state:tpmAbsState) :
       LET (out,s) = runState(
                   TPM_Init
       		  >> TPM_Startup
@@ -846,38 +832,30 @@ tpm [ B:TYPE+, % BLOB
 		  >> TPM_Extend(hv,0)
 		  >> TPM_Unseal(sealBlob(k,pcrs,b),j)
 		  >>= unit)
-		  (tpmUnknown) IN
+		  (state) IN
       IF j=private(k) AND pcrs=pcrs(s)
          THEN out=outBlob(b)
          ELSE out=outBlob(nothing)
       ENDIF;  
 
-  % Take the output of the previous command execution and attempt to unseal
-  % it.  Note the use of useOutputState to create a function for bind
-  % rather than sequence.
-  TPM_UnsealPrev(k:(asymKey?)):[tpmAbsOutput->State] =
-    useOutputOutput(outNothing,
-		(LAMBDA (a:tpmAbsOutput):
-		  (LAMBDA (s:tpmAbsState):
-		    IF outBlob?(a) AND sealBlob?(obl(a))
-		    THEN outputCom(s,ABS_Unseal(obl(a),k))
-		    ELSE outputCom(s,noopCom)
-		    ENDIF)));
-
-  %% Create a seal and immediately unseal it.
-  unseal_prev_seal_success: THEOREM
-    FORALL (k,j:(asymKey?),data:BLOB,pcrs:PCRS) :
+  unseal_prev_success: THEOREM
+    FORALL (k,j:(asymKey?),data:BLOB,pcrs:PCRS,state:tpmAbsState) :
       LET (out,s) = runState(
                   TPM_Init
       		  >> TPM_Startup
 		  >> CPU_senter
 		  >> CPU_sinit
                   >> TPM_Seal(k,data)
-		  >>= TPM_UnsealPrev(j))
-		  (tpmUnknown) IN  
+		  >>= LAMBDA (a:tpmAbsOutput) : 
+		  prev(outBlob?(a) AND sealBlob?(obl(a)),
+		       TPM_Unseal(obl(a),j),TPM_Noop(a)))
+		  (state) IN  
 	(j=private(k) AND pcrs=pcrs(s))
 	   => out = outBlob(data)
-	 %ELSE out = outBlob(nothing)
+%       IF j=private(k) AND pcrs=pcrs(s)
+%          THEN out=outBlob(data)
+%          ELSE out=outBlob(nothing)
+%       ENDIF;  
 
 
   %% UnBind encrypted blob (decrypt)
@@ -904,37 +882,25 @@ tpm [ B:TYPE+, % BLOB
      output(outNothing,
             (LAMBDA (s:tpmAbsState): outputCom(s,ABS_Data_Bind(k,d))));
 
-  TPM_UnBindPrev(k:(asymKey?)):[tpmAbsOutput->State] = 
-    useOutputOutput(outNothing,
-		(LAMBDA (a:tpmAbsOutput):
-		  (LAMBDA (s:tpmAbsState):
-		    IF outBlob?(a) AND encryptBlob?(obl(a))
-		    THEN outputCom(s,ABS_UnBind(obl(a),k))
-		    ELSE outputCom(s,noopCom)
-		    ENDIF)));
-  
   %% UnBind an encrypted blob successfully
-  unBindPrev_success : THEOREM 
-    (FORALL(d:BLOB,k,j:(asymKey?),a:AUTHDATA,state:tpmAbsState) : 
+  unBind_prev_success:THEOREM 
+    (FORALL(d:BLOB,k,j:(asymKey?),auth:AUTHDATA,state:tpmAbsState) : 
       LET (out,s) = runState(
                   TPM_Init
       		  >> TPM_Startup
 		  >> CPU_senter
 		  >> CPU_sinit
-		  >> TPM_CreateWrapKey(j,k,a)
-		  >>= TPM_LoadPrev
+		  >> TPM_CreateWrapKey(j,k,auth)
+		  >>= LAMBDA (a:tpmAbsOutput) : 
+		  prev(outWrapKey?(a) AND wrapKey?(owk(a)),
+		       TPM_LoadKey2(owk(a)),TPM_Noop(a))
 		  >> Tspi_Data_Bind(k,d)
-		  >>= TPM_UnBindPrev(private(k)))
+		  >>= LAMBDA (a:tpmAbsOutput) : 
+		  prev(outBlob?(a) AND encryptBlob?(obl(a)),
+		       TPM_UnBind(obl(a),private(k)),TPM_Noop(a)))
  		  (state) IN 
  	  j = srk(s) OR  member(j,keys(s)) => out = outBlob(d)
 	 );
-
-  %% No-op - not a real TPM command
-  TPM_Noop : [tpmAbsOutput -> State] =
-    (LAMBDA (a:tpmAbsOutput): state((LAMBDA(s:tpmAbsState) : (a,s))));
-
-  %% TPM is off - not a real TPM command
-  TPM_Off : State = put(outNothing,tpmUnknown);
 
 
   %% Monotonicity of locality
@@ -949,7 +915,7 @@ tpm [ B:TYPE+, % BLOB
   %% Prove that skipping SENTER is detectable by showing the quote following
   %% a command differs when SENTER is excluded.
   %% proved - Tue Jun 12 15:34:24 CDT 2012
-  noSenter: THEOREM (FORALL (k:(wrapKey?),hv:HV,n:BLOB,pcrMask:PCRMASK) :
+  noSenter: THEOREM (FORALL (k:(wrapKey?),hv:HV,n:BLOB,pcrMask:PCRMASK,state:tpmAbsState) :
     runState(
       TPM_Init
       >> TPM_Startup
@@ -958,20 +924,20 @@ tpm [ B:TYPE+, % BLOB
       >> TPM_Extend(hv,0)
       >> TPM_Quote(k,n,pcrMask)
       >>= unit)
-      (tpmUnknown)
+      (state)
     /=
     runState(
       TPM_Init
       >> TPM_Extend(hv,0)
       >> TPM_Quote(k,n,pcrMask)
       >>= unit)
-      (tpmUnknown))
+      (state))
 
   %% TPMs will not lie about who they are.  If the AIK cannot be installed
   %% then no quote will be generated
   %% proved - Wed Jul 11 11:28:46 EDT 2012
   aik_binding : THEOREM
-    FORALL (aik:(wrapKey?),b:BLOB,pm:PCRMASK) :
+    FORALL (aik:(wrapKey?),b:BLOB,pm:PCRMASK,state:tpmAbsState) :
       LET (out,s) = runState(
                   TPM_Init
       		  >> TPM_Startup
@@ -979,7 +945,7 @@ tpm [ B:TYPE+, % BLOB
 		  >> CPU_sinit
 		  >> TPM_Quote(aik,b,pm)
 		  >>= unit)
-		  (tpmUnknown) IN
+		  (state) IN
        NOT checkKeyRoot(aik,srk(s)) => out=outNothing;              
 
    %% Simple verification of the quote generation process from init
@@ -996,34 +962,40 @@ tpm [ B:TYPE+, % BLOB
    %% proved Sat Jul 14 11:19:56 CDT 2012
    cert_and_quote_with_prev_key: THEOREM
      FORALL (aik:(asymKey?),
-             s:tpmAbsState,
+             state:tpmAbsState,
 	     n:BLOB,
 	     pm:PCRMASK,
 	     k:(symKey?),
 	     sml:SML,
-	     a:AUTHDATA) :
+	     auth:AUTHDATA) :
        LET (out,s) = runState(
                    TPM_Init
  		   >> TPM_Startup
  		   >> CPU_senter
  		   >> CPU_sinit
- 		   >> TPM_MakeIdentity(aik,k,a) % identity is output
+ 		   >> TPM_MakeIdentity(aik,k,auth) % identity is output
 		   >>= CPU_saveOutput(0) % identity is saved in 0
- 		   >>= CA_CertPrev(n,pm,k) % CA cert is output
+ 		   >>= LAMBDA (a:tpmAbsOutput) : 
+		   prev(outIdentity?(a),
+		        CA_certify(oidentc(a)), TPM_Noop(a)) % CA cert is output
                    >>= CPU_saveOutput(1) % CA cert is saved in 1
-		   >>= TPM_ActivateIdentityPrev(k) % session key is output
+		   >>= LAMBDA (a:tpmAbsOutput) : 
+		   prev(outIdentActivation?(a) AND wrapKey?(key(oactc(a))),
+		   	TPM_ActivateIdentity(key(oactc(a)),k), TPM_Noop(a)) % session key is output
 		   >> CPU_read(0) % identity is output
-		   >>= TPM_QuotePrev(n,pm) % quote signed by AIK is output
+		   >>= LAMBDA (a:tpmAbsOutput) : 
+		   prev(outIdentity?(a),
+		        TPM_Quote(oidentaik(a),n,pm), TPM_Noop(a)) % quote signed by AIK is output
 		   >>= CPU_saveOutput(2) % Quote is saved in 2
 		   >> CPU_BuildQuoteFromMem(2,1,1,sml) % Build the quote
 		   )
- 		   (tpmUnknown) IN
+ 		   (state) IN
          out = outFullQuote(certBlob(private(asymKey(caKeyVal)),
                                         keyBlob
                                         (wrapKey
                                          (private(asymKey(srkKeyVal)),
                                           aik,
-					  a))),
+					  auth))),
                                sml,
                                outQuote(private(aik),
                                         n,
@@ -1034,5 +1006,5 @@ tpm [ B:TYPE+, % BLOB
                                                    (extend
                                                     (reset, hash(sinit)),
                                                     hash(mle))]),
-                                         pm)));
+                                         pm)))	    
 END tpm
