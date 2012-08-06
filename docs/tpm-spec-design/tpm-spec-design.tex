@@ -409,11 +409,30 @@ function of bind.  The implementation is:
 Keep in mind that bind does not produce a state.  Instead it produces
 a state monad that given a state will produce and output state pair.
 That state is the parameter \verb!s0! in the above implementation.
+
 The biggest clue to the behavior of bind comes in the \verb!LET! form
 where \verb!(a,s1)! is bound to running \verb!m! -- the first argument
 to bind -- on state \verb!s0!.  \verb!a! is bound to the output and
 \verb!s1! to the state resulting from running \verb!m! on \verb!s0!.
+If we were doing this outside the monad, we would refer to this as the
+intermediate state between the two executions.
 
+The result of the bind is \verb+runState(f(a))(s1)+.  First consider
+\verb+runState(f(a))+.  Looking at the signature, \verb+f(a)+ is a
+mapping from something of type \verb+A+ to a monad of type
+\verb+State+.  What we get, is a next state monad with the previous
+output bound to \verb+a+ -- the previous output is available to the
+calculation of the next state.  \verb+runState+ pulls the state
+function out of the new state monad and evalutes that function with
+\verb+s1+, the intermediate state.  So, the state is threaded throught
+the evaluation with the user providing only \verb+s0+, the initial
+state.  This initial state is the primary use of \verb+unit+ -- a
+state is lifted into the monad and then pushed through a collection of
+bind operations to caculuate the state resulting from many command
+applications.
+
+Another common operation is a specialization of bind that we refer to
+as \emph{sequence} (\verb+m << n+) shown here:
 
 \begin{alltt}
  >> (m:State,f:State):State =
@@ -421,6 +440,10 @@ to bind -- on state \verb!s0!.  \verb!a! is bound to the output and
           LET (a,s1) = runState(m)(s0) IN
             runState(f)(s1));
 \end{alltt}
+
+Sequence works exactly like bind except that the previuos output is
+ignored.  Most TPM commands use sequence because technically they do
+not return anything, but simply modify state.
 
 \section{Verification Approach}
 

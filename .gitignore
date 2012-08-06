@@ -14,3 +14,6 @@ source/pvsbin/memory.bin
 source/pvsbin/pcr.bin
 source/pvsbin/StateMonad.bin
 source/pvsbin/tpm.bin
+/docs/tpm-spec-design/tpm-spec-design.toc
+/docs/tpm-spec-design/tpm-spec-design.blg
+/docs/tpm-spec-design/tpm-spec-design.bbl
