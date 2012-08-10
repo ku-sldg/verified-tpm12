@@ -360,15 +360,15 @@ tpm [ B:TYPE+, % BLOB
     modify(outNothing,
            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_sinit)));
  
-   %% Build a quote for the appraiser from the quote, cert, and log
-   buildQuote(q:(outQuote?),ca:(outIdentActivation?),sml:SML,sessk:(symKey?)):tpmAbsOutput =
-     IF sessk=osessk(ca)
+  %% Build a quote for the appraiser from the quote, cert, and log
+  buildQuote(q:(outQuote?),ca:(outIdentActivation?),sml:SML,sessk:(symKey?)):tpmAbsOutput =
+    IF sessk=osessk(ca)
      THEN outFullQuote(oactc(ca),sml,q)
      ELSE outError(2)
-     ENDIF;
+    ENDIF;
 
-   CPU_BuildQuoteFromMem(q,ca,sessk:nat,sml:SML):State =
-     output(outNothing,
+  CPU_BuildQuoteFromMem(q,ca,sessk:nat,sml:SML):State =
+    output(outNothing,
             (LAMBDA (s:tpmAbsState) :
 	       LET theMem = memory(s) IN
 	         IF outIdentActivation?(theMem(sessk))
@@ -895,6 +895,32 @@ tpm [ B:TYPE+, % BLOB
       locality(s) >= locality(executeCom(s,c)));
 
 
+  pcrs_unchanged: THEOREM (FORALL (s:tpmAbsState,c:tpmAbsInput) :
+    not(ABS_Extend?(c) or 
+    	ABS_Startup?(c) or 
+	ABS_sinit?(c) or 
+	ABS_senter?(c) or 
+	ABS_Init?(c)) =>
+      pcrs(s) = pcrs(executeCom(s,c)));
+
+  srk_unchanged: THEOREM (FORALL (s:tpmAbsState,c:tpmAbsInput) :
+    not(ABS_Startup?(c) or ABS_Init?(c)) =>
+      srk(s) = srk(executeCom(s,c)));
+
+  ek_unchanged: THEOREM (FORALL (s:tpmAbsState,c:tpmAbsInput) :
+    not(ABS_Startup?(c) or ABS_Init?(c)) =>
+      ek(s) = ek(executeCom(s,c)));
+
+  keys_unchanged: THEOREM (FORALL (s:tpmAbsState,c:tpmAbsInput) :
+    not(ABS_Startup?(c) or ABS_Init?(c) or 
+    	ABS_LoadKey2?(c) or ABS_ActivateIdentity?(c)) =>
+      keys(s) = keys(executeCom(s,c)));
+
+  postInit_unchanged: THEOREM (FORALL (s:tpmAbsState,c:tpmAbsInput) :
+    not(ABS_Startup?(c) or ABS_Init?(c)) =>
+      postInit(s) = postInit(executeCom(s,c)));
+
+  
   %% Prove that skipping SENTER is detectable by showing the quote following
   %% a command differs when SENTER is excluded.
   %% proved - Tue Jun 12 15:34:24 CDT 2012
