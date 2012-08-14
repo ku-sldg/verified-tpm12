@@ -25,6 +25,7 @@
 %%  1 = "Bad input key"
 %%  2 = "bad session key"
 %%  4 = "bad quote parts"
+%%  5 = "Clear Disabled"
 
 tpm [ B:TYPE+, % BLOB
       HV:TYPE+,% Hash value
@@ -93,9 +94,10 @@ tpm [ B:TYPE+, % BLOB
   %% TPM Ownership Commands
     ABS_TakeOwnership : ABS_TakeOwnership?
   %% Operational Flags Commands
-    ABS_OwnerClear : ABS_OwnerClear? % unimplemented
-    ABS_ForceClear : ABS_ForceClear? % unimplemented
-    ABS_DisableOwnerClear : ABS_DisabelOwnerClear? % unimplemented
+    ABS_OwnerClear(authK:(asymKey?)) : ABS_OwnerClear? 
+    ABS_ForceClear : ABS_ForceClear? 
+    ABS_DisableOwnerClear : ABS_DisableOwnerClear? 
+    ABS_DisableForceClear : ABS_DisableForceClear? 
   %% Software Commands
     ABS_senter : ABS_senter? % implemented all actions as one senter
     ABS_sinit : ABS_sinit? % partially implemented
@@ -135,7 +137,9 @@ tpm [ B:TYPE+, % BLOB
 		       ek : (asymKey?),
 		       keys : KEYSET,
                        pcrs : PCRS,
-		       locality : LOCALITY
+		       locality : LOCALITY,
+		       disableOwnerClear : bool,
+		       disableForceClear : bool
 		    #];
 
   IMPORTING StateMonad[tpmAbsOutput,tpmAbsState];
@@ -145,7 +149,7 @@ tpm [ B:TYPE+, % BLOB
   %% Unknown state
   tpmUnknown : tpmAbsState
 
-  %% Power on state after init is raised by hardwer
+  %% Power on state after init is raised by hardware
   tpmPostInit : tpmAbsState = (#
                          pcrs:=pcrsPower
 			 , postInit:=true
@@ -154,6 +158,8 @@ tpm [ B:TYPE+, % BLOB
 			 , srk:=private(srkVal)
 			 , ek:=private(ekVal)
 			 , memory:=empty
+			 , disableOwnerClear:=FALSE
+			 , disableForceClear:=FALSE
 			 #);
 
   %% Standard initial state following startup command.  Technically, there
@@ -166,6 +172,8 @@ tpm [ B:TYPE+, % BLOB
 			 , srk:=private(srkVal)
 			 , ek:=private(ekVal)
 			 , memory:=empty
+			 , disableOwnerClear:=FALSE
+			 , disableForceClear:=FALSE
 			 #);
 
   %% Predicate to determine if startup has occured.  Used as types
@@ -208,6 +216,27 @@ tpm [ B:TYPE+, % BLOB
   activateIdentityState(s:tpmAbsState,a:(wrapKey?),k:(symKey?)) : tpmAbsState =
     loadKey2State(s,a);
 
+  clear(s:tpmAbsState) : tpmAbsState = %not fully implemented
+    s WITH [`keys:=emptyset]
+
+  ownerClearState(s:tpmAbsState,auth:(asymKey?)) : tpmAbsState =
+    IF auth = private(srk(s)) AND s`disableOwnerClear=FALSE
+      THEN clear(s)
+      ELSE s
+    ENDIF
+
+  forceClearState(s:tpmAbsState) : tpmAbsState = 
+    IF s`disableForceClear=FALSE
+      THEN clear(s)
+      ELSE s
+    ENDIF
+  
+  disableOwnerClearState(s:tpmAbsState) : tpmAbsState = 
+    s WITH [`disableOwnerClear:=TRUE];
+
+  disableForceClearState(s:tpmAbsState) : tpmAbsState = 
+    s WITH [`disableForceClear:=TRUE];
+
   % save a value to external memory
   saveState(s:tpmAbsState,i:nat,v:tpmAbsOutput) : tpmAbsState =
     s WITH [`memory := updateLoc(memory(s),i,v)];
@@ -232,6 +261,10 @@ tpm [ B:TYPE+, % BLOB
       ABS_Extend(h,n) : extendState(s,n,h),
       ABS_ActivateIdentity(a,k) : activateIdentityState(s,a,k),
       ABS_Init : tpmPostInit,
+      ABS_OwnerClear(k): ownerClearState(s,k),
+      ABS_ForceClear: forceClearState(s),
+      ABS_DisableOwnerClear: disableOwnerClearState(s),
+      ABS_DisableForceClear: disableForceClearState(s),
       ABS_senter : 
         changeLocalityState(extendState(pcrsResetSenterState(s),0,hash(sinit))),
       ABS_sinit : changeLocalityState(extendState(s,0,hash(mle))),
@@ -272,8 +305,8 @@ tpm [ B:TYPE+, % BLOB
   % Output PCRs from a state as quote
   quoteOut(s:tpmAbsState,k:(wrapKey?),n:BLOB,pm:PCRMASK) : tpmAbsOutput =
     IF checkKeyRoot(k,srk(s))
-    THEN outQuote(private(wkey(k)),n,getPCRs(s`pcrs,pm))
-    ELSE outNothing
+     THEN outQuote(private(wkey(k)),n,getPCRs(s`pcrs,pm))
+     ELSE outNothing
     ENDIF;
 
   % Output a newly generated AIK.  Note that a simulates the new aik.
@@ -295,6 +328,21 @@ tpm [ B:TYPE+, % BLOB
   % NEED TO ENSURE NEW, RANDOM SRK KEY PAIR
   takeOwnershipOut : tpmAbsOutput =
     outAsymKey(srkVal);
+
+  ownerClearOut(s:tpmAbsState,auth:(asymKey?)) : tpmAbsOutput = 
+    IF auth = private(srk(s))
+      THEN IF disableOwnerClear(s)=FALSE
+      	    THEN outNothing
+	    ELSE outError(5)
+	   ENDIF
+      ELSE outError(2)
+    ENDIF
+
+  forceClearOut(s:tpmAbsState) : tpmAbsOutput =
+    IF disableOwnerClear(s)=FALSE
+      THEN outNothing
+      ELSE outError(2)
+    ENDIF
 
   % Generate a certified AIK from an AIK.  Certification assumes that the
   % EK really does belong to the TPM.  We're abstracting away that check.
@@ -321,6 +369,8 @@ tpm [ B:TYPE+, % BLOB
       ABS_ActivateIdentity(a,k) : activateIdentityOut(s,a,k),
       ABS_Sign(sk,aik,sb) : signOut(s,sk,aik,sb),
       ABS_TakeOwnership : takeOwnershipOut,
+      ABS_OwnerClear(k) : ownerClearOut(s,k),
+      ABS_ForceClear : forceClearOut(s),
       ABS_certify(aik,ek,freshk) : certOut(s,aik,ek,freshk),
       ABS_read(i) : readOut(s,i),
       ABS_Data_Bind(k,d) : dataBindOut(s,k,d)
@@ -519,6 +569,85 @@ tpm [ B:TYPE+, % BLOB
 		 >>= unit)
 		 (state) IN
       a = outAsymKey(srkVal);
+
+  TPM_OwnerClear(auth:(asymKey?)) : State = 
+     modifyOutput(outNothing,
+            (LAMBDA (s:tpmAbsState) : executeCom(s,ABS_OwnerClear(auth))),
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_OwnerClear(auth)))
+	    );
+
+  owner_clear_success: THEOREM FORALL (state:tpmAbsState,k:(asymKey?)) : 
+    LET(a,s) = runState(
+    	       TPM_Init
+	       >> TPM_Startup
+	       >> CPU_senter
+	       >> CPU_sinit
+	       >> TPM_OwnerClear(k)
+	       >>= unit)
+	       (state) IN
+      k = private(srk(state)) AND disableOwnerClear(state) = FALSE =>
+      keys(s) = emptyset
+
+%     IF k = private(srk(state))
+%       THEN IF disableOwnerClear(s) = FALSE
+%       	    THEN keys(s)=emptyset AND a=outNothing
+% 	    ELSE s=state AND a=outError(5)
+% 	   ENDIF
+%       ELSE s=state AND a=outError(2)
+%     ENDIF
+
+  TPM_ForceClear : State = 
+     modifyOutput(outNothing,
+            (LAMBDA (s:tpmAbsState) : executeCom(s,ABS_ForceClear)),
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_ForceClear))
+	    );
+
+  force_clear_success: THEOREM FORALL (state:tpmAbsState) : 
+    LET(a,s) = runState(
+    	       TPM_Init
+	       >> TPM_Startup
+	       >> CPU_senter
+	       >> CPU_sinit
+	       >> TPM_ForceClear
+	       >>= unit)
+	       (state) IN
+	disableForceClear(state WITH [`disableForceClear:=TRUE]) =>disableForceClear(s)=TRUE% AND a = outError(5)
+%       IF disableForceClear(state) = FALSE 
+%        THEN keys(s)=emptyset AND a=outNothing
+%        ELSE keys(s)=keys(state) AND a=outError(5)
+%       ENDIF   
+
+
+  TPM_DisableOwnerClear : State = 
+     modify(outNothing,
+		(LAMBDA (s:tpmAbsState) : executeCom(s,ABS_DisableOwnerClear)));
+
+  disable_owner_clear_success: THEOREM FORALL (state:tpmAbsState) : 
+    LET(a,s) = runState(
+    	       TPM_Init
+	       >> TPM_Startup
+	       >> CPU_senter
+	       >> CPU_sinit
+	       >> TPM_DisableOwnerClear
+	       >>= unit)
+	       (state) IN
+      disableOwnerClear(s) = TRUE;
+
+  TPM_DisableForceClear : State =
+     modify(outNothing,
+		(LAMBDA (s:tpmAbsState) : executeCom(s,ABS_DisableForceClear)));
+
+  disable_force_clear_success: THEOREM FORALL (state:tpmAbsState) : 
+    LET(a,s) = runState(
+    	       TPM_Init
+	       >> TPM_Startup
+	       >> CPU_senter
+	       >> CPU_sinit
+	       >> TPM_DisableForceClear
+	       >>= unit)
+	       (state) IN
+      disableForceClear(s) = TRUE;
+
 
   %% Wrap new key k with parent key
   TPM_CreateWrapKey(parent,k:(asymKey?),k_auth:AUTHDATA) : State = 
@@ -913,7 +1042,8 @@ tpm [ B:TYPE+, % BLOB
 
   keys_unchanged: THEOREM (FORALL (s:tpmAbsState,c:tpmAbsInput) :
     not(ABS_Startup?(c) or ABS_Init?(c) or 
-    	ABS_LoadKey2?(c) or ABS_ActivateIdentity?(c)) =>
+    	ABS_LoadKey2?(c) or ABS_ActivateIdentity?(c) or 
+	ABS_ForceClear?(c) or ABS_OwnerClear?(c)) =>
       keys(s) = keys(executeCom(s,c)));
 
   postInit_unchanged: THEOREM (FORALL (s:tpmAbsState,c:tpmAbsInput) :
