@@ -520,6 +520,13 @@ tpm [ B:TYPE+, % BLOB
 		 (state) IN
       a = outAsymKey(srkVal);
 
+  take_ownership_post : THEOREM FORALL (state:tpmAbsState) :
+     LET (a,s) = runState(
+		 TPM_TakeOwnership)
+		 (tpmStartup) IN
+      a = outAsymKey(srkVal)
+      AND s = tpmStartup;
+
   %% Wrap new key k with parent key
   TPM_CreateWrapKey(parent,k:(asymKey?),k_auth:AUTHDATA) : State = 
      output(outNothing,
@@ -536,6 +543,14 @@ tpm [ B:TYPE+, % BLOB
 		 >>= unit)
 		 (state) IN
       a = outWrapKey(wrapKey(p,k,a));
+
+  create_wrap_key_post: THEOREM FORALL (p,k:(asymKey?),a:AUTHDATA) : 
+     LET (a,s) = runState(
+     	         TPM_CreateWrapKey(p,k,a))
+		 (tpmStartup) IN
+      a = outWrapKey(wrapKey(p,k,a))
+      AND s = tpmStartup;
+
 
   %% Install key k in a TPM
   TPM_LoadKey2(k:(wrapKey?)):State =
@@ -557,6 +572,16 @@ tpm [ B:TYPE+, % BLOB
          THEN member(wkey(k),keys(s))
 	 ELSE not(member(wkey(k),keys(s)))
       ENDIF;
+
+  load_key_post: THEOREM FORALL (k:(wrapKey?)) :
+    LET (out,s) = runState(
+    		  TPM_LoadKey2(k))
+		  (tpmStartup) IN
+      IF wrappingKey(k) = srk(s)
+         THEN member(wkey(k),keys(s))
+	 ELSE not(member(wkey(k),keys(s)))
+      ENDIF
+      AND out = outNothing;
 
   %% A key is installed if it is wrapped with an installed key
   %% proved - Tue Jun 12 15:38:22 CDT 2012
@@ -629,6 +654,13 @@ tpm [ B:TYPE+, % BLOB
     LET waik:(wrapKey?) = wrapKey(srk(s),a,auth) IN
       out = outIdentity(waik,outCertReq(waik,ekVal,k));
 
+  make_identity_post: THEOREM FORALL(a:(asymKey?),k:(symKey?),auth:AUTHDATA) :
+    LET (out,s) = runState(
+     	 	   TPM_MakeIdentity(a,k,auth))
+		 (tpmStartup) IN
+    	LET waik:(wrapKey?) = wrapKey(srk(s),a,auth) IN
+      	    out = outIdentity(waik,outCertReq(waik,ekVal,k))
+	    AND s = tpmStartup;
    
   %% Use an AIK
   TPM_ActivateIdentity(a:(wrapKey?),k:(symKey?)) : State =
@@ -644,6 +676,17 @@ tpm [ B:TYPE+, % BLOB
     LET (out,s) = runState(
                   TPM_ActivateIdentity(aik,k)
 		  >>= unit)
+		  (tpmStartup) IN
+      out = IF checkKeyRoot(aik,srk(s))
+            THEN outSymKey(k)
+	    ELSE outNothing
+	    ENDIF
+      AND checkKeyRoot(aik,srk(s)) => member(wkey(aik),keys(s));
+
+
+  activate_identity_post : THEOREM FORALL (aik:(wrapKey?),k:(symKey?)) :
+    LET (out,s) = runState(
+                  TPM_ActivateIdentity(aik,k))
 		  (tpmStartup) IN
       out = IF checkKeyRoot(aik,srk(s))
             THEN outSymKey(k)
@@ -674,11 +717,22 @@ tpm [ B:TYPE+, % BLOB
      		  TPM_Sign(k,aik,b)
 		  >>=unit)
 		  (state) IN
-		  IF k /= aik
-		  THEN out = outBlob(signBlob(k,b))
-		  ELSE out = outNothing
-		  ENDIF
+	IF k /= aik
+	   THEN out = outBlob(signBlob(k,b))
+	   ELSE out = outNothing
+	ENDIF
 		  %Need to test to make sure aik parameter is actual aik?
+
+  sign_post: THEOREM FORALL(k:KEY,aik:(wrapKey?),b:BLOB,state:tpmAbsState) :
+     LET(out,s) = runState(
+     		  TPM_Sign(k,aik,b))
+		  (state) IN
+	IF k /= aik
+	   THEN out = outBlob(signBlob(k,b))
+	   ELSE out = outNothing
+	ENDIF
+	AND s = state;
+
 	           	  
   %% Output PCR(i)
   TPM_PcrRead(i:PCRINDEX) : State = 
@@ -691,6 +745,13 @@ tpm [ B:TYPE+, % BLOB
 		  >>=unit)
 		  (state) IN
 	out = outPCR(pcrs(s)(i)));
+
+  pcr_read_post: THEOREM (FORALL(i:PCRINDEX,state:tpmAbsState) : 
+     LET(out,s) = runState(
+     		  TPM_PcrRead(i))
+		  (state) IN
+	out = outPCR(pcrs(s)(i))
+	AND s = state);
 
 
   %% Generate and output a quote
@@ -762,6 +823,16 @@ tpm [ B:TYPE+, % BLOB
 		       extend(
 		     	 extend(
 		       	   extend(reset,hash(sinit)),hash(mle)),hv),null)))
+
+  quote_post: THEOREM 
+    FORALL (k:(wrapKey?),n:BLOB,p:PCRINDEX) :
+        LET (a,s) = runState(
+	    	    TPM_Quote(k,n,cons(p,null)))
+		    (tpmStartup)
+	IN 
+	wrappingKey(k) = private(asymKey(srkKeyVal)) =>
+        	       a = outQuote(private(wkey(k)),n,cons(tpmStartup`pcrs(p),null))
+	AND s = tpmStartup
       
   quote_with_prev_key:
     THEOREM
@@ -774,7 +845,7 @@ tpm [ B:TYPE+, % BLOB
 		   >> TPM_MakeIdentity(k,sessk,auth)
 		   >>= LAMBDA (a:tpmAbsOutput) : 
 		   IF outIdentity?(a) THEN
-			TPM_Quote(oidentaik(a),n,pm)ELSE TPM_Noop(a)ENDIF)
+			TPM_Quote(oidentaik(a),n,pm) ELSE TPM_Noop(a) ENDIF)
 		   (state) IN
         out = outQuote(private(k),
 	               n,
@@ -803,6 +874,16 @@ tpm [ B:TYPE+, % BLOB
  		  (state) IN
 	out = outBlob(sealBlob(k,s`pcrs,b))
 
+  %% Seal a secret successfully
+  seal_post: THEOREM
+    FORALL (k:(asymKey?),hv:HV,b:BLOB,state:tpmAbsState) :
+      LET (out,s) = runState(
+     	 	  TPM_Seal(k,b))
+ 		  (state) IN
+	out = outBlob(sealBlob(k,s`pcrs,b))
+	AND s = state
+
+
   %% Unseal and output a blob (should be binary or data)
   TPM_Unseal(d:(sealBlob?),k:(asymKey?)) : State = 
      output(outNothing,
@@ -824,6 +905,18 @@ tpm [ B:TYPE+, % BLOB
          THEN out=outBlob(b)
          ELSE out=outBlob(nothing)
       ENDIF;  
+
+  unseal_post: THEOREM
+    FORALL (j,k:(asymKey?),hv:HV,b:BLOB,pcrs:PCRS,state:tpmAbsState) :
+      LET (out,s) = runState(
+                  TPM_Unseal(sealBlob(k,pcrs,b),j))
+		  (state) IN
+      IF j=private(k) AND pcrs=pcrs(s)
+         THEN out=outBlob(b)
+         ELSE out=outBlob(nothing)
+      ENDIF
+      AND s = state;  
+
 
   unseal_prev_success: THEOREM
     FORALL (k,j:(asymKey?),b:BLOB,pcrs:PCRS,state:tpmAbsState) :
@@ -859,6 +952,15 @@ tpm [ B:TYPE+, % BLOB
 		  (state) IN
       j = private(k) =>
        out = outBlob(b)
+
+  unBind_post : THEOREM
+    FORALL (k,j:(asymKey?),b:BLOB,state:tpmAbsState) : 
+      LET (out,s) = runState(
+		  TPM_UnBind(encryptBlob(j,b),k))
+		  (state) IN
+      j = private(k) =>
+       out = outBlob(b)
+     AND s = state
 
 	
   Tspi_Data_Bind(k:KEY,d:BLOB) : State = 
