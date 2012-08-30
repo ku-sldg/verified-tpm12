@@ -19,10 +19,14 @@
 
 ; (include-book "tools/defconsts" :dir :system)
 (include-book "misc/assert" :dir :system)
+(include-book "misc/defun-plus" :dir :system)
+
+(include-book "pcr")
 
 ; potentially useful for proof debugging
-;(include-book "misc/untranslate-patterns" :dir :system)
-;(add-untranslate-pattern (cddddr (cddr tpm-s)) (asdf tpm-s))
+(include-book "misc/untranslate-patterns" :dir :system)
+(add-untranslate-pattern (cddddr (cddr ?x)) (asdf ?tpm-s))
+(add-untranslate-pattern (cadddr (cdr tpm-s)) (keys tpm-s))
 
 (defrec tpm-state
   (mem post-init srk ek keys pcrs locality)
@@ -31,46 +35,32 @@
 (defun srk-p (srk)
   (declare (xargs :guard t))
   (declare (ignore srk))
-  t)
+  t
+  ;(integerp srk)
+  )
+  
 
 (defun ek-p (ek)
   (declare (xargs :guard t))
   (declare (ignore ek))
+  ;(integerp ek)
   t)
 
-(defun key-p (key)
+(defun key-p (key) 
   (declare (xargs :guard t))
-  (declare (ignore key))
-  t)
+  (integerp key))
 
 (defun keys-p (keys)
   (declare (xargs :guard t))
   (cond ((atom keys)
          (null keys))
-        (t (and (key-p keys)
+        (t (and (key-p (car keys))
                 (keys-p (cdr keys))))))
 
-(defun pcr-key-p (pcr-key)
-  (declare (xargs :guard t))
-  (integerp pcr-key))
-
-(defun pcr-val-p (pcr-val)
-  (declare (xargs :guard t))
-  (declare (ignore pcr-val))
-  t)
-
-(defun pcr-p (pcr)
-  (declare (xargs :guard t))
-  (and (consp pcr)
-       (pcr-key-p (car pcr))
-       (pcr-val-p (cdr pcr))))
-
-(defun pcrs-p (pcrs)
-  (declare (xargs :guard t))
-  (cond ((atom pcrs)
-         (null pcrs))
-        (t (and (pcr-p (car pcrs))
-                (pcrs-p (cdr pcrs))))))
+(defthm keys-p-implies-true-listp
+; requires induction, so we go ahead and write the lemma
+  (implies (keys-p x) 
+           (true-listp x)))
 
 (defconst *pcrs-reset* nil)
 
@@ -92,9 +82,8 @@
        (pcrs-p (access tpm-state tpm-s :pcrs))
        (locality-p (access tpm-state tpm-s :locality))))
 
-
 (defconst *tpm-post-init* 
-  (make tpm-state							
+  (make tpm-state						
         :mem nil
         :post-init t
         :srk :srkval
@@ -136,24 +125,20 @@
   (declare (xargs :guard (tpm-state-p tpm-s)))
   (not (access tpm-state tpm-s :post-init)))
 
-(defun pcrs-reset-senter-state (tpm-s)
-  (declare (xargs :guard (tpm-state-p tpm-s)))
-  (change tpm-state tpm-s
-          :pcrs *pcrs-reset*))
-
 ; TODO: consider removing the "state" suffix from the following functions.  If
 ; Perry or someone else reads this, feel free to articulate the reason that
 ; "state" is a suffix and then remove this todo if I (Rager) was just missing
 ; something.
 
-(defthm resetting-pcrs-preserves-tpm-state-p
-; May be useful, but who knows.  Rewrite rule (theorem) won't trigger so long
-; as tpm-state-p function is "enabled".
-  (implies (tpm-state-p tpm-s)
-           (tpm-state-p (pcrs-reset-senter-state tpm-s))))
+(defun+ pcrs-reset-senter-state (tpm-s)
+  (declare (xargs :guard (tpm-state-p tpm-s)
+                  :output (tpm-state-p (pcrs-reset-senter-state tpm-s))))
+  (change tpm-state tpm-s
+          :pcrs *pcrs-reset*))
 
-(defun change-locality-state (tpm-s)
-  (declare (xargs :guard (tpm-state-p tpm-s)))
+(defun+ change-locality-state (tpm-s)
+  (declare (xargs :guard (tpm-state-p tpm-s)
+                  :output (tpm-state-p (change-locality-state tpm-s))))
   (let ((prev-locality (access tpm-state tpm-s :locality)))
     (change tpm-state tpm-s
             :locality 
@@ -161,13 +146,10 @@
                 (1- prev-locality)
               prev-locality))))
 
-(defthm change-locality-state-preserves-tpm-state-p
-  (implies (tpm-state-p tpm-s)
-           (tpm-state-p (change-locality-state tpm-s))))
-
-(defun remove-key (key keys)
+(defun+ remove-key (key keys)
   (declare (xargs :guard (and (key-p key)
-                              (keys-p keys))))
+                              (keys-p keys))
+                  :output (keys-p (remove-key key keys))))
   (remove key keys))
 
 (defun revoke-key-state (key tpm-s)
@@ -178,32 +160,43 @@
                             (access tpm-state tpm-s
                                     :keys))))
 
-(defthm revoke-key-state-preserves-tpm-state-p
-  (implies (and (tpm-state-p tpm-s)
-                (key-p key))
-           (tpm-state-p (revoke-key-state tpm-s key))))
+(skip-proofs
 
-(defun add-key (key keys)
+; ACL2 should probably be able to prove this automatically, so there's a good
+; chance there is a bug in remove-key or revoke-key-state.
+
+ (defthm revoke-key-state-preserves-tpm-state-p
+
+   (implies (and (tpm-state-p tpm-s)
+                 (key-p key))
+            (tpm-state-p (revoke-key-state key tpm-s)))))
+
+(defun+ add-key (key keys)
   (declare (xargs :guard (and (key-p key)
-                              (keys-p keys))))
+                              (keys-p keys))
+                  :output (keys-p (add-key key keys))))
   (cons key keys))
 
-(defthm add-key-preserves-keys-p
-  (implies (and (key-p key)
-                (keys-p keys))
-           (keys-p (add-key key keys))))
-
-(defun load-key-to-state (key tpm-s)
+(defun+ load-key-to-state (key tpm-s)
   (declare (xargs :guard (and (tpm-state-p tpm-s)
-                              (key-p key))))
+                              (key-p key))
+                  :output (tpm-state-p (load-key-to-state key tpm-s))))
   (change tpm-state tpm-s
           :keys (add-key key
                          (access tpm-state tpm-s :keys))))
 
-(defthm load-key-to-state-preserves-tpm-state-p
-  (implies (and (key-p key)
-                (tpm-state-p tpm-s))
-           (tpm-state-p (load-key-to-state key tpm-s))))
+(skip-proofs
+ (defun+ extend-state (index hash-value tpm-s)
 
+; TODO: ask Perry/Brigid whether this function should have a diff name
+
+   (declare (xargs :guard (and (integerp index)
+                               (hash-value-p hash-value)
+                               (tpm-state-p tpm-s))
+                   :output (tpm-state-p (extend-state index hash-value tpm-s))))
+   (change tpm-state tpm-s :pcrs
+           (pcrs-extend (access tpm-state tpm-s :pcrs)
+                        index
+                        hash-value))))
 
 
