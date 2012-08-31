@@ -28,9 +28,22 @@
 (add-untranslate-pattern (cddddr (cddr ?x)) (asdf ?tpm-s))
 (add-untranslate-pattern (cadddr (cdr tpm-s)) (keys tpm-s))
 
+
 (defrec tpm-state
   (mem post-init srk ek keys pcrs locality)
   t)
+
+; Have ACL2 untranslate the following terms when it does printing, so that
+; it's easier to read.
+(add-untranslate-pattern (car tpm-s) (mem tpm-s))
+(add-untranslate-pattern (car (cdr tpm-s)) (post-init tpm-s))
+(add-untranslate-pattern (car (cdr (cdr tpm-s))) (srk tpm-s))
+(add-untranslate-pattern (car (cdr (cdr (cdr tpm-s)))) (ek tpm-s))
+(add-untranslate-pattern (car (cdr (cdr (cdr (cdr tpm-s))))) (keys tpm-s))
+(add-untranslate-pattern (car (cdr (cdr (cdr (cdr (cdr tpm-s)))))) 
+                         (pcrs tpm-s))
+(add-untranslate-pattern (car (cdr (cdr (cdr (cdr (cdr (cdr tpm-s))))))) 
+                         (locality tpm-s))
 
 (defun srk-p (srk)
   (declare (xargs :guard t))
@@ -191,9 +204,10 @@
 ; TODO: ask Perry/Brigid whether this function should have a diff name
 
    (declare (xargs :guard (and (integerp index)
-                               (hash-value-p hash-value)
+                               (valid-extension-value-p hash-value)
                                (tpm-state-p tpm-s))
-                   :output (tpm-state-p (extend-state index hash-value tpm-s))))
+                   :output (tpm-state-p (extend-state index hash-value
+                                                      tpm-s))))
    (change tpm-state tpm-s :pcrs
            (pcrs-extend (access tpm-state tpm-s :pcrs)
                         index
