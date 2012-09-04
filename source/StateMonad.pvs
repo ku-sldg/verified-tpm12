@@ -68,7 +68,11 @@ BEGIN
       state(LAMBDA (s0:S) :
                LET (a1,s1) = runState(m0)(s0) IN
                  (a1,f(s1))));
-           
+
+ %% This is really not an ifM because we don't have multiple types
+ %% in the monad.  Still could prove handy though.
+ ifM(b:bool,t,e:State):State =
+    IF b THEN t ELSE e ENDIF;
 
  %% Predefined, useful values for f.  
 
