@@ -61,6 +61,15 @@ BEGIN
  assocativity: LAW FORALL (m:State,f,g:[A->State]) :
    m >>= f >>= g = m >>= (lambda(x:A): f(x) >>= g)
 
+ %% Common Monadic functions
+
+ liftM(f:[S->S]):[State->State] = 
+    (LAMBDA (m0:State) :
+      state(LAMBDA (s0:S) :
+               LET (a1,s1) = runState(m0)(s0) IN
+                 (a1,f(s1))));
+           
+
  %% Predefined, useful values for f.  
 
  % Replace state
