@@ -169,3 +169,5 @@
                 (valid-extension-value-p val2))
            (not (equal (extend pcr val1)
                        (extend pcr val2)))))
+
+(in-theory (disable extend)) ; will eventually disable many more functions
