@@ -119,7 +119,6 @@
     (bool nonempty-type-eq-decl nil booleans nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
     (KEY type-decl nil key nil)
-    (wrapKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
     (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
     (member const-decl "bool" sets nil)
     (checkKey const-decl "bool" key nil)
