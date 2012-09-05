@@ -390,7 +390,7 @@ tpm [ B:TYPE+, % BLOB
   gen_cert : THEOREM FORALL (aik:(wrapKey?),ek:(asymKey?),k:(symKey?)) :
     LET (out,s) = runState(
                   CA_certify(outCertReq(aik,ek,k))
-		  >>= unit)
+		  >>= return)
 		  (tpmStartup) IN
       out = outIdentActivation(
                  certBlob(private(asymKey(caKeyVal)),keyBlob(aik)),
@@ -427,11 +427,11 @@ tpm [ B:TYPE+, % BLOB
       NOT ABS_Startup?(c) =>
         runState(TPM_Init
                >> state(LAMBDA (s:tpmAbsState):(a,executeCom(s,c)))
-	       >>= unit)
+	       >>= return)
 	       (s0)`2
         =
         runState(TPM_Init
-               >>= unit)
+               >>= return)
 	      (s0)`2
 
   %% Prove that senter after power up results in reset PCRs followed by sinit
@@ -443,7 +443,7 @@ tpm [ B:TYPE+, % BLOB
       		  >> TPM_Startup
       		  >> CPU_senter
       		  >> CPU_sinit
-      		  >>= unit)
+      		  >>= return)
       		  (state)
       IN s = changeLocalityState(
                changeLocalityState(
@@ -469,10 +469,10 @@ tpm [ B:TYPE+, % BLOB
 		   s WITH [`pcrs:=pcrsExtend(pcrs(s),0,hv1)])) IN
       hv0/=hv1 =>
         runState(
-          f2 >>= (LAMBDA (x:tpmAbsOutput): f1 >>= unit))(tpmStartup)
+          f2 >>= (LAMBDA (x:tpmAbsOutput): f1 >>= return))(tpmStartup)
         /=
         runState(
-          f1 >>= (LAMBDA (x:tpmAbsOutput): f2 >>= unit))(tpmStartup))
+          f1 >>= (LAMBDA (x:tpmAbsOutput): f2 >>= return))(tpmStartup))
 
   %% Extending a reset PCR is antisymmetric if the two values are not equal
   %% Let form used to defined commands for bind.  Will use command forms
@@ -482,9 +482,9 @@ tpm [ B:TYPE+, % BLOB
         f1:State = TPM_Extend(hv0,0),
       	f2:State = TPM_Extend(hv1,0) IN
       (hv0/=hv1 =>
-        runState(f2 >> f1 >>= unit)(tpmStartup)
+        runState(f2 >> f1 >>= return)(tpmStartup)
         /=
-        runState(f1 >> f2 >>= unit)(tpmStartup)))
+        runState(f1 >> f2 >>= return)(tpmStartup)))
 
   %% Extending a reset PCR is antisymmetric if the two values are not equal.
   %% No let form - commands appear directly in bind
@@ -494,13 +494,13 @@ tpm [ B:TYPE+, % BLOB
        runState(
          TPM_Extend(hv1,0)
 	 >> TPM_Extend(hv0,0)
-	 >>= unit)
+	 >>= return)
 	 (tpmStartup)
        /=
        runState(
          TPM_Extend(hv0,0)
 	 >> TPM_Extend(hv1,0)
-	 >>= unit)
+	 >>= return)
 	 (tpmStartup))
 
 
@@ -516,7 +516,7 @@ tpm [ B:TYPE+, % BLOB
 		 >> CPU_senter
 		 >> CPU_sinit
 		 >> TPM_TakeOwnership
-		 >>= unit)
+		 >>= return)
 		 (state) IN
       a = outAsymKey(srkVal);
 
@@ -533,7 +533,7 @@ tpm [ B:TYPE+, % BLOB
 		 >> CPU_senter
 		 >> CPU_sinit
 		 >> TPM_CreateWrapKey(p,k,a)
-		 >>= unit)
+		 >>= return)
 		 (state) IN
       a = outWrapKey(wrapKey(p,k,a));
 
@@ -551,7 +551,7 @@ tpm [ B:TYPE+, % BLOB
 		  >> CPU_senter
 		  >> CPU_sinit
 		  >> TPM_LoadKey2(k)
-		  >>= unit)
+		  >>= return)
 		  (state) IN
       IF wrappingKey(k) = srk(s)
          THEN member(wkey(k),keys(s))
@@ -568,7 +568,7 @@ tpm [ B:TYPE+, % BLOB
 		  >> CPU_sinit
 		  >> TPM_LoadKey2(k)
 		  >> TPM_LoadKey2(j)
-		  >>= unit)
+		  >>= return)
 		  (state) IN
       wrappingKey(j) = wkey(k) AND wrappingKey(k) = srk(s) =>
          member(wkey(j),keys(s));
@@ -603,7 +603,7 @@ tpm [ B:TYPE+, % BLOB
 		   >> TPM_CreateWrapKey(k,j,a2)
 		   >>= LAMBDA (a:tpmAbsOutput) : IF outWrapKey?(a) AND wrapKey?(owk(a)) THEN
 		   TPM_LoadKey2(owk(a)) ELSE TPM_Noop(a) ENDIF
-		   >>= unit)
+		   >>= return)
 		   (state) IN
 	p=srk(s) OR member(p,keys(s))
 	=>
@@ -624,7 +624,7 @@ tpm [ B:TYPE+, % BLOB
 		 >> CPU_senter
 		 >> CPU_sinit
 		 >> TPM_MakeIdentity(a,k,auth)
-		 >>= unit)
+		 >>= return)
 		 (state) IN
     LET waik:(wrapKey?) = wrapKey(srk(s),a,auth) IN
       out = outIdentity(waik,outCertReq(waik,ekVal,k));
@@ -643,7 +643,7 @@ tpm [ B:TYPE+, % BLOB
   activate_identity_success : THEOREM FORALL (aik:(wrapKey?),k:(symKey?)) :
     LET (out,s) = runState(
                   TPM_ActivateIdentity(aik,k)
-		  >>= unit)
+		  >>= return)
 		  (tpmStartup) IN
       out = IF checkKeyRoot(aik,srk(s))
             THEN outSymKey(k)
@@ -657,7 +657,7 @@ tpm [ B:TYPE+, % BLOB
 		  >>= LAMBDA(a:tpmAbsOutput) : 
 		      IF outIdentity?(a) THEN
 		           TPM_ActivateIdentity(oidentaik(a),k)ELSE TPM_Noop(a) ENDIF
-		  >>= unit)
+		  >>= return)
 		  (tpmStartup) IN
       out = outSymKey(k)
        AND 
@@ -672,7 +672,7 @@ tpm [ B:TYPE+, % BLOB
   sign_success: THEOREM FORALL(k:KEY,aik:(wrapKey?),b:BLOB,state:tpmAbsState) :
      LET(out,s) = runState(
      		  TPM_Sign(k,aik,b)
-		  >>=unit)
+		  >>=return)
 		  (state) IN
 		  IF k /= aik
 		  THEN out = outBlob(signBlob(k,b))
@@ -688,7 +688,7 @@ tpm [ B:TYPE+, % BLOB
   pcrRead_success: THEOREM(FORALL(i:PCRINDEX,state:tpmAbsState) : 
      LET(out,s) = runState(
      		  TPM_PcrRead(i)
-		  >>=unit)
+		  >>=return)
 		  (state) IN
 	out = outPCR(pcrs(s)(i)));
 
@@ -737,7 +737,7 @@ tpm [ B:TYPE+, % BLOB
         >> CPU_sinit
         >> TPM_Extend(hv,0)
         >> TPM_Quote(k,n,pm)
-        >>= unit)
+        >>= return)
       (state) IN
     checkKeyRoot(k,srk(s)) => 
       a = outQuote(private(wkey(k)),n,map(s`pcrs,pm)));
@@ -753,7 +753,7 @@ tpm [ B:TYPE+, % BLOB
 	  >> CPU_sinit
       	  >> TPM_Extend(hv,0)
       	  >> TPM_Quote(k,n,cons(0,null))
-      	  >>= unit)
+      	  >>= return)
       	  (state)
 	IN wrappingKey(k) = private(asymKey(srkKeyVal)) =>
         a = outQuote(private(wkey(k)),
@@ -799,7 +799,7 @@ tpm [ B:TYPE+, % BLOB
  		  >> CPU_sinit
  		  >> TPM_Extend(hv,0)
  		  >> TPM_Seal(k,b)
-		  >>= unit)
+		  >>= return)
  		  (state) IN
 	out = outBlob(sealBlob(k,s`pcrs,b))
 
@@ -818,7 +818,7 @@ tpm [ B:TYPE+, % BLOB
 		  >> CPU_sinit
 		  >> TPM_Extend(hv,0)
 		  >> TPM_Unseal(sealBlob(k,pcrs,b),j)
-		  >>= unit)
+		  >>= return)
 		  (state) IN
       IF j=private(k) AND pcrs=pcrs(s)
          THEN out=outBlob(b)
@@ -855,7 +855,7 @@ tpm [ B:TYPE+, % BLOB
 		  >> CPU_senter
 		  >> CPU_sinit
 		  >> TPM_UnBind(encryptBlob(j,b),k)
-		  >>= unit)
+		  >>= return)
 		  (state) IN
       j = private(k) =>
        out = outBlob(b)
@@ -932,14 +932,14 @@ tpm [ B:TYPE+, % BLOB
       >> CPU_sinit
       >> TPM_Extend(hv,0)
       >> TPM_Quote(k,n,pcrMask)
-      >>= unit)
+      >>= return)
       (state)
     /=
     runState(
       TPM_Init
       >> TPM_Extend(hv,0)
       >> TPM_Quote(k,n,pcrMask)
-      >>= unit)
+      >>= return)
       (state))
 
   %% TPMs will not lie about who they are.  If the AIK cannot be installed
@@ -953,7 +953,7 @@ tpm [ B:TYPE+, % BLOB
 		  >> CPU_senter
 		  >> CPU_sinit
 		  >> TPM_Quote(aik,b,pm)
-		  >>= unit)
+		  >>= return)
 		  (state) IN
        NOT checkKeyRoot(aik,srk(s)) => out=outNothing;              
 
