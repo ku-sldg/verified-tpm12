@@ -984,12 +984,13 @@ tpm [ B:TYPE+, % BLOB
  		   >> CPU_sinit
  		   >> TPM_MakeIdentity(aik,k,auth) % identity is output
 		   >>= CPU_saveOutput(0) % identity is saved in 0
- 		   >>= LAMBDA (a:tpmAbsOutput) : 
-		         IF outIdentity?(a) THEN
-			    % CA cert is output
-		            CA_certify(oidentc(a))
-			    ELSE TPM_Noop(a)
-		         ENDIF
+		   >>= ifM(outIdentity?)(CA_certify(oidentc(a))(TPM_Noop))
+ 		   % >>= LAMBDA (a:tpmAbsOutput) : 
+		   %       IF outIdentity?(a) THEN
+		   % 	    % CA cert is output
+		   %          CA_certify(oidentc(a))
+		   % 	    ELSE TPM_Noop(a)
+		   %       ENDIF
                    >>= CPU_saveOutput(1) % CA cert is saved in 1
 		   >>= LAMBDA (a:tpmAbsOutput) : 
 		         IF outIdentActivation?(a)

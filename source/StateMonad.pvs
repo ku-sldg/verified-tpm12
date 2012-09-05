@@ -71,8 +71,11 @@ BEGIN
 
  %% This is really not an ifM because we don't have multiple types
  %% in the monad.  Still could prove handy though.
- ifM(b:bool,t,e:State):State =
-    IF b THEN t ELSE e ENDIF;
+ ifM(p:[A->bool],t,e:State):[[A->bool] -> [A->State]] =
+    LAMBDA (p:[A->bool]) :
+      LAMBDA (a:A) :
+        state(
+          IF p(a) THEN runState(t) ELSE runState(e) ENDIF);
 
  %% Predefined, useful values for f.  
 
