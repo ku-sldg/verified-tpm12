@@ -360,15 +360,15 @@ tpm [ B:TYPE+, % BLOB
     modify(outNothing,
            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_sinit)));
  
-   %% Build a quote for the appraiser from the quote, cert, and log
-   buildQuote(q:(outQuote?),ca:(outIdentActivation?),sml:SML,sessk:(symKey?)):tpmAbsOutput =
-     IF sessk=osessk(ca)
+  %% Build a quote for the appraiser from the quote, cert, and log
+  buildQuote(q:(outQuote?),ca:(outIdentActivation?),sml:SML,sessk:(symKey?)):tpmAbsOutput =
+    IF sessk=osessk(ca)
      THEN outFullQuote(oactc(ca),sml,q)
      ELSE outError(2)
-     ENDIF;
+    ENDIF;
 
-   CPU_BuildQuoteFromMem(q,ca,sessk:nat,sml:SML):State =
-     output(outNothing,
+  CPU_BuildQuoteFromMem(q,ca,sessk:nat,sml:SML):State =
+    output(outNothing,
             (LAMBDA (s:tpmAbsState) :
 	       LET theMem = memory(s) IN
 	         IF outIdentActivation?(theMem(sessk))
@@ -895,6 +895,32 @@ tpm [ B:TYPE+, % BLOB
       locality(s) >= locality(executeCom(s,c)));
 
 
+  pcrs_unchanged: THEOREM (FORALL (s:tpmAbsState,c:tpmAbsInput) :
+    not(ABS_Extend?(c) or 
+    	ABS_Startup?(c) or 
+	ABS_sinit?(c) or 
+	ABS_senter?(c) or 
+	ABS_Init?(c)) =>
+      pcrs(s) = pcrs(executeCom(s,c)));
+
+  srk_unchanged: THEOREM (FORALL (s:tpmAbsState,c:tpmAbsInput) :
+    not(ABS_Startup?(c) or ABS_Init?(c)) =>
+      srk(s) = srk(executeCom(s,c)));
+
+  ek_unchanged: THEOREM (FORALL (s:tpmAbsState,c:tpmAbsInput) :
+    not(ABS_Startup?(c) or ABS_Init?(c)) =>
+      ek(s) = ek(executeCom(s,c)));
+
+  keys_unchanged: THEOREM (FORALL (s:tpmAbsState,c:tpmAbsInput) :
+    not(ABS_Startup?(c) or ABS_Init?(c) or 
+    	ABS_LoadKey2?(c) or ABS_ActivateIdentity?(c)) =>
+      keys(s) = keys(executeCom(s,c)));
+
+  postInit_unchanged: THEOREM (FORALL (s:tpmAbsState,c:tpmAbsInput) :
+    not(ABS_Startup?(c) or ABS_Init?(c)) =>
+      postInit(s) = postInit(executeCom(s,c)));
+
+  
   %% Prove that skipping SENTER is detectable by showing the quote following
   %% a command differs when SENTER is excluded.
   %% proved - Tue Jun 12 15:34:24 CDT 2012
@@ -939,7 +965,7 @@ tpm [ B:TYPE+, % BLOB
    %% 0 -> identity
    %% 1 -> CA cert
    %% 2 -> TPM quote
-   %%
+   %%z
    %% Note that the identity is not used in building the final
    %% appraiser's quote
    %% proved Sat Jul 14 11:19:56 CDT 2012
@@ -959,16 +985,26 @@ tpm [ B:TYPE+, % BLOB
  		   >> TPM_MakeIdentity(aik,k,auth) % identity is output
 		   >>= CPU_saveOutput(0) % identity is saved in 0
  		   >>= LAMBDA (a:tpmAbsOutput) : 
-		   IF outIdentity?(a) THEN
-		        CA_certify(oidentc(a)) ELSE TPM_Noop(a)ENDIF % CA cert is output
+		         IF outIdentity?(a) THEN
+			    % CA cert is output
+		            CA_certify(oidentc(a))
+			    ELSE TPM_Noop(a)
+		         ENDIF
                    >>= CPU_saveOutput(1) % CA cert is saved in 1
 		   >>= LAMBDA (a:tpmAbsOutput) : 
-		       IF outIdentActivation?(a) AND wrapKey?(key(oactc(a))) THEN
-		   TPM_ActivateIdentity(key(oactc(a)),k)ELSE TPM_Noop(a) ENDIF % session key is output
+		         IF outIdentActivation?(a)
+                            AND wrapKey?(key(oactc(a))) THEN 
+			    % session key is output
+		            TPM_ActivateIdentity(key(oactc(a)),k)
+			    ELSE TPM_Noop(a)
+		         ENDIF
 		   >> CPU_read(0) % identity is output
 		   >>= LAMBDA (a:tpmAbsOutput) : 
-		   IF outIdentity?(a) THEN
-		        TPM_Quote(oidentaik(a),n,pm)ELSE TPM_Noop(a) ENDIF % quote signed by AIK is output
+		         IF outIdentity?(a) THEN
+			    % quote signed by AIK is output
+		            TPM_Quote(oidentaik(a),n,pm)
+			    ELSE TPM_Noop(a)
+	                 ENDIF 
 		   >>= CPU_saveOutput(2) % Quote is saved in 2
 		   >> CPU_BuildQuoteFromMem(2,1,1,sml) % Build the quote
 		   )
