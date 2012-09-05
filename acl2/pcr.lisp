@@ -78,7 +78,7 @@
   (declare (xargs :guard t))
   (and (integerp val)
        (>= val 0)
-       (<= val (expt 2 *pcr-bit-length*))))
+       (< val (expt 2 *pcr-bit-length*))))
 
 (local (include-book "arithmetic-5/top" :dir :system))
 
@@ -149,25 +149,18 @@
   (implies (member index pcr-mask)
            (member (nth index pcrs)
                    (get-pcrs pcrs pcr-mask))))
-#|
-(defthm extension-is-antisymmetric1
-  (implies (equal (extend pcr val1)
-                  (extend pcr val2))
-           (equal val1 val2)
-           )
-  :rule-classes nil)
 
-(defthm lemma2
-  (implies (equal (mod val1 256)
-                  (mod val2 256))
-           (equal val1 val2))
-  :rule-classes nil)
-
-(defthm lemma3
-  (implies (not (equal val1 val2))
-           (not (equal (mod val1 256)
-                       (mod val2 256)))))
-  :rule-classes nil)
+(local ; requires arithmetic-5
+ (defthm extension-is-antisymmetric-lemma
+   (implies (and (< a n)
+                 (< b n)
+                 (< 0 a)
+                 (< 0 b)
+                 (rationalp n)
+                 (rationalp x)
+                 (not (equal a b)))
+            (not (equal (mod (+ x a) n)
+                        (mod (+ x b) n))))))
 
 (defthm extension-is-antisymmetric
   (implies (and (not (equal val1 val2))
@@ -176,13 +169,3 @@
                 (valid-extension-value-p val2))
            (not (equal (extend pcr val1)
                        (extend pcr val2)))))
-
-
-(defun+ pcrs-extend (pcrs nonce hash-value)
-  (declare (xargs :guard (and (nonce-p nonce)
-                              (hash-value-p hash-value)
-                              (tpm-state-p tpm-s))
-                  :output (pcrs-p (pcrs-extend prcrs nonce hash-value))))
-  
-
-|#
