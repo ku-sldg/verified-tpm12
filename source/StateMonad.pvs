@@ -39,12 +39,10 @@ BEGIN
           LET (a,s1) = runState(m)(s0) IN 
 	    runState(f(a))(s1));
 
- >> (m:State,f:State):State =
+ >> (m:State,s:State):State =
    state(LAMBDA(s0:S):
           LET (a,s1) = runState(m)(s0) IN
-            runState(f)(s1));
-
- %% Defined bind0 over two states for use later
+            runState(s)(s1));
 
  %% Monad laws -- might as well, we're in a prover
  
@@ -65,9 +63,10 @@ BEGIN
 
  %% liftM lifts a state transformation into the state monad.  Given a function
  %% from S to S, return a function from State to State.
+
  liftM(f:[S->S]):[State->State] = 
     (LAMBDA (m0:State) :
-      state(LAMBDA (s0:S) :
+       state(LAMBDA (s0:S) :
                LET (a1,s1) = runState(m0)(s0) IN
                  (a1,f(s1))));
 
