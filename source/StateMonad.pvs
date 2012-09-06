@@ -63,17 +63,24 @@ BEGIN
 
  %% Common Monadic functions
 
+ %% liftM lifts a state transformation into the state monad.  Given a function
+ %% from S to S, return a function from State to State.
  liftM(f:[S->S]):[State->State] = 
     (LAMBDA (m0:State) :
       state(LAMBDA (s0:S) :
                LET (a1,s1) = runState(m0)(s0) IN
                  (a1,f(s1))));
 
- %% This is really not an ifM because we don't have multiple types
- %% in the monad.  Still could prove handy though.
+ %% ifM takes a predicate and a condition monad, evaluates the condition
+ %% monad and calls the predicate on the output.  Based on the predicate
+ %% value, one of two monads results.  ifM_ works the same, but ignores
+ %% the prior output.
+
+ %% Use with >>=
  ifM(p:[A->bool],c,t,e:[A->State]): [A->State] =
     (LAMBDA (a:A) : c(a) >>= IF p(a) THEN t ELSE e ENDIF);
 
+ %% Use with >>
  ifM_(p:[A->bool],c:State,t,e:[A->State]): State =
     c >>= (LAMBDA (a:A): IF p(a) THEN t(a) ELSE e(a) ENDIF);
 

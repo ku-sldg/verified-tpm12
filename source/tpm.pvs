@@ -983,17 +983,21 @@ tpm [ B:TYPE+, % BLOB
  		   >> CPU_senter
  		   >> CPU_sinit
  		   >> TPM_MakeIdentity(aik,k,auth) % identity is output
-		   >>= ifM(outIdentity?, CPU_saveOutput(0),
+		   >>= ifM(outIdentity?,
+		           CPU_saveOutput(0),
 		           (LAMBDA (a:tpmAbsOutput) : CA_certify(oidentc(a))),
 			   TPM_Noop)
 	           >>= ifM((LAMBDA (a:tpmAbsOutput) :
 		              outIdentActivation?(a)
 		              AND wrapKey?(key(oactc(a)))),
 			   CPU_saveOutput(1),
-			   (LAMBDA (a:tpmAbsOutput) : TPM_ActivateIdentity(key(oactc(a)),k)),
+			   (LAMBDA (a:tpmAbsOutput) :
+			      TPM_ActivateIdentity(key(oactc(a)),k)),
 			   TPM_Noop)
-		   >> ifM_(outIdentity?,CPU_read(0),
-		           (LAMBDA (a:tpmAbsOutput) : TPM_Quote(oidentaik(a),n,pm)),
+		   >> ifM_(outIdentity?,
+		           CPU_read(0),
+		           (LAMBDA (a:tpmAbsOutput) :
+			      TPM_Quote(oidentaik(a),n,pm)),
 			   TPM_Noop)
 		   >>= CPU_saveOutput(2) % Quote is saved in 2
 		   >> CPU_BuildQuoteFromMem(2,1,1,sml) % Build the quote
