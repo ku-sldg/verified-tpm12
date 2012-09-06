@@ -146,7 +146,7 @@ tpm [ B:TYPE+, % BLOB
   %% Unknown state
   tpmUnknown : tpmAbsState
 
-  %% Power on state after init is raised by hardwer
+  %% Power on state after init is raised by hardware
   tpmPostInit : tpmAbsState = (#
                          pcrs:=pcrsPower
 			 , postInit:=true
@@ -984,6 +984,7 @@ tpm [ B:TYPE+, % BLOB
    %% 0 -> identity
    %% 1 -> CA cert
    %% 2 -> TPM quote
+   %%
    %% Note that the identity is not used in building the final
    %% appraiser's quote
    %% proved Sat Jul 14 11:19:56 CDT 2012
