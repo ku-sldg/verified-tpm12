@@ -983,29 +983,18 @@ tpm [ B:TYPE+, % BLOB
  		   >> CPU_senter
  		   >> CPU_sinit
  		   >> TPM_MakeIdentity(aik,k,auth) % identity is output
-		   >>= CPU_saveOutput(0) % identity is saved in 0
-		   >>= ifM(outIdentity?)(CA_certify(oidentc(a))(TPM_Noop))
- 		   % >>= LAMBDA (a:tpmAbsOutput) : 
-		   %       IF outIdentity?(a) THEN
-		   % 	    % CA cert is output
-		   %          CA_certify(oidentc(a))
-		   % 	    ELSE TPM_Noop(a)
-		   %       ENDIF
-                   >>= CPU_saveOutput(1) % CA cert is saved in 1
-		   >>= LAMBDA (a:tpmAbsOutput) : 
-		         IF outIdentActivation?(a)
-                            AND wrapKey?(key(oactc(a))) THEN 
-			    % session key is output
-		            TPM_ActivateIdentity(key(oactc(a)),k)
-			    ELSE TPM_Noop(a)
-		         ENDIF
-		   >> CPU_read(0) % identity is output
-		   >>= LAMBDA (a:tpmAbsOutput) : 
-		         IF outIdentity?(a) THEN
-			    % quote signed by AIK is output
-		            TPM_Quote(oidentaik(a),n,pm)
-			    ELSE TPM_Noop(a)
-	                 ENDIF 
+		   >>= ifM(outIdentity?, CPU_saveOutput(0),
+		           (LAMBDA (a:tpmAbsOutput) : CA_certify(oidentc(a))),
+			   TPM_Noop)
+	           >>= ifM((LAMBDA (a:tpmAbsOutput) :
+		              outIdentActivation?(a)
+		              AND wrapKey?(key(oactc(a)))),
+			   CPU_saveOutput(1),
+			   (LAMBDA (a:tpmAbsOutput) : TPM_ActivateIdentity(key(oactc(a)),k)),
+			   TPM_Noop)
+		   >> ifM_(outIdentity?,CPU_read(0),
+		           (LAMBDA (a:tpmAbsOutput) : TPM_Quote(oidentaik(a),n,pm)),
+			   TPM_Noop)
 		   >>= CPU_saveOutput(2) % Quote is saved in 2
 		   >> CPU_BuildQuoteFromMem(2,1,1,sml) % Build the quote
 		   )
