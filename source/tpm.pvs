@@ -42,6 +42,7 @@ tpm [ B:TYPE+, % BLOB
 
   IMPORTING pcr[HV];
   IMPORTING key[B,K,HV];
+  IMPORTING ReturnCodes;
 
   SML : TYPE = list[HV];
 
@@ -49,17 +50,17 @@ tpm [ B:TYPE+, % BLOB
   tpmAbsOutput : DATATYPE
   BEGIN
     outNothing : outNothing?
-    outError(errorVal:nat) : outError?
-    outQuote(oqk:KEY,oqnon:BLOB,oqpcrs:list[PCR]) : outQuote?
-    outWrapKey(owk:KEY) : outWrapKey?
-    outAsymKey(oask:KEY) : outAsymKey?
-    outSymKey(osk:KEY) : outSymKey?
-    outBlob(obl:BLOB) : outBlob?
-    outCertReq(ocertaik:(wrapKey?),ocertek:(asymKey?),ofreshk:(symKey?)) : outCertReq?
-    outIdentity(oidentaik:(wrapKey?),oidentc:(outCertReq?)) : outIdentity?
-    outIdentActivation(oactc:(certBlob?),osessk:(symKey?),oactek:(asymKey?)) : outIdentActivation?
-    outFullQuote(ofullqc:(certBlob?),ofullqsml:SML,ofullqq:(outQuote?)) : outFullQuote?
-    outPCR(pcr:PCR) : outPCR?
+    outError(m:ReturnCode) : outError?
+    outQuote(oqk:KEY,oqnon:BLOB,oqpcrs:list[PCR],m:ReturnCode) : outQuote?
+    outWrapKey(owk:KEY,m:ReturnCode) : outWrapKey?
+    outAsymKey(oask:KEY,m:ReturnCode) : outAsymKey?
+    outSymKey(osk:KEY,m:ReturnCode) : outSymKey?
+    outBlob(obl:BLOB,m:ReturnCode) : outBlob?
+    outCertReq(ocertaik:(wrapKey?),ocertek:(asymKey?),ofreshk:(symKey?),m:ReturnCode) : outCertReq?
+    outIdentity(oidentaik:(wrapKey?),oidentc:(outCertReq?),m:ReturnCode) : outIdentity?
+    outIdentActivation(oactc:(certBlob?),osessk:(symKey?),oactek:(asymKey?),m:ReturnCode) : outIdentActivation?
+    outFullQuote(ofullqc:(certBlob?),ofullqsml:SML,ofullqq:(outQuote?),m:ReturnCode) : outFullQuote?
+    outPCR(pcr:PCR,m:ReturnCode) : outPCR?
   END tpmAbsOutput;
 
   IMPORTING memory[tpmAbsOutput,outNothing];
@@ -250,63 +251,91 @@ tpm [ B:TYPE+, % BLOB
   
   % Output secret sealed with asymetric key 
   sealOut(s:tpmAbsState,k:(asymKey?),data:BLOB) : tpmAbsOutput = 
-    outBlob(sealBlob(k,pcrs(s),data));
+    IF data = nothing
+      THEN outError(TPM_BAD_PARAMETER)
+      ELSE outBlob(sealBlob(k,pcrs(s),data),TPM_SUCCESS)
+    ENDIF
 
   % Output secret unsealed with an asymetric key and PCRs 
   unsealOut(s:tpmAbsState,d:(sealBlob?),k:(asymKey?)) : tpmAbsOutput = 
-    outBlob(unseal(d,pcrs(s),k));
+    LET b:BLOB = unseal(d,pcrs(s),k) IN
+    IF nothing?(b)
+      THEN outError(TPM_NOTSEALED_BLOB)
+      ELSE outBlob(b,TPM_SUCCESS)
+    ENDIF
 
   % Output decrypted key
   unBindOut(s:tpmAbsState,d:(encryptBlob?),k:(asymKey?)) : tpmAbsOutput =
-     outBlob(decrypt(d,k));
+    LET b:BLOB = decrypt(d,k) IN
+%% TODO: double check command specificiations... this might be okay without IF stmt
+%      IF nothing?(b)
+%        THEN outError()
+%        ELSE 
+       outBlob(b,TPM_SUCCESS)
+%      ENDIF
+    
 
   % Generate a NEW RANDOM key pair.
   createWrapKeyOut(parent,k:(asymKey?),a:AUTHDATA):tpmAbsOutput = 
-     outWrapKey(wrapKey(parent,k,a));
+     outWrapKey(wrapKey(parent,k,a),TPM_SUCCESS);
 
   % Output PCR of given index
   pcrReadOut(s:tpmAbsState,ind:PCRINDEX) : tpmAbsOutput = 
-    LET p = pcrs(s) IN
-     outPCR(p(ind));
+  %% TODO: will ind not be allowed to be > 23 because of defn of PCRINDEX?
+%     IF ind > 23
+%       THEN outError(TPM_BADINDEX) 
+%       ELSE 
+      	   LET p = pcrs(s) IN outPCR(p(ind),TPM_SUCCESS)
+%     ENDIF;
 
   % Output PCRs from a state as quote
   quoteOut(s:tpmAbsState,k:(wrapKey?),n:BLOB,pm:PCRMASK) : tpmAbsOutput =
-    IF checkKeyRoot(k,srk(s))
-    THEN outQuote(private(wkey(k)),n,getPCRs(s`pcrs,pm))
-    ELSE outNothing
-    ENDIF;
+  %% TODO: will pm be allowed to have elements > 23? see pcrReadOut 
+%     IF some((LAMBDA (x:nat):x>23),pm)
+%       THEN outError(TPM_INVALID_PCR_INFO)
+%       ELSE 
+      	   IF checkKeyRoot(k,srk(s))
+      	     THEN outQuote(private(wkey(k)),n,getPCRs(s`pcrs,pm),TPM_SUCCESS)
+      	     ELSE outError(TPM_INVALID_KEYUSAGE) %% TODO: double check this
+	   ENDIF
+%     ENDIF;
 
   % Output a newly generated AIK.  Note that a simulates the new aik.
   makeIdentityOut(s:tpmAbsState,a:(asymKey?),k:(symKey?),auth:AUTHDATA) : tpmAbsOutput =
     LET waik:(wrapKey?) = wrapKey(srk(s),a,auth) IN
-      outIdentity(waik,outCertReq(waik,ekVal,k));
+      outIdentity(waik,outCertReq(waik,ekVal,k,TPM_SUCCESS),TPM_SUCCESS);
 
   % Retrieve a key if a can be installed
+  %% TODO: Activiate identity needs more work
   activateIdentityOut(s:tpmAbsState,a:(wrapKey?),k:(symKey?)) : tpmAbsOutput =
-    IF checkKeyRoot(a,srk(s)) THEN outSymKey(k) ELSE outNothing ENDIF;
+    IF checkKeyRoot(a,srk(s)) 
+      THEN outSymKey(k,TPM_SUCCESS) 
+      ELSE outError(TPM_BAD_PARAMETER) 
+    ENDIF;
 
   % Sign a blob if signing key isn't aik
   signOut(s:tpmAbsState,sk:KEY,aik:(wrapKey?),sb:BLOB) : tpmAbsOutput =
     IF sk /= aik
-     THEN outBlob(signBlob(sk,sb))
-     ELSE outNothing
+     THEN outBlob(signBlob(sk,sb),TPM_SUCCESS)
+     ELSE outError(TPM_INVALID_KEYUSAGE)
     ENDIF;
     
   % NEED TO ENSURE NEW, RANDOM SRK KEY PAIR
   takeOwnershipOut : tpmAbsOutput =
-    outAsymKey(srkVal);
+  %% TODO: Lots of flags for this one.
+    outAsymKey(srkVal,TPM_SUCCESS);
 
   % Generate a certified AIK from an AIK.  Certification assumes that the
   % EK really does belong to the TPM.  We're abstracting away that check.
   certOut(s:tpmAbsState,aik:(wrapKey?),ek:(asymKey?),freshk:(symKey?)) : tpmAbsOutput =
-    outIdentActivation(certBlob(private(caVal),keyBlob(aik)),freshk,ek);
+    outIdentActivation(certBlob(private(caVal),keyBlob(aik)),freshk,ek,TPM_SUCCESS);
 
   % Read a value and output
   readOut(s:tpmAbsState,i:nat) : tpmAbsOutput =
     memory(s)(i);
   
   dataBindOut(s:tpmAbsState,k:KEY,d:BLOB) : tpmAbsOutput = 
-    outBlob(encryptBlob(k,d));
+    outBlob(encryptBlob(k,d),TPM_SUCCESS);
 
   %% Generate output from a command and state
   outputCom(s:tpmAbsState,c:tpmAbsInput) : tpmAbsOutput = 
@@ -363,8 +392,8 @@ tpm [ B:TYPE+, % BLOB
   %% Build a quote for the appraiser from the quote, cert, and log
   buildQuote(q:(outQuote?),ca:(outIdentActivation?),sml:SML,sessk:(symKey?)):tpmAbsOutput =
     IF sessk=osessk(ca)
-     THEN outFullQuote(oactc(ca),sml,q)
-     ELSE outError(2)
+     THEN outFullQuote(oactc(ca),sml,q,TPM_SUCCESS)
+     ELSE outError(TPM_INAPPROPRIATE_SIG) %% TODO: Double check this
     ENDIF;
 
   CPU_BuildQuoteFromMem(q,ca,sessk:nat,sml:SML):State =
@@ -375,7 +404,7 @@ tpm [ B:TYPE+, % BLOB
 		    AND outIdentActivation?(theMem(ca))
 		    AND outQuote?(theMem(q))
                  THEN buildQuote(theMem(q),theMem(ca),sml,osessk(theMem(sessk)))
-		 ELSE outError(4)
+		 ELSE outError(TPM_FAIL) %% TODO: Incorrect
 		 ENDIF));
 
   %% CA Command Definitions
@@ -389,13 +418,14 @@ tpm [ B:TYPE+, % BLOB
   %% proved - Wed Jul 11 13:14:11 EDT 2012
   gen_cert : THEOREM FORALL (aik:(wrapKey?),ek:(asymKey?),k:(symKey?)) :
     LET (out,s) = runState(
-                  CA_certify(outCertReq(aik,ek,k))
+                  CA_certify(outCertReq(aik,ek,k,TPM_SUCCESS))
 		  >>= unit)
 		  (tpmStartup) IN
       out = outIdentActivation(
                  certBlob(private(asymKey(caKeyVal)),keyBlob(aik)),
                  k,
-                 ek)
+                 ek,
+		 TPM_SUCCESS)
 
 
   %% TPM Command Definitions - Note that all commands used by the TPM
@@ -518,7 +548,7 @@ tpm [ B:TYPE+, % BLOB
 		 >> TPM_TakeOwnership
 		 >>= unit)
 		 (state) IN
-      a = outAsymKey(srkVal);
+      a = outAsymKey(srkVal,TPM_SUCCESS);
 
   %% Wrap new key k with parent key
   TPM_CreateWrapKey(parent,k:(asymKey?),k_auth:AUTHDATA) : State = 
@@ -535,7 +565,7 @@ tpm [ B:TYPE+, % BLOB
 		 >> TPM_CreateWrapKey(p,k,a)
 		 >>= unit)
 		 (state) IN
-      a = outWrapKey(wrapKey(p,k,a));
+      a = outWrapKey(wrapKey(p,k,a),TPM_SUCCESS);
 
   %% Install key k in a TPM
   TPM_LoadKey2(k:(wrapKey?)):State =
@@ -627,7 +657,7 @@ tpm [ B:TYPE+, % BLOB
 		 >>= unit)
 		 (state) IN
     LET waik:(wrapKey?) = wrapKey(srk(s),a,auth) IN
-      out = outIdentity(waik,outCertReq(waik,ekVal,k));
+      out = outIdentity(waik,outCertReq(waik,ekVal,k,TPM_SUCCESS),TPM_SUCCESS);
 
    
   %% Use an AIK
@@ -646,7 +676,7 @@ tpm [ B:TYPE+, % BLOB
 		  >>= unit)
 		  (tpmStartup) IN
       out = IF checkKeyRoot(aik,srk(s))
-            THEN outSymKey(k)
+            THEN outSymKey(k,TPM_SUCCESS)
 	    ELSE outNothing
 	    ENDIF
       AND checkKeyRoot(aik,srk(s)) => member(wkey(aik),keys(s));
@@ -659,7 +689,7 @@ tpm [ B:TYPE+, % BLOB
 		           TPM_ActivateIdentity(oidentaik(a),k)ELSE TPM_Noop(a) ENDIF
 		  >>= unit)
 		  (tpmStartup) IN
-      out = outSymKey(k)
+      out = outSymKey(k,TPM_SUCCESS)
        AND 
       member(aik,keys(s));
 
@@ -675,8 +705,8 @@ tpm [ B:TYPE+, % BLOB
 		  >>=unit)
 		  (state) IN
 		  IF k /= aik
-		  THEN out = outBlob(signBlob(k,b))
-		  ELSE out = outNothing
+		  THEN out = outBlob(signBlob(k,b),TPM_SUCCESS)
+		  ELSE out = outError(TPM_INVALID_KEYUSAGE)
 		  ENDIF
 		  %Need to test to make sure aik parameter is actual aik?
 	           	  
@@ -690,7 +720,7 @@ tpm [ B:TYPE+, % BLOB
      		  TPM_PcrRead(i)
 		  >>=unit)
 		  (state) IN
-	out = outPCR(pcrs(s)(i)));
+	out = outPCR(pcrs(s)(i),TPM_SUCCESS));
 
 
   %% Generate and output a quote
@@ -740,7 +770,7 @@ tpm [ B:TYPE+, % BLOB
         >>= unit)
       (state) IN
     checkKeyRoot(k,srk(s)) => 
-      a = outQuote(private(wkey(k)),n,map(s`pcrs,pm)));
+      a = outQuote(private(wkey(k)),n,map(s`pcrs,pm),TPM_SUCCESS));
 
   %% Prove that quote generation returns the correct PCR.  This theorem
   %% needs to be updated with something cleaner.
@@ -761,7 +791,8 @@ tpm [ B:TYPE+, % BLOB
 		     cons(
 		       extend(
 		     	 extend(
-		       	   extend(reset,hash(sinit)),hash(mle)),hv),null)))
+		       	   extend(reset,hash(sinit)),hash(mle)),hv),null),
+		     TPM_SUCCESS))
       
   quote_with_prev_key:
     THEOREM
@@ -781,7 +812,8 @@ tpm [ B:TYPE+, % BLOB
                        map((pcrsReset WITH [(0) := extend(
                                                      extend(reset,hash(sinit)),
                                                      hash(mle))]),
-	                   pm));
+	                   pm),
+		       TPM_SUCCESS);
 
 
   %% Seal and output a blob (should be binary or data)
@@ -793,15 +825,12 @@ tpm [ B:TYPE+, % BLOB
   seal_secret_success: THEOREM
     FORALL (k:(asymKey?),hv:HV,b:BLOB,state:tpmAbsState) :
       LET (out,s) = runState(
-     	 	  TPM_Init
-      		  >> TPM_Startup
- 		  >> CPU_senter
- 		  >> CPU_sinit
- 		  >> TPM_Extend(hv,0)
- 		  >> TPM_Seal(k,b)
-		  >>= unit)
- 		  (state) IN
-	out = outBlob(sealBlob(k,s`pcrs,b))
+ 		  TPM_Seal(k,b))
+ 		  (tpmStartup) IN
+	IF nothing?(b) 
+	  THEN out = outError(TPM_BAD_PARAMETER) 
+	  ELSE out = outBlob(sealBlob(k,s`pcrs,b),TPM_SUCCESS)
+	ENDIF
 
   %% Unseal and output a blob (should be binary or data)
   TPM_Unseal(d:(sealBlob?),k:(asymKey?)) : State = 
@@ -812,33 +841,23 @@ tpm [ B:TYPE+, % BLOB
   unseal_secret_success: THEOREM
     FORALL (j,k:(asymKey?),hv:HV,b:BLOB,pcrs:PCRS,state:tpmAbsState) :
       LET (out,s) = runState(
-                  TPM_Init
-      		  >> TPM_Startup
-		  >> CPU_senter
-		  >> CPU_sinit
-		  >> TPM_Extend(hv,0)
-		  >> TPM_Unseal(sealBlob(k,pcrs,b),j)
-		  >>= unit)
-		  (state) IN
-      IF j=private(k) AND pcrs=pcrs(s)
-         THEN out=outBlob(b)
-         ELSE out=outBlob(nothing)
+      	  	  TPM_Unseal(sealBlob(k,pcrs,b),j))
+		  (tpmStartup) IN
+      IF j=private(k) AND pcrs=pcrs(s) AND not(nothing?(b))
+         THEN out=outBlob(b,TPM_SUCCESS)
+         ELSE out=outError(TPM_NOTSEALED_BLOB) 
       ENDIF;  
 
   unseal_prev_success: THEOREM
     FORALL (k,j:(asymKey?),b:BLOB,pcrs:PCRS,state:tpmAbsState) :
       LET (out,s) = runState(
-                  TPM_Init
-      		  >> TPM_Startup
-		  >> CPU_senter
-		  >> CPU_sinit
-                  >> TPM_Seal(k,b)
+      	  	  TPM_Seal(k,b)
 		  >>= LAMBDA (a:tpmAbsOutput) : 
-		  IF outBlob?(a) AND sealBlob?(obl(a))THEN
-		       TPM_Unseal(obl(a),j)ELSE TPM_Noop(a)ENDIF)
-		  (state) IN  
-	j=private(k) AND pcrs=pcrs(s)
-	   => out = outBlob(b)      
+		  IF outBlob?(a) AND sealBlob?(obl(a)) THEN
+		       TPM_Unseal(obl(a),j) ELSE TPM_Noop(a)ENDIF)
+		  (tpmStartup) IN  
+	j=private(k) AND pcrs=pcrs(s) AND not(nothing?(b))
+	   => out = outBlob(b,TPM_SUCCESS)      
 
 
   %% UnBind encrypted blob (decrypt)
@@ -858,7 +877,7 @@ tpm [ B:TYPE+, % BLOB
 		  >>= unit)
 		  (state) IN
       j = private(k) =>
-       out = outBlob(b)
+       out = outBlob(b,TPM_SUCCESS)
 
 	
   Tspi_Data_Bind(k:KEY,d:BLOB) : State = 
@@ -882,7 +901,7 @@ tpm [ B:TYPE+, % BLOB
 		  IF outBlob?(a) AND encryptBlob?(obl(a)) THEN
 		       TPM_UnBind(obl(a),private(k)) ELSE TPM_Noop(a) ENDIF)
  		  (state) IN 
- 	  j = srk(s) OR  member(j,keys(s)) => out = outBlob(d)
+ 	  j = srk(s) OR  member(j,keys(s)) => out = outBlob(d,TPM_SUCCESS)
 	 );
 
 
@@ -955,7 +974,7 @@ tpm [ B:TYPE+, % BLOB
 		  >> TPM_Quote(aik,b,pm)
 		  >>= unit)
 		  (state) IN
-       NOT checkKeyRoot(aik,srk(s)) => out=outNothing;              
+       NOT checkKeyRoot(aik,srk(s)) => out=outError(TPM_INVALID_KEYUSAGE);              
 
    %% Simple verification of the quote generation process from init
    %% through generation of the appraiser's quote.  Yay.  This is what
@@ -1015,5 +1034,7 @@ tpm [ B:TYPE+, % BLOB
                                                    (extend
                                                     (reset, hash(sinit)),
                                                     hash(mle))]),
-                                         pm)))	    
+                                         pm),
+					 TPM_SUCCESS),
+				TPM_SUCCESS)	    
 END tpm
