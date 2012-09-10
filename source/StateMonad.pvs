@@ -6,18 +6,18 @@ BEGIN
    state(runState:[S->[A,S]]):state?
  END State
 
- %% unit :: a -> M a -- Nothing special here
+ %% return :: a -> M a -- Nothing special here
  %%
  %% x - output produced in the state
  %% s - the state being associated with x
  %% 
  %% 1. x is bound to a new output of type A
  %% 2. state encapsulates a function of type S->[A,S]
- %% 3. the value for A in runState is x, the input to unit
+ %% 3. the value for A in runState is x, the input to return
  %% 4. the value for S is held abstract until runState is applied
  %% 5. whatever state is input to runState, the output will be the value
- %% bound to x in unit(x)
- unit(x:A):State = state(LAMBDA (s:S) : (x,s));
+ %% bound to x in return(x)
+ return(x:A):State = state(LAMBDA (s:S) : (x,s));
 
  %% bind :: M a -> (a -> M b) -> M b -- For our purposes a=b making this
  %% bind :: M a -> (a -> M a) -> M a
@@ -39,27 +39,49 @@ BEGIN
           LET (a,s1) = runState(m)(s0) IN 
 	    runState(f(a))(s1));
 
- >> (m:State,f:State):State =
+ >> (m:State,s:State):State =
    state(LAMBDA(s0:S):
           LET (a,s1) = runState(m)(s0) IN
-            runState(f)(s1));
-
- %% Defined bind0 over two states for use later
+            runState(s)(s1));
 
  %% Monad laws -- might as well, we're in a prover
  
- % Left identity -- bind(unit(a),f) = f(a)
+ % Left identity -- bind(return(a),f) = f(a)
 
- left_identity: LAW FORALL (a:A,f:[A->State]) : unit(a) >>= f = f(a)
+ left_identity: LAW FORALL (a:A,f:[A->State]) : return(a) >>= f = f(a)
 
- % Right identity -- bind(m,unit) = m
+ % Right identity -- bind(m,return) = m
 
- right_identity: LAW FORALL (m:State) : m >>= unit = m
+ right_identity: LAW FORALL (m:State) : m >>= return = m
 
  % Associativity -- bind(bind(m,f),g) = bind(m,bind(\x->f(x),g))
 
  assocativity: LAW FORALL (m:State,f,g:[A->State]) :
    m >>= f >>= g = m >>= (lambda(x:A): f(x) >>= g)
+
+ %% Common Monadic functions
+
+ %% liftM lifts a state transformation into the state monad.  Given a function
+ %% from S to S, return a function from State to State.
+
+ liftM(f:[S->S]):[State->State] = 
+    (LAMBDA (m0:State) :
+       state(LAMBDA (s0:S) :
+               LET (a1,s1) = runState(m0)(s0) IN
+                 (a1,f(s1))));
+
+ %% ifM takes a predicate and a condition monad, evaluates the condition
+ %% monad and calls the predicate on the output.  Based on the predicate
+ %% value, one of two monads results.  ifM_ works the same, but ignores
+ %% the prior output.
+
+ %% Use with >>=
+ ifM(p:[A->bool],c,t,e:[A->State]): [A->State] =
+    (LAMBDA (a:A) : c(a) >>= IF p(a) THEN t ELSE e ENDIF);
+
+ %% Use with >>
+ ifM_(p:[A->bool],c:State,t,e:[A->State]): State =
+    c >>= (LAMBDA (a:A): IF p(a) THEN t(a) ELSE e(a) ENDIF);
 
  %% Predefined, useful values for f.  
 
