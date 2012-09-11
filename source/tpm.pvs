@@ -65,6 +65,14 @@ tpm [ B:TYPE+, % BLOB
 
   IMPORTING memory[tpmAbsOutput,outNothing];
 
+  %% Argument to TPM startup indicating startup mode
+  tpmStartupMode : DATATYPE
+  BEGIN
+    Startup_clear : Startup_clear?
+    Startup_save(addr:nat) : Startup_save?
+    Startup_deactivated : Startup_deactivated?
+  END tpmStartupMode
+
   %% State monad input type.  All inputs are in the form of a command with
   %% parameters.
   tpmAbsInput : DATATYPE
