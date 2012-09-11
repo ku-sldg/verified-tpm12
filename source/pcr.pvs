@@ -56,7 +56,7 @@ pcr [HV: TYPE+] : THEORY
     (LAMBDA (i:PCRINDEX) :
       (# 
          pcrReset := true
-         , pcrLocality := 2
+         , pcrLocality := 0
       #))
 
   %% PCR extension operator
