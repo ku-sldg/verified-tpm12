@@ -65,13 +65,13 @@ tpm [ B:TYPE+, % BLOB
 
   IMPORTING memory[tpmAbsOutput,outNothing];
 
-  %% Argument to TPM startup indicating startup mode
-  tpmStartupMode : DATATYPE
+  %% Argument to TPM startup indicating startup mode.
+  TPM_STARTUP_TYPE : DATATYPE
   BEGIN
-    Startup_clear : Startup_clear?
-    Startup_save(addr:nat) : Startup_save?
-    Startup_deactivated : Startup_deactivated?
-  END tpmStartupMode
+    TPM_ST_CLEAR : TPM_ST_CLEAR?
+    TPM_ST_STATE : TPM_ST_STATE?
+    TPM_ST_DEACTIVATED : TPM_ST_DEACTIVATED?
+  END TPM_STARTUP_TYPE
 
   %% State monad input type.  All inputs are in the form of a command with
   %% parameters.
@@ -81,7 +81,7 @@ tpm [ B:TYPE+, % BLOB
     ABS_Reset : ABS_Reset? %unimplemented
     ABS_Init : ABS_Init? 
     ABS_SaveState : ABS_SaveState? % unimplemented
-    ABS_Startup : ABS_Startup? % Only clear implemented
+    ABS_Startup(startupType : TPM_STARTUP_TYPE) : ABS_Startup? % Only clear implemented
   %% Protected Storage Commands
     ABS_Seal(sk:(asymKey?),data:BLOB) : ABS_Seal?
     ABS_Unseal(s:(sealBlob?),uk:(asymKey?)) : ABS_Unseal?   
@@ -230,7 +230,7 @@ tpm [ B:TYPE+, % BLOB
   %% Run if TPM_Init has run but TPM_Startup has not
   executeComPostInit(s:(afterInit?),c:tpmAbsInput) : tpmAbsState =
     CASES c OF
-      ABS_Startup : tpmStartup
+      ABS_Startup(t) : tpmStartup
       ELSE s
     ENDCASES;
 
@@ -457,9 +457,9 @@ tpm [ B:TYPE+, % BLOB
   TPM_Init : State = put(outNothing,tpmPostInit);
 
   %% Start up the TPM after TPM_Init
-  TPM_Startup : State =
+  TPM_Startup(st:TPM_STARTUP_TYPE) : State =
     modify(outNothing,
-            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_Startup)));
+            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_Startup(st))));
   
   %% The only command that can run and do anyting folling a TPM_Init is 
   %% TPM_Startup.  If anything else tries to run, nothing happens.  Note
@@ -481,7 +481,7 @@ tpm [ B:TYPE+, % BLOB
   resetMonad: THEOREM (FORALL (hv:HV, state:tpmAbsState) :
     LET (a,s) = runState(
       	          TPM_Init
-      		  >> TPM_Startup
+      		  >> TPM_Startup(TPM_ST_CLEAR)
       		  >> CPU_senter
       		  >> CPU_sinit)
       		  (state)
@@ -548,7 +548,7 @@ tpm [ B:TYPE+, % BLOB
   take_ownership_success : THEOREM FORALL (state:tpmAbsState) :
      LET (a,s) = runState(
      	         TPM_Init
-		 >> TPM_Startup
+		 >> TPM_Startup(TPM_ST_CLEAR)
 		 >> CPU_senter
 		 >> CPU_sinit
 		 >> TPM_TakeOwnership)
@@ -564,7 +564,7 @@ tpm [ B:TYPE+, % BLOB
   create_wrap_key_success: THEOREM FORALL (p,k:(asymKey?),a:AUTHDATA, state:tpmAbsState) : 
      LET (a,s) = runState(
      	         TPM_Init
-		 >> TPM_Startup
+		 >> TPM_Startup(TPM_ST_CLEAR)
 		 >> CPU_senter
 		 >> CPU_sinit
 		 >> TPM_CreateWrapKey(p,k,a))
@@ -583,7 +583,7 @@ tpm [ B:TYPE+, % BLOB
   load_key_success: THEOREM FORALL (k:wrapKey,state:tpmAbsState) :
     LET (out,s) = runState(
                   TPM_Init
-      		  >> TPM_Startup
+      		  >> TPM_Startup(TPM_ST_CLEAR)
 		  >> CPU_senter
 		  >> CPU_sinit
 		  >> TPM_LoadKey2(k))
@@ -598,7 +598,7 @@ tpm [ B:TYPE+, % BLOB
   load_key_success2: THEOREM FORALL (j,k:wrapKey,state:tpmAbsState) :
     LET (out,s) = runState(
                   TPM_Init
-      		  >> TPM_Startup
+      		  >> TPM_Startup(TPM_ST_CLEAR)
 		  >> CPU_senter
 		  >> CPU_sinit
 		  >> TPM_LoadKey2(k)
@@ -610,7 +610,7 @@ tpm [ B:TYPE+, % BLOB
   load_prev_key_success: THEOREM FORALL (k,p:(asymKey?),auth:AUTHDATA,state:tpmAbsState) :
     LET (out,s) = runState(
                   TPM_Init
-      		  >> TPM_Startup
+      		  >> TPM_Startup(TPM_ST_CLEAR)
 		  >> CPU_senter
 		  >> CPU_sinit
                   >> TPM_CreateWrapKey(p,k,auth)
@@ -628,7 +628,7 @@ tpm [ B:TYPE+, % BLOB
   nested_wrapped_keys_success: THEOREM FORALL (k,j,p:(asymKey?),a1,a2:AUTHDATA,state:tpmAbsState) :
      LET (out,s) = runState(
      	 	   TPM_Init
-      		   >> TPM_Startup
+      		   >> TPM_Startup(TPM_ST_CLEAR)
 		   >> CPU_senter
 		   >> CPU_sinit
 		   >> TPM_CreateWrapKey(p,k,a1)
@@ -653,7 +653,7 @@ tpm [ B:TYPE+, % BLOB
   make_identity_success: THEOREM FORALL(state:tpmAbsState,a:(asymKey?),k:(symKey?),auth:AUTHDATA) :
      LET (out,s) = runState(
      	         TPM_Init
-		 >> TPM_Startup
+		 >> TPM_Startup(TPM_ST_CLEAR)
 		 >> CPU_senter
 		 >> CPU_sinit
 		 >> TPM_MakeIdentity(a,k,auth))
@@ -759,7 +759,7 @@ tpm [ B:TYPE+, % BLOB
     LET (a,s) =
       runState(
         TPM_Init
-        >> TPM_Startup
+        >> TPM_Startup(TPM_ST_CLEAR)
         >> CPU_senter
         >> CPU_sinit
         >> TPM_Extend(hv,0)
@@ -774,7 +774,7 @@ tpm [ B:TYPE+, % BLOB
   quote_monad: THEOREM (FORALL (k:wrapKey,hv:HV,n:BLOB, state:tpmAbsState) :
         LET (a,s) = runState(
           TPM_Init
-          >> TPM_Startup
+          >> TPM_Startup(TPM_ST_CLEAR)
       	  >> CPU_senter
 	  >> CPU_sinit
       	  >> TPM_Extend(hv,0)
@@ -794,7 +794,7 @@ tpm [ B:TYPE+, % BLOB
     FORALL (k:(asymKey?),state:tpmAbsState,n:BLOB,pm:PCRMASK,sessk:(symKey?),auth:AUTHDATA) :
        LET (out,s) = runState(
                    TPM_Init
-		   >> TPM_Startup
+		   >> TPM_Startup(TPM_ST_CLEAR)
 		   >> CPU_senter
 		   >> CPU_sinit
 		   >> TPM_MakeIdentity(k,sessk,auth)
@@ -865,7 +865,7 @@ tpm [ B:TYPE+, % BLOB
     FORALL (k,j:(asymKey?),b:BLOB,state:tpmAbsState) : 
       LET (out,s) = runState(
                   TPM_Init
-      		  >> TPM_Startup
+      		  >> TPM_Startup(TPM_ST_CLEAR)
 		  >> CPU_senter
 		  >> CPU_sinit
 		  >> TPM_UnBind(encryptBlob(j,b),k))
@@ -883,7 +883,7 @@ tpm [ B:TYPE+, % BLOB
     (FORALL(d:BLOB,k,j:(asymKey?),auth:AUTHDATA,state:tpmAbsState) : 
       LET (out,s) = runState(
                   TPM_Init
-      		  >> TPM_Startup
+      		  >> TPM_Startup(TPM_ST_CLEAR)
 		  >> CPU_senter
 		  >> CPU_sinit
 		  >> TPM_CreateWrapKey(j,k,auth)
@@ -940,7 +940,7 @@ tpm [ B:TYPE+, % BLOB
   no_senter: THEOREM (FORALL (k:wrapKey,hv:HV,n:BLOB,pcrMask:PCRMASK,state:tpmAbsState) :
     runState(
       TPM_Init
-      >> TPM_Startup
+      >> TPM_Startup(TPM_ST_CLEAR)
       >> CPU_senter
       >> CPU_sinit
       >> TPM_Extend(hv,0)
@@ -960,7 +960,7 @@ tpm [ B:TYPE+, % BLOB
     FORALL (aik:wrapKey,b:BLOB,pm:PCRMASK,state:tpmAbsState) :
       LET (out,s) = runState(
                   TPM_Init
-      		  >> TPM_Startup
+      		  >> TPM_Startup(TPM_ST_CLEAR)
 		  >> CPU_senter
 		  >> CPU_sinit
 		  >> TPM_Quote(aik,b,pm))
@@ -989,7 +989,7 @@ tpm [ B:TYPE+, % BLOB
 	     auth:AUTHDATA) :
        LET (out,s) = runState(
                    TPM_Init
- 		   >> TPM_Startup
+ 		   >> TPM_Startup(TPM_ST_CLEAR)
  		   >> CPU_senter
  		   >> CPU_sinit
  		   >> TPM_MakeIdentity(aik,k,auth) % identity is output
