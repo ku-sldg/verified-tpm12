@@ -123,9 +123,6 @@ tpm [ B:TYPE+, % BLOB
   %% mle blob instance for measurement
   mle : B;
 
-  %% Locality type - check with spec
-  LOCALITY : TYPE = {n:nat | n<=4};
-
   %% Uninterpreted Key values.
   ekKeyVal : K;
   srkKeyVal : K;
