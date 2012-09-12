@@ -43,6 +43,7 @@ tpm [ B:TYPE+, % BLOB
   IMPORTING pcr[HV];
   IMPORTING key[B,K,HV];
   IMPORTING ReturnCodes;
+  IMPORTING startupData;
 
   SML : TYPE = list[HV];
 
@@ -64,14 +65,6 @@ tpm [ B:TYPE+, % BLOB
   END tpmAbsOutput;
 
   IMPORTING memory[tpmAbsOutput,outNothing];
-
-  %% Argument to TPM startup indicating startup mode.
-  TPM_STARTUP_TYPE : DATATYPE
-  BEGIN
-    TPM_ST_CLEAR : TPM_ST_CLEAR?
-    TPM_ST_STATE : TPM_ST_STATE?
-    TPM_ST_DEACTIVATED : TPM_ST_DEACTIVATED?
-  END TPM_STARTUP_TYPE
 
   %% State monad input type.  All inputs are in the form of a command with
   %% parameters.
