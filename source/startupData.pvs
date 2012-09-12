@@ -1,13 +1,49 @@
-startupData : THEORY
+startupData[B,K,HV : TYPE+] : THEORY
 
   BEGIN
 
+  IMPORTING pcr[HV];
+  IMPORTING key[B,K,HV];
+
+  %% Flags used by the TPM_Startup command
   TPM_STARTUP_TYPE : DATATYPE
   BEGIN
     TPM_ST_CLEAR : TPM_ST_CLEAR?
     TPM_ST_STATE : TPM_ST_STATE?
     TPM_ST_DEACTIVATED : TPM_ST_DEACTIVATED?
   END TPM_STARTUP_TYPE  
+
+  %% Record containing state data to be stored on TPM_SaveState invocation
+  %% and restored when using TPM_ST_STATE flag.  The valid? flag indicates
+  %% if whether the record is valid or not.
+  restoreStateData : TYPE = [#
+  		          valid? : bool,
+			  keys : KEYSET,
+                          pcrs : PCRS,
+		          pcrFlags : PCRFLAGS
+			#]
+
+  %% Create a save record with keys, pcrs, and pcr flags.  Throw out pcr
+  %% values if they are resettable
+  saveState(tpmKeys: KEYSET, tpmPcrs : PCRS, tpmPcrFlags : PCRFLAGS) : restoreStateData = 
+    (# valid? := TRUE,
+       keys := tpmKeys,
+       pcrs := (LAMBDA (i:PCRINDEX) :
+                     IF pcrReset(tpmPcrFlags(i))
+		        THEN resetOne
+			ELSE tpmPcrs(i)
+                     ENDIF),
+       pcrFlags := tpmPcrFlags
+       #);
+
+  %% Initial value for saved data.  The only field that matters is the valid?
+  %% field that must be false.
+  initSaveData : restoreStateData =
+    (# valid? := FALSE,
+       keys := emptyset,
+       pcrs := pcrsPower,
+       pcrFlags := allResetAccess
+    #);
 
   END startupData
 

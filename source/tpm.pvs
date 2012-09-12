@@ -43,7 +43,7 @@ tpm [ B:TYPE+, % BLOB
   IMPORTING pcr[HV];
   IMPORTING key[B,K,HV];
   IMPORTING ReturnCodes;
-  IMPORTING startupData;
+  IMPORTING startupData[B,K,HV];
 
   SML : TYPE = list[HV];
 
@@ -74,7 +74,7 @@ tpm [ B:TYPE+, % BLOB
     ABS_Reset : ABS_Reset? %unimplemented
     ABS_Init : ABS_Init? 
     ABS_SaveState : ABS_SaveState? % unimplemented
-    ABS_Startup(startupType : TPM_STARTUP_TYPE) : ABS_Startup? % Only clear implemented
+    ABS_Startup(startupType : TPM_STARTUP_TYPE) : ABS_Startup?
   %% Protected Storage Commands
     ABS_Seal(sk:(asymKey?),data:BLOB) : ABS_Seal?
     ABS_Unseal(s:(sealBlob?),uk:(asymKey?)) : ABS_Unseal?   
@@ -128,6 +128,7 @@ tpm [ B:TYPE+, % BLOB
 
   %% Abstract TPM State with keys, PCR array and locality
   tpmAbsState : TYPE = [#
+  	      	       restore : restoreStateData,
                        memory : mem,
                        postInit : bool,
                        srk : (asymKey?),
@@ -155,6 +156,7 @@ tpm [ B:TYPE+, % BLOB
 			 , srk:=private(srkVal)
 			 , ek:=private(ekVal)
 			 , memory:=empty
+			 , restore:=initSaveData
 			 #);
 
   %% Standard initial state following startup command.  Technically, there
@@ -168,7 +170,24 @@ tpm [ B:TYPE+, % BLOB
 			 , srk:=private(srkVal)
 			 , ek:=private(ekVal)
 			 , memory:=empty
+			 , restore:=initSaveData
 			 #);
+
+  %% Generate a new state from restore data.  Basically this is a clear
+  %% restart with pcrs, keys, and pcr flags coming from the restore
+  %% data.  Note that this function assumes valid data and will behave
+  %% badly otherwise
+  tpmRestore(rd:restoreStateData) : tpmAbsState = (#
+                         pcrs:=pcrs(rd)
+			 , pcrFlags:=pcrFlags(rd)
+			 , postInit:=false
+			 , locality:=4
+			 , keys:=keys(rd)
+			 , srk:=private(srkVal)
+			 , ek:=private(ekVal)
+			 , memory:=empty
+			 , restore:=rd
+                         #)
 
   %% Predicate to determine if startup has occured.  Used as types
   %% (afterInit?) is the set of states occuring immediately after TPM_Init
