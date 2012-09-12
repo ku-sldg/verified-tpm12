@@ -190,12 +190,9 @@ tpm [ B:TYPE+, % BLOB
   %% manipulation functions are defined externally in key.pvs and
   %% pcr.pvs respectively
 
-  %% Reset PCRs as performed by SENTER.  Right now this is wrong as the
-  %% pcrsReset value resets as if the CPU is resetting.  Need to fix this.
-  %% I think only PCRs that are resettable need to be reset here and others
-  %% left alone.
+  %% Reset PCRs as performed by SENTER.
   pcrsResetSenterState(s:tpmAbsState) : tpmAbsState =
-    s WITH [`pcrs := pcrsReset(pcrFlags(s))];
+    s WITH [`pcrs := pcrsSenter(pcrs(s),pcrFlags(s))];
 
   %% Decrease locality value
   changeLocalityState(s:tpmAbsState) : tpmAbsState =
@@ -807,8 +804,8 @@ tpm [ B:TYPE+, % BLOB
 		   (state) IN
         out = outQuote(private(k),
 	               n,
-                       map((pcrsReset(pcrFlags(s)) WITH [(0) := extend(
-                                                     extend(reset,hash(sinit)),
+                       map((pcrsSenter(pcrsReset(pcrFlags(s)),pcrFlags(s))
+		         WITH [(0) := extend(extend(reset,hash(sinit)),
                                                      hash(mle))]),
 	                   pm),
 		       TPM_SUCCESS);
@@ -1026,7 +1023,7 @@ tpm [ B:TYPE+, % BLOB
                                outQuote(private(aik),
                                         n,
                                         map
-                                        ((pcrsReset(pcrFlags(s))
+                                        ((pcrsSenter(pcrsReset(pcrFlags(s)),pcrFlags(s))
                                           WITH [(0)
                                                 := extend
                                                    (extend

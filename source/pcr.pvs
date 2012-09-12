@@ -45,10 +45,16 @@ pcr [HV: TYPE+] : THEORY
   %% Power on - unknown state
   pcrsPower : PCRS;
 
-  %% Following startup clear - based on flags
-  pcrsReset(flags : PCRFLAGS) : PCRS = 
+  %% Following startup clear.  Nonresettable PCRs to 0 and resettable PCRs
+  %% to -1
+  pcrsReset(flags : PCRFLAGS) : PCRS =
     (LAMBDA (i:PCRINDEX) : 
       IF pcrReset(flags(i)) THEN resetOne ELSE reset ENDIF);
+
+  %% Followign SENTER.  Nonresettable PCRs to same and resettable PCRs to 0
+  pcrsSenter(curr : PCRS, flags : PCRFLAGS) : PCRS =
+    (LAMBDA (i:PCRINDEX) :
+      IF pcrReset(flags(i)) THEN reset ELSE curr(i) ENDIF);
 
   %% Some common PCR flag settings
 
