@@ -4,6 +4,8 @@ startupData[B,K,HV : TYPE+] : THEORY
 
   IMPORTING pcr[HV];
   IMPORTING key[B,K,HV];
+  IMPORTING PermanentFlags;
+  IMPORTING PermanentData[HV];
 
   %% Flags used by the TPM_Startup command
   TPM_STARTUP_TYPE : DATATYPE
@@ -15,34 +17,51 @@ startupData[B,K,HV : TYPE+] : THEORY
 
   %% Record containing state data to be stored on TPM_SaveState invocation
   %% and restored when using TPM_ST_STATE flag.  The valid? flag indicates
-  %% if whether the record is valid or not.
+  %% if whether the record is valid or not.  Note that EK and SRK should
+  %% technically be in the permData structure, but we like to keep those
+  %% values exposed at the TPM state level.  Most presentations of the TPM
+  %% do this and do not reference permData or permFlags.  Thus, we try
+  %% to be consistent here.
   restoreStateData : TYPE = [#
   		          valid? : bool,
+                          srk : (asymKey?),
+		          ek : (asymKey?),
 			  keys : KEYSET,
                           pcrs : PCRS,
-		          pcrFlags : PCRFLAGS
+			  permFlags : PermFlags,
+			  permData : PermData
 			#]
 
   %% Create a save record with keys, pcrs, and pcr flags.  Throw out pcr
   %% values if they are resettable
-  saveState(tpmKeys: KEYSET, tpmPcrs : PCRS, tpmPcrFlags : PCRFLAGS) : restoreStateData = 
+  saveState(tpmKeys: KEYSET, tpmEK : (asymKey?), tpmSRK : (asymKey?), tpmPcrs : PCRS, tpmPermFlags : PermFlags, tpmPermData : PermData ) : restoreStateData = 
     (# valid? := TRUE,
        keys := tpmKeys,
+       ek := tpmEK,
+       srk := tpmSRK,
        pcrs := (LAMBDA (i:PCRINDEX) :
-                     IF pcrReset(tpmPcrFlags(i))
+                     IF pcrReset(pcrAttrib(tpmPermData)(i))
 		        THEN resetOne
 			ELSE tpmPcrs(i)
                      ENDIF),
-       pcrFlags := tpmPcrFlags
+       permFlags := tpmPermFlags,
+       permData := tpmPermData
        #);
 
   %% Initial value for saved data.  The only field that matters is the valid?
   %% field that must be false.
+
+  ekInit : K
+  srkInit : K
+
   initSaveData : restoreStateData =
     (# valid? := FALSE,
        keys := emptyset,
+       ek := asymKey(ekInit),
+       srk := asymKey(srkInit),
        pcrs := pcrsPower,
-       pcrFlags := allResetAccess
+       permFlags := permFlagsInit,
+       permData := permDataInit
     #);
 
   END startupData

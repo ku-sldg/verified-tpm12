@@ -139,7 +139,7 @@ tpm [ B:TYPE+, % BLOB
 		       ek : (asymKey?),
 		       keys : KEYSET,
                        pcrs : PCRS,
-		       locality : LOCALITY
+		       locality : LOCALITY,
 		       permFlags : PermFlags,
 		       permData : PermData,
 		       disableForceClear : bool
@@ -171,7 +171,6 @@ tpm [ B:TYPE+, % BLOB
   %% will be many results of TPM_Startup, but this is a good starting point
   tpmStartup : tpmAbsState = (#
                          pcrs:=pcrsReset(allResetAccess)
-			 , pcrFlags:=allResetAccess
 			 , postInit:=false
 			 , locality:=4
 			 , keys:=emptyset
@@ -190,7 +189,6 @@ tpm [ B:TYPE+, % BLOB
   %% badly otherwise
   tpmRestore(rd:restoreStateData) : tpmAbsState = (#
                          pcrs:=pcrs(rd)
-			 , pcrFlags:=pcrFlags(rd)
 			 , postInit:=false
 			 , locality:=4
 			 , keys:=keys(rd)
@@ -198,6 +196,9 @@ tpm [ B:TYPE+, % BLOB
 			 , ek:=private(ekVal)
 			 , memory:=empty
 			 , restore:=rd
+			 , permFlags:=permFlags(rd)
+			 , permData:=permData(rd)
+			 , disableForceClear:=FALSE
                          #)
 
   %% Predicate to determine if startup has occured.  Used as types

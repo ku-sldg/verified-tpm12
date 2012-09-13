@@ -1,5 +1,7 @@
-PermanentData : THEORY
+PermanentData[HV:TYPE+] : THEORY
   BEGIN
+
+  IMPORTING pcr[HV];
   
   PermData : TYPE = [#
 %     tag : TPM_STRUCTURE_TAG,
@@ -17,7 +19,7 @@ PermanentData : THEORY
 %     delegateKey : TPM_KEY,
 %     auditMonotonicCounter : TPM_COUNTER_VALUE,
 %     monotonicCounter[TPM_MIN_COUNTERS] : TPM_COUNTER_VALUE,
-%     pcrAttrib[TPM_NUM_PCR] : TPM_PCR_ATTRIBUTES,
+     pcrAttrib : PCRFLAGS
 %     ordinalAuditStatus[] : BYTE[],
 %     rngState : BYTE[],
 %     familyTable : TPM_FAMILY_TABLE,
@@ -30,4 +32,6 @@ PermanentData : THEORY
 %     daaBlobKey : TPM_KEY
   #];
 
-  END PermanentData;
+  permDataInit : PermData = (# pcrAttrib := allResetAccess #)
+
+  END PermanentData
