@@ -44,6 +44,7 @@ tpm [ B:TYPE+, % BLOB
   IMPORTING pcr[HV];
   IMPORTING key[B,K,HV];
   IMPORTING ReturnCodes;
+  IMPORTING PermanentFlags;
 
   SML : TYPE = list[HV];
 
@@ -139,7 +140,7 @@ tpm [ B:TYPE+, % BLOB
 		       keys : KEYSET,
                        pcrs : PCRS,
 		       locality : LOCALITY,
-		       disableOwnerClear : bool,
+		       permFlags : PermFlags,
 		       disableForceClear : bool
 		    #];
 
@@ -159,7 +160,7 @@ tpm [ B:TYPE+, % BLOB
 			 , srk:=private(srkVal)
 			 , ek:=private(ekVal)
 			 , memory:=empty
-			 , disableOwnerClear:=FALSE
+			 , permFlags:=permFlagsInit
 			 , disableForceClear:=FALSE
 			 #);
 
@@ -173,7 +174,7 @@ tpm [ B:TYPE+, % BLOB
 			 , srk:=private(srkVal)
 			 , ek:=private(ekVal)
 			 , memory:=empty
-			 , disableOwnerClear:=FALSE
+			 , permFlags:=permFlagsInit
 			 , disableForceClear:=FALSE
 			 #);
 
@@ -221,7 +222,7 @@ tpm [ B:TYPE+, % BLOB
     s WITH [`keys:=emptyset]
 
   ownerClearState(s:tpmAbsState,auth:(asymKey?)) : tpmAbsState =
-    IF auth = private(srk(s)) AND s`disableOwnerClear=FALSE
+    IF auth = private(srk(s)) AND disableOwnerClear(permFlags(s))=FALSE
       THEN clear(s)
       ELSE s
     ENDIF
@@ -233,7 +234,7 @@ tpm [ B:TYPE+, % BLOB
     ENDIF
   
   disableOwnerClearState(s:tpmAbsState) : tpmAbsState = 
-    s WITH [`disableOwnerClear:=TRUE];
+    s WITH [`permFlags(disableOwnerClear):=TRUE];
 
   disableForceClearState(s:tpmAbsState) : tpmAbsState = 
     s WITH [`disableForceClear:=TRUE];
@@ -368,17 +369,17 @@ tpm [ B:TYPE+, % BLOB
 
   ownerClearOut(s:tpmAbsState,auth:(asymKey?)) : tpmAbsOutput = 
     IF auth = private(srk(s))
-      THEN IF disableOwnerClear(s)=FALSE
-      	    THEN outNothing
-	    ELSE outError(5)
+      THEN IF disableOwnerClear(permFlags(s))
+      	    THEN outError(TPM_CLEAR_DISABLED)
+	    ELSE outNothing
 	   ENDIF
-      ELSE outError(2)
+      ELSE outError(TPM_AUTHFAIL)
     ENDIF
 
   forceClearOut(s:tpmAbsState) : tpmAbsOutput =
-    IF disableOwnerClear(s)=FALSE
-      THEN outNothing
-      ELSE outError(2)
+    IF disableForceClear(s)
+      THEN outError(TPM_CLEAR_DISABLED)
+      ELSE outNothing
     ENDIF
 
   % Generate a certified AIK from an AIK.  Certification assumes that the
@@ -624,25 +625,17 @@ tpm [ B:TYPE+, % BLOB
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_OwnerClear(auth)))
 	    );
 
-  owner_clear_success: THEOREM FORALL (state:tpmAbsState,k:(asymKey?)) : 
+  owner_clear_post: THEOREM FORALL (state:(afterStartup?),k:(asymKey?)) : 
     LET(a,s) = runState(
-    	       TPM_Init
-	       >> TPM_Startup
-	       >> CPU_senter
-	       >> CPU_sinit
-	       >> TPM_OwnerClear(k)
-	       >>= unit)
-	       (state) IN
-      k = private(srk(state)) AND disableOwnerClear(state) = FALSE =>
-      keys(s) = emptyset
-
-%     IF k = private(srk(state))
-%       THEN IF disableOwnerClear(s) = FALSE
-%       	    THEN keys(s)=emptyset AND a=outNothing
-% 	    ELSE s=state AND a=outError(5)
-% 	   ENDIF
-%       ELSE s=state AND a=outError(2)
-%     ENDIF
+	       TPM_OwnerClear(k))
+	       (state) IN   
+    IF k=private(srk(s))
+      THEN IF disableOwnerClear(permFlags(s))
+      	    THEN a=outError(TPM_CLEAR_DISABLED) AND keys(s)=keys(state)
+	    ELSE a=outNothing AND keys(s) = emptyset
+	   ENDIF
+      ELSE a=outError(TPM_AUTHFAIL) AND keys(s)=keys(state)
+    ENDIF
 
   TPM_ForceClear : State = 
      modifyOutput(outNothing,
@@ -650,51 +643,36 @@ tpm [ B:TYPE+, % BLOB
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_ForceClear))
 	    );
 
-  force_clear_success: THEOREM FORALL (state:tpmAbsState) : 
+  force_clear_post: THEOREM FORALL (state:(afterStartup?)) : 
     LET(a,s) = runState(
-    	       TPM_Init
-	       >> TPM_Startup
-	       >> CPU_senter
-	       >> CPU_sinit
-	       >> TPM_ForceClear
-	       >>= unit)
+	       TPM_ForceClear)
 	       (state) IN
-	disableForceClear(state WITH [`disableForceClear:=TRUE]) =>disableForceClear(s)=TRUE% AND a = outError(5)
-%       IF disableForceClear(state) = FALSE 
-%        THEN keys(s)=emptyset AND a=outNothing
-%        ELSE keys(s)=keys(state) AND a=outError(5)
-%       ENDIF   
-
+	IF disableForceClear(state)
+      	  THEN a=outError(TPM_CLEAR_DISABLED) AND keys(s)=keys(state)
+      	  ELSE a=outNothing and keys(s)=emptyset
+    	ENDIF
 
   TPM_DisableOwnerClear : State = 
      modify(outNothing,
 		(LAMBDA (s:tpmAbsState) : executeCom(s,ABS_DisableOwnerClear)));
 
-  disable_owner_clear_success: THEOREM FORALL (state:tpmAbsState) : 
+  disable_owner_clear_post: THEOREM FORALL (state:(afterStartup?)) : 
     LET(a,s) = runState(
-    	       TPM_Init
-	       >> TPM_Startup
-	       >> CPU_senter
-	       >> CPU_sinit
-	       >> TPM_DisableOwnerClear
-	       >>= unit)
+    	       TPM_DisableOwnerClear)
 	       (state) IN
-      disableOwnerClear(s) = TRUE;
+      disableOwnerClear(permFlags(s)) = TRUE
+      AND a = outNothing;
 
   TPM_DisableForceClear : State =
      modify(outNothing,
 		(LAMBDA (s:tpmAbsState) : executeCom(s,ABS_DisableForceClear)));
 
-  disable_force_clear_success: THEOREM FORALL (state:tpmAbsState) : 
+  disable_force_clear_post: THEOREM FORALL (state:(afterStartup?)) : 
     LET(a,s) = runState(
-    	       TPM_Init
-	       >> TPM_Startup
-	       >> CPU_senter
-	       >> CPU_sinit
-	       >> TPM_DisableForceClear
-	       >>= unit)
+    	       TPM_DisableForceClear)
 	       (state) IN
-      disableForceClear(s) = TRUE;
+      disableForceClear(s) = TRUE
+      AND a = outNothing;
 
 
   %% Wrap new key k with parent key
@@ -1081,7 +1059,8 @@ tpm [ B:TYPE+, % BLOB
   keys_unchanged: THEOREM 
     FORALL (s:tpmAbsState,c:tpmAbsInput) :
       not(ABS_Startup?(c) or ABS_Init?(c) or 
-    	  ABS_LoadKey2?(c) or ABS_ActivateIdentity?(c)) =>
+    	  ABS_LoadKey2?(c) or ABS_ActivateIdentity?(c) or
+	  ABS_OwnerClear?(c) or ABS_ForceClear?(c)) =>
       keys(s) = keys(executeCom(s,c));
 
   postInit_unchanged: THEOREM 
