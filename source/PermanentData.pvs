@@ -1,0 +1,33 @@
+PermanentData : THEORY
+  BEGIN
+  
+  PermData : TYPE = [#
+%     tag : TPM_STRUCTURE_TAG,
+%     revMajor : BYTE,
+%     revMinor : BYTE,
+%     tpmProof : TPM_SECRET,
+%     ekReset : TPM_NONCE,
+%     ownerAuth : TPM_SECRET,
+%     operatorAuth : TPM_SECRET,
+%     authDIR[1] : TPM_DIRVALUE,
+%     manuMaintPub : TPM_PUBKEY,
+%     endorsementKey : TPM_KEY,
+%     srk : TPM_KEY,
+%     contextKey : TPM_KEY,
+%     delegateKey : TPM_KEY,
+%     auditMonotonicCounter : TPM_COUNTER_VALUE,
+%     monotonicCounter[TPM_MIN_COUNTERS] : TPM_COUNTER_VALUE,
+%     pcrAttrib[TPM_NUM_PCR] : TPM_PCR_ATTRIBUTES,
+%     ordinalAuditStatus[] : BYTE[],
+%     rngState : BYTE[],
+%     familyTable : TPM_FAMILY_TABLE,
+%     delegateTable : TPM_DELEGATE_TABLE,
+%     lastFamilyID : UINT32,
+%     noOwnerNVWrite : UINT32,
+%     restrictDelegate : TPM_CMK_DELEGATE,
+%     tpmDAASeed : TPM_DAA_TPM_SEED,
+%     daaProof : TPM_NONCE,
+%     daaBlobKey : TPM_KEY
+  #];
+
+  END PermanentData;
