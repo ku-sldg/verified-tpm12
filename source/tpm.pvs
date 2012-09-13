@@ -216,7 +216,7 @@ tpm [ B:TYPE+, % BLOB
 
   %% Reset PCRs as performed by SENTER.
   pcrsResetSenterState(s:tpmAbsState) : tpmAbsState =
-    s WITH [`pcrs := pcrsSenter(pcrs(s),pcrFlags(s))];
+    s WITH [`pcrs := pcrsSenter(pcrs(s),pcrAttrib(permData(s)))];
 
   %% Decrease locality value
   changeLocalityState(s:tpmAbsState) : tpmAbsState =
@@ -933,7 +933,7 @@ tpm [ B:TYPE+, % BLOB
     FORALL (k:(asymKey?),state:tpmAbsState,n:BLOB,pm:PCRMASK,sessk:(symKey?),auth:AUTHDATA) :
       LET (a,s) = runState(
       	  	  TPM_Init
-		  >> TPM_Startup
+		  >> TPM_Startup(TPM_ST_CLEAR)
 		  >> CPU_senter
 		  >> CPU_sinit
 		  >> TPM_MakeIdentity(k,sessk,auth)
@@ -945,7 +945,7 @@ tpm [ B:TYPE+, % BLOB
 		  (state) IN
         a = outQuote(private(k),
 	             n,
-                     map((pcrsReset WITH [(0) := extend(
+                     map((pcrsReset(pcrAttrib(permData(s))) WITH [(0) := extend(
                                                      extend(reset,hash(sinit)),
                                                      hash(mle))]),
 	                 pm),
@@ -1099,7 +1099,7 @@ tpm [ B:TYPE+, % BLOB
     FORALL (k:wrapKey,hv:HV,n:BLOB,pcrMask:PCRMASK,state:tpmAbsState) :
       runState(
 	TPM_Init
-      	>> TPM_Startup
+      	>> TPM_Startup(TPM_ST_CLEAR)
       	>> CPU_senter
       	>> CPU_sinit
       	>> TPM_Extend(hv,0)
@@ -1182,7 +1182,7 @@ tpm [ B:TYPE+, % BLOB
                                outQuote(private(aik),
                                         n,
                                         map
-                                        ((pcrsSenter(pcrsReset(pcrFlags(s)),pcrFlags(s))
+                                        ((pcrsSenter(pcrsReset(pcrAttrib(permData(s))),pcrAttrib(permData(s)))
                                           WITH [(0)
                                                 := extend
                                                    (extend
