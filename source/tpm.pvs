@@ -76,7 +76,7 @@ tpm [ B:TYPE+, % BLOB
   %% Startup commands
     ABS_Reset : ABS_Reset? %unimplemented
     ABS_Init : ABS_Init? 
-    ABS_SaveState : ABS_SaveState? % unimplemented
+    ABS_SaveState : ABS_SaveState?
     ABS_Startup(startupType : TPM_STARTUP_TYPE) : ABS_Startup?
   %% Protected Storage Commands
     ABS_Seal(sk:(asymKey?),data:BLOB) : ABS_Seal?
@@ -322,6 +322,7 @@ tpm [ B:TYPE+, % BLOB
       ABS_Extend(h,n) : extendState(s,n,h),
       ABS_ActivateIdentity(a,k) : activateIdentityState(s,a,k),
       ABS_Init : tpmPostInit,
+      ABS_SaveState : saveState(s),
       ABS_OwnerClear(k): ownerClearState(s,k),
       ABS_ForceClear: forceClearState(s),
       ABS_DisableOwnerClear: disableOwnerClearState(s),
@@ -580,6 +581,11 @@ tpm [ B:TYPE+, % BLOB
   TPM_Startup(st:TPM_STARTUP_TYPE) : State =
     modify(outNothing,
             (LAMBDA (s:tpmAbsState):executeCom(s,ABS_Startup(st))));
+
+  %% Save the TPM state in preparation for restore at startup
+  TPM_SaveState : State =
+    modify(outNothing,
+            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_SaveState)))
   
   %% The only command that can run and do anyting folling a TPM_Init is 
   %% TPM_Startup.  If anything else tries to run, nothing happens.  Note
