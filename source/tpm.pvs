@@ -610,6 +610,29 @@ tpm [ B:TYPE+, % BLOB
     modify(outNothing,
             (LAMBDA (s:tpmAbsState):executeCom(s,ABS_Startup(st))));
 
+  %% Can't prove this right now because there is no guarantee that the saved
+  %% state is value.  Specifically, that resettable PCRs have been reset
+  %% appropriately.  Need to define a well-formedness condition for this.
+  startup_post : THEOREM
+    FORALL (s0:(afterInit?), f:TPM_STARTUP_TYPE) : 
+      LET (a,s) = runState(TPM_Startup(f))(s0) IN
+       LET save = restore(s) IN
+        CASES f OF
+          TPM_ST_CLEAR : TRUE, % Dummy for now
+	  TPM_ST_STATE : valid?(save) AND wellFormed?(save) =>
+	                      keys(save) = keys(s)
+			      AND ek(save) = ek(s)
+			      AND srk(save) = srk(s)
+			      AND FORALL (i:PCRINDEX) : 
+	      		      	    IF pcrReset(pcrAttrib(permData(save))(i))
+	         		    THEN pcrs(save)(i) = resetOne
+		 		    ELSE pcrs(save)(i) = pcrs(s)(i)
+	      			    ENDIF
+			      AND permFlags(save) = permFlags(s)
+			      AND permData(save) = permData(s),
+	  TPM_ST_DEACTIVATED : TRUE % Dummy for now
+        ENDCASES
+
   %% The only command that can run and do anyting folling a TPM_Init is 
   %% TPM_Startup.  If anything else tries to run, nothing happens.  Note
   %% the use of an "anything" command in the first command sequence.  Could
@@ -623,6 +646,7 @@ tpm [ B:TYPE+, % BLOB
         =
         runState(TPM_Init)
 	      (s0)`2
+
 
   %% Prove that senter after power up results in reset PCRs followed by sinit
   %% measurement.
