@@ -60,10 +60,14 @@ tpm [ B:TYPE+, % BLOB
     outAsymKey(oask:KEY,m:ReturnCode) : outAsymKey?
     outSymKey(osk:KEY,m:ReturnCode) : outSymKey?
     outBlob(obl:BLOB,m:ReturnCode) : outBlob?
-    outCertReq(ocertaik:wrapKey,ocertek:(asymKey?),ofreshk:(symKey?),m:ReturnCode) : outCertReq?
-    outIdentity(oidentaik:wrapKey,oidentc:(outCertReq?),m:ReturnCode) : outIdentity?
-    outIdentActivation(oactc:(certBlob?),osessk:(symKey?),oactek:(asymKey?),m:ReturnCode) : outIdentActivation?
-    outFullQuote(ofullqc:(certBlob?),ofullqsml:SML,ofullqq:(outQuote?),m:ReturnCode) : outFullQuote?
+    outCertReq(ocertaik:wrapKey,ocertek:(asymKey?),
+               ofreshk:(symKey?),m:ReturnCode) : outCertReq?
+    outIdentity(oidentaik:wrapKey,oidentc:(outCertReq?),
+                m:ReturnCode) : outIdentity?
+    outIdentActivation(oactc:(certBlob?),osessk:(symKey?),oactek:(asymKey?),
+                       m:ReturnCode) : outIdentActivation?
+    outFullQuote(ofullqc:(certBlob?),ofullqsml:SML,ofullqq:(outQuote?),
+                 m:ReturnCode) : outFullQuote?
     outPCR(pcr:PCR,m:ReturnCode) : outPCR?
   END tpmAbsOutput;
 
@@ -523,7 +527,8 @@ tpm [ B:TYPE+, % BLOB
            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_sinit)));
  
   %% Build a quote for the appraiser from the quote, cert, and log
-  buildQuote(q:(outQuote?),ca:(outIdentActivation?),sml:SML,sessk:(symKey?)):tpmAbsOutput =
+  buildQuote(q:(outQuote?),ca:(outIdentActivation?),sml:SML,
+             sessk:(symKey?)):tpmAbsOutput =
     IF sessk=osessk(ca)
      THEN outFullQuote(oactc(ca),sml,q,TPM_SUCCESS)
      ELSE outError(TPM_INAPPROPRIATE_SIG) %% TODO: Double check this
@@ -972,7 +977,8 @@ tpm [ B:TYPE+, % BLOB
 	AND s = state
       
   quote_with_prev_key: THEOREM
-    FORALL (k:(asymKey?),state:tpmAbsState,n:BLOB,pm:PCRMASK,sessk:(symKey?),auth:AUTHDATA) :
+    FORALL (k:(asymKey?),state:tpmAbsState,n:BLOB,
+            pm:PCRMASK,sessk:(symKey?),auth:AUTHDATA) :
       LET (a,s) = runState(
       	  	  TPM_Init
 		  >> TPM_Startup(TPM_ST_CLEAR)
