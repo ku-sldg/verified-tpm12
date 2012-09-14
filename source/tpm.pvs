@@ -171,8 +171,9 @@ tpm [ B:TYPE+, % BLOB
 			 , disableForceClear:=FALSE
 			 #);
 
-  %% Standard initial state following startup command.  Technically, there
-  %% will be many results of TPM_Startup, but this is a good starting point
+  %% Standard initial state following startup command with the TPM_ST_CLEAR
+  %% option set.  Note that this should be checked against the spec before
+  %% asserting goodness.
   tpmStartup : tpmAbsState = (#
                          pcrs:=pcrsReset(allResetAccess)
 			 , postInit:=false
@@ -618,7 +619,7 @@ tpm [ B:TYPE+, % BLOB
       LET (a,s) = runState(TPM_Startup(f))(s0) IN
        LET save = restore(s) IN
         CASES f OF
-          TPM_ST_CLEAR : TRUE, % Dummy for now
+          TPM_ST_CLEAR : s = tpmStartup,
 	  TPM_ST_STATE : valid?(save) AND wellFormed?(save) =>
 	                      keys(save) = keys(s)
 			      AND ek(save) = ek(s)
@@ -630,7 +631,7 @@ tpm [ B:TYPE+, % BLOB
 	      			    ENDIF
 			      AND permFlags(save) = permFlags(s)
 			      AND permData(save) = permData(s),
-	  TPM_ST_DEACTIVATED : TRUE % Dummy for now
+	  TPM_ST_DEACTIVATED : postInit(s)
         ENDCASES
 
   %% The only command that can run and do anyting folling a TPM_Init is 
