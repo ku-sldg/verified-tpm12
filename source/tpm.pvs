@@ -262,8 +262,30 @@ tpm [ B:TYPE+, % BLOB
   disableForceClearState(s:tpmAbsState) : tpmAbsState = 
     s WITH [`disableForceClear:=TRUE];
 
+  saveStateState(s:tpmAbsState) : tpmAbsState =
+    s WITH [`restore:=saveState(keys(s),ek(s),srk(s),pcrs(s),permFlags(s),permData(s))];
+
+  restoreStateState(s:tpmAbsState) : tpmAbsState =
+    IF valid?(restore(s))
+       THEN LET rs=restore(s) IN
+             (#
+              restore := rs,
+	      memory := memory(s),
+	      postInit := FALSE,
+	      ek := ek(rs),
+	      srk := srk(rs),
+	      pcrs := pcrs(rs),
+	      keys := keys(rs),
+	      locality := 3,
+	      permFlags := permFlags(rs),
+	      permData := permData(rs),
+	      disableForceClear := FALSE
+            #)
+       ELSE s
+    ENDIF;
+
   % save a value to external memory
-  saveState(s:tpmAbsState,i:nat,v:tpmAbsOutput) : tpmAbsState =
+  saveToMemState(s:tpmAbsState,i:nat,v:tpmAbsOutput) : tpmAbsState =
     s WITH [`memory := updateLoc(memory(s),i,v)];
 
   %% What we want to generate with each command is a pair of type
@@ -293,7 +315,7 @@ tpm [ B:TYPE+, % BLOB
       ABS_senter : 
         changeLocalityState(extendState(pcrsResetSenterState(s),0,hash(sinit))),
       ABS_sinit : changeLocalityState(extendState(s,0,hash(mle))),
-      ABS_save(i,v) : saveState(s,i,v)
+      ABS_save(i,v) : saveToMemState(s,i,v)
       ELSE s
   ENDCASES;
   

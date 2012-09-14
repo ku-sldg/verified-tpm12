@@ -34,7 +34,12 @@ startupData[B,K,HV : TYPE+] : THEORY
 
   %% Create a save record with keys, pcrs, and pcr flags.  Throw out pcr
   %% values if they are resettable
-  saveState(tpmKeys: KEYSET, tpmEK : (asymKey?), tpmSRK : (asymKey?), tpmPcrs : PCRS, tpmPermFlags : PermFlags, tpmPermData : PermData ) : restoreStateData = 
+  saveState(tpmKeys: KEYSET,
+            tpmEK : (asymKey?),
+	    tpmSRK : (asymKey?),
+	    tpmPcrs : PCRS,
+	    tpmPermFlags : PermFlags,
+	    tpmPermData : PermData ) : restoreStateData = 
     (# valid? := TRUE,
        keys := tpmKeys,
        ek := tpmEK,
