@@ -262,27 +262,37 @@ tpm [ B:TYPE+, % BLOB
   disableForceClearState(s:tpmAbsState) : tpmAbsState = 
     s WITH [`disableForceClear:=TRUE];
 
-  saveStateState(s:tpmAbsState) : tpmAbsState =
-    s WITH [`restore:=saveState(keys(s),ek(s),srk(s),pcrs(s),permFlags(s),permData(s))];
+  saveState(s:tpmAbsState) : tpmAbsState =
+    s WITH [`restore:=saveState(keys(s)
+                                , ek(s)
+		      		, srk(s)
+		      		, pcrs(s)
+		      		, permFlags(s)
+		      		, permData(s)
+		      		)];
 
-  restoreStateState(s:tpmAbsState) : tpmAbsState =
+  restoreState(s:tpmAbsState) : tpmAbsState =
     IF valid?(restore(s))
        THEN LET rs=restore(s) IN
              (#
-              restore := rs,
-	      memory := memory(s),
-	      postInit := FALSE,
-	      ek := ek(rs),
-	      srk := srk(rs),
-	      pcrs := pcrs(rs),
-	      keys := keys(rs),
-	      locality := 3,
-	      permFlags := permFlags(rs),
-	      permData := permData(rs),
-	      disableForceClear := FALSE
+              restore := rs
+	      , memory := memory(s)
+	      , postInit := FALSE
+	      , ek := ek(rs)
+	      , srk := srk(rs)
+	      , pcrs := pcrs(rs)
+	      , keys := keys(rs)
+	      , locality := 3
+	      , permFlags := permFlags(rs)
+	      , permData := permData(rs)
+	      , disableForceClear := FALSE
             #)
        ELSE s
     ENDIF;
+
+  % deactivate by going back to init.  Not sure this is correct.
+  deactivateState(s:tpmAbsState) : tpmAbsState = 
+    s WITH [`postInit := TRUE];
 
   % save a value to external memory
   saveToMemState(s:tpmAbsState,i:nat,v:tpmAbsOutput) : tpmAbsState =
@@ -297,7 +307,11 @@ tpm [ B:TYPE+, % BLOB
   %% Run if TPM_Init has run but TPM_Startup has not
   executeComPostInit(s:(afterInit?),c:tpmAbsInput) : tpmAbsState =
     CASES c OF
-      ABS_Startup(t) : tpmStartup
+      ABS_Startup(t) : CASES t OF 
+      		        TPM_ST_CLEAR : tpmStartup,
+    			TPM_ST_STATE : restoreState(s),
+    			TPM_ST_DEACTIVATED : deactivateState(s)
+                       ENDCASES
       ELSE s
     ENDCASES;
 
