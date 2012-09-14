@@ -44,7 +44,9 @@ tpm [ B:TYPE+, % BLOB
   IMPORTING pcr[HV];
   IMPORTING key[B,K,HV];
   IMPORTING ReturnCodes;
+  IMPORTING startupData[B,K,HV];
   IMPORTING PermanentFlags;
+  IMPORTING PermanentData[HV];
 
   SML : TYPE = list[HV];
 
@@ -58,10 +60,14 @@ tpm [ B:TYPE+, % BLOB
     outAsymKey(oask:KEY,m:ReturnCode) : outAsymKey?
     outSymKey(osk:KEY,m:ReturnCode) : outSymKey?
     outBlob(obl:BLOB,m:ReturnCode) : outBlob?
-    outCertReq(ocertaik:wrapKey,ocertek:(asymKey?),ofreshk:(symKey?),m:ReturnCode) : outCertReq?
-    outIdentity(oidentaik:wrapKey,oidentc:(outCertReq?),m:ReturnCode) : outIdentity?
-    outIdentActivation(oactc:(certBlob?),osessk:(symKey?),oactek:(asymKey?),m:ReturnCode) : outIdentActivation?
-    outFullQuote(ofullqc:(certBlob?),ofullqsml:SML,ofullqq:(outQuote?),m:ReturnCode) : outFullQuote?
+    outCertReq(ocertaik:wrapKey,ocertek:(asymKey?),
+               ofreshk:(symKey?),m:ReturnCode) : outCertReq?
+    outIdentity(oidentaik:wrapKey,oidentc:(outCertReq?),
+                m:ReturnCode) : outIdentity?
+    outIdentActivation(oactc:(certBlob?),osessk:(symKey?),oactek:(asymKey?),
+                       m:ReturnCode) : outIdentActivation?
+    outFullQuote(ofullqc:(certBlob?),ofullqsml:SML,ofullqq:(outQuote?),
+                 m:ReturnCode) : outFullQuote?
     outPCR(pcr:PCR,m:ReturnCode) : outPCR?
   END tpmAbsOutput;
 
@@ -74,8 +80,8 @@ tpm [ B:TYPE+, % BLOB
   %% Startup commands
     ABS_Reset : ABS_Reset? %unimplemented
     ABS_Init : ABS_Init? 
-    ABS_SaveState : ABS_SaveState? % unimplemented
-    ABS_Startup : ABS_Startup? % Only clear implemented
+    ABS_SaveState : ABS_SaveState?
+    ABS_Startup(startupType : TPM_STARTUP_TYPE) : ABS_Startup?
   %% Protected Storage Commands
     ABS_Seal(sk:(asymKey?),data:BLOB) : ABS_Seal?
     ABS_Unseal(s:(sealBlob?),uk:(asymKey?)) : ABS_Unseal?   
@@ -118,9 +124,6 @@ tpm [ B:TYPE+, % BLOB
   %% mle blob instance for measurement
   mle : B;
 
-  %% Locality type - check with spec
-  LOCALITY : TYPE = {n:nat | n<=4};
-
   %% Uninterpreted Key values.
   ekKeyVal : K;
   srkKeyVal : K;
@@ -133,6 +136,7 @@ tpm [ B:TYPE+, % BLOB
 
   %% Abstract TPM State with keys, PCR array and locality
   tpmAbsState : TYPE = [#
+  	      	       restore : restoreStateData,
                        memory : mem,
                        postInit : bool,
                        srk : (asymKey?),
@@ -141,6 +145,7 @@ tpm [ B:TYPE+, % BLOB
                        pcrs : PCRS,
 		       locality : LOCALITY,
 		       permFlags : PermFlags,
+		       permData : PermData,
 		       disableForceClear : bool
 		    #];
 
@@ -160,23 +165,45 @@ tpm [ B:TYPE+, % BLOB
 			 , srk:=private(srkVal)
 			 , ek:=private(ekVal)
 			 , memory:=empty
+			 , restore:=initSaveData
 			 , permFlags:=permFlagsInit
+			 , permData:=permDataInit
 			 , disableForceClear:=FALSE
 			 #);
 
   %% Standard initial state following startup command.  Technically, there
   %% will be many results of TPM_Startup, but this is a good starting point
   tpmStartup : tpmAbsState = (#
-                         pcrs:=pcrsReset
+                         pcrs:=pcrsReset(allResetAccess)
 			 , postInit:=false
 			 , locality:=4
 			 , keys:=emptyset
 			 , srk:=private(srkVal)
 			 , ek:=private(ekVal)
 			 , memory:=empty
+			 , restore:=initSaveData
 			 , permFlags:=permFlagsInit
+			 , permData:=permDataInit
 			 , disableForceClear:=FALSE
 			 #);
+
+  %% Generate a new state from restore data.  Basically this is a clear
+  %% restart with pcrs, keys, and pcr flags coming from the restore
+  %% data.  Note that this function assumes valid data and will behave
+  %% badly otherwise
+  tpmRestore(rd:restoreStateData) : tpmAbsState = (#
+                         pcrs:=pcrs(rd)
+			 , postInit:=false
+			 , locality:=4
+			 , keys:=keys(rd)
+			 , srk:=private(srkVal)
+			 , ek:=private(ekVal)
+			 , memory:=empty
+			 , restore:=rd
+			 , permFlags:=permFlags(rd)
+			 , permData:=permData(rd)
+			 , disableForceClear:=FALSE
+                         #)
 
   %% Predicate to determine if startup has occured.  Used as types
   %% (afterInit?) is the set of states occuring immediately after TPM_Init
@@ -193,7 +220,7 @@ tpm [ B:TYPE+, % BLOB
 
   %% Reset PCRs as performed by SENTER.
   pcrsResetSenterState(s:tpmAbsState) : tpmAbsState =
-    s WITH [`pcrs := pcrsReset];
+    s WITH [`pcrs := pcrsSenter(pcrs(s),pcrAttrib(permData(s)))];
 
   %% Decrease locality value
   changeLocalityState(s:tpmAbsState) : tpmAbsState =
@@ -239,8 +266,40 @@ tpm [ B:TYPE+, % BLOB
   disableForceClearState(s:tpmAbsState) : tpmAbsState = 
     s WITH [`disableForceClear:=TRUE];
 
+  saveState(s:tpmAbsState) : tpmAbsState =
+    s WITH [`restore:=saveState(keys(s)
+                                , ek(s)
+		      		, srk(s)
+		      		, pcrs(s)
+		      		, permFlags(s)
+		      		, permData(s)
+		      		)];
+
+  restoreState(s:tpmAbsState) : tpmAbsState =
+    IF valid?(restore(s))
+       THEN LET rs=restore(s) IN
+             (#
+              restore := rs
+	      , memory := memory(s)
+	      , postInit := FALSE
+	      , ek := ek(rs)
+	      , srk := srk(rs)
+	      , pcrs := pcrs(rs)
+	      , keys := keys(rs)
+	      , locality := 3
+	      , permFlags := permFlags(rs)
+	      , permData := permData(rs)
+	      , disableForceClear := FALSE
+            #)
+       ELSE s
+    ENDIF;
+
+  % deactivate by going back to init.  Not sure this is correct.
+  deactivateState(s:tpmAbsState) : tpmAbsState = 
+    s WITH [`postInit := TRUE];
+
   % save a value to external memory
-  saveState(s:tpmAbsState,i:nat,v:tpmAbsOutput) : tpmAbsState =
+  saveToMemState(s:tpmAbsState,i:nat,v:tpmAbsOutput) : tpmAbsState =
     s WITH [`memory := updateLoc(memory(s),i,v)];
 
   %% What we want to generate with each command is a pair of type
@@ -252,7 +311,11 @@ tpm [ B:TYPE+, % BLOB
   %% Run if TPM_Init has run but TPM_Startup has not
   executeComPostInit(s:(afterInit?),c:tpmAbsInput) : tpmAbsState =
     CASES c OF
-      ABS_Startup : tpmStartup
+      ABS_Startup(t) : CASES t OF 
+      		        TPM_ST_CLEAR : tpmStartup,
+    			TPM_ST_STATE : restoreState(s),
+    			TPM_ST_DEACTIVATED : deactivateState(s)
+                       ENDCASES
       ELSE s
     ENDCASES;
 
@@ -263,6 +326,7 @@ tpm [ B:TYPE+, % BLOB
       ABS_Extend(h,n) : extendState(s,n,h),
       ABS_ActivateIdentity(a,k) : activateIdentityState(s,a,k),
       ABS_Init : tpmPostInit,
+      ABS_SaveState : saveState(s),
       ABS_OwnerClear(k): ownerClearState(s,k),
       ABS_ForceClear: forceClearState(s),
       ABS_DisableOwnerClear: disableOwnerClearState(s),
@@ -270,7 +334,7 @@ tpm [ B:TYPE+, % BLOB
       ABS_senter : 
         changeLocalityState(extendState(pcrsResetSenterState(s),0,hash(sinit))),
       ABS_sinit : changeLocalityState(extendState(s,0,hash(mle))),
-      ABS_save(i,v) : saveState(s,i,v)
+      ABS_save(i,v) : saveToMemState(s,i,v)
       ELSE s
   ENDCASES;
   
@@ -463,7 +527,8 @@ tpm [ B:TYPE+, % BLOB
            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_sinit)));
  
   %% Build a quote for the appraiser from the quote, cert, and log
-  buildQuote(q:(outQuote?),ca:(outIdentActivation?),sml:SML,sessk:(symKey?)):tpmAbsOutput =
+  buildQuote(q:(outQuote?),ca:(outIdentActivation?),sml:SML,
+             sessk:(symKey?)):tpmAbsOutput =
     IF sessk=osessk(ca)
      THEN outFullQuote(oactc(ca),sml,q,TPM_SUCCESS)
      ELSE outError(TPM_INAPPROPRIATE_SIG) %% TODO: Double check this
@@ -518,9 +583,14 @@ tpm [ B:TYPE+, % BLOB
   TPM_Init : State = put(outNothing,tpmPostInit);
 
   %% Start up the TPM after TPM_Init
-  TPM_Startup : State =
+  TPM_Startup(st:TPM_STARTUP_TYPE) : State =
     modify(outNothing,
-            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_Startup)));
+            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_Startup(st))));
+
+  %% Save the TPM state in preparation for restore at startup
+  TPM_SaveState : State =
+    modify(outNothing,
+            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_SaveState)))
   
   %% The only command that can run and do anyting folling a TPM_Init is 
   %% TPM_Startup.  If anything else tries to run, nothing happens.  Note
@@ -543,7 +613,7 @@ tpm [ B:TYPE+, % BLOB
     FORALL (hv:HV, state:tpmAbsState) :
       LET (a,s) = runState(
       	          TPM_Init
-      		  >> TPM_Startup
+      		  >> TPM_Startup(TPM_ST_CLEAR)
       		  >> CPU_senter
       		  >> CPU_sinit)
       		  (state)
@@ -907,10 +977,11 @@ tpm [ B:TYPE+, % BLOB
 	AND s = state
       
   quote_with_prev_key: THEOREM
-    FORALL (k:(asymKey?),state:tpmAbsState,n:BLOB,pm:PCRMASK,sessk:(symKey?),auth:AUTHDATA) :
+    FORALL (k:(asymKey?),state:tpmAbsState,n:BLOB,
+            pm:PCRMASK,sessk:(symKey?),auth:AUTHDATA) :
       LET (a,s) = runState(
       	  	  TPM_Init
-		  >> TPM_Startup
+		  >> TPM_Startup(TPM_ST_CLEAR)
 		  >> CPU_senter
 		  >> CPU_sinit
 		  >> TPM_MakeIdentity(k,sessk,auth)
@@ -922,7 +993,7 @@ tpm [ B:TYPE+, % BLOB
 		  (state) IN
         a = outQuote(private(k),
 	             n,
-                     map((pcrsReset WITH [(0) := extend(
+                     map((pcrsReset(pcrAttrib(permData(s))) WITH [(0) := extend(
                                                      extend(reset,hash(sinit)),
                                                      hash(mle))]),
 	                 pm),
@@ -1007,7 +1078,7 @@ tpm [ B:TYPE+, % BLOB
     FORALL (d:BLOB,k,j:(asymKey?),auth:AUTHDATA,state:tpmAbsState) : 
       LET (a,s) = runState(
                   TPM_Init
-      		  >> TPM_Startup
+      		  >> TPM_Startup(TPM_ST_CLEAR)
 		  >> CPU_senter
 		  >> CPU_sinit
 		  >> TPM_CreateWrapKey(j,k,auth)
@@ -1076,7 +1147,7 @@ tpm [ B:TYPE+, % BLOB
     FORALL (k:wrapKey,hv:HV,n:BLOB,pcrMask:PCRMASK,state:tpmAbsState) :
       runState(
 	TPM_Init
-      	>> TPM_Startup
+      	>> TPM_Startup(TPM_ST_CLEAR)
       	>> CPU_senter
       	>> CPU_sinit
       	>> TPM_Extend(hv,0)
@@ -1096,7 +1167,7 @@ tpm [ B:TYPE+, % BLOB
     FORALL (aik:wrapKey,b:BLOB,pm:PCRMASK,state:tpmAbsState) :
       LET (out,s) = runState(
                   TPM_Init
-      		  >> TPM_Startup
+      		  >> TPM_Startup(TPM_ST_CLEAR)
 		  >> CPU_senter
 		  >> CPU_sinit
 		  >> TPM_Quote(aik,b,pm))
@@ -1125,7 +1196,7 @@ tpm [ B:TYPE+, % BLOB
 	     auth:AUTHDATA) :
        LET (out,s) = runState(
                    TPM_Init
- 		   >> TPM_Startup
+ 		   >> TPM_Startup(TPM_ST_CLEAR)
  		   >> CPU_senter
  		   >> CPU_sinit
  		   >> TPM_MakeIdentity(aik,k,auth) % identity is output
@@ -1159,7 +1230,7 @@ tpm [ B:TYPE+, % BLOB
                                outQuote(private(aik),
                                         n,
                                         map
-                                        ((pcrsReset
+                                        ((pcrsSenter(pcrsReset(pcrAttrib(permData(s))),pcrAttrib(permData(s)))
                                           WITH [(0)
                                                 := extend
                                                    (extend

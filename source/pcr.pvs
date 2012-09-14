@@ -17,6 +17,9 @@
 pcr [HV: TYPE+] : THEORY
   BEGIN
 
+  %% Locality type - check with spec
+  LOCALITY : TYPE = {n:nat | n<=4};
+
   %% Basic PCR datatype
   PCR : datatype
   begin
@@ -28,13 +31,39 @@ pcr [HV: TYPE+] : THEORY
   %% PCR array index type - check with spec
   PCRINDEX : TYPE = {n:nat | n <=23};
 
+  %% Information associated with PCR
+  PCRFLAG : TYPE = [# pcrLocality : LOCALITY, pcrReset : bool #];
+
   %% PCR array
   PCRS : TYPE = ARRAY[PCRINDEX->PCR];
 
-  %% Some common PCR sets
-  pcrsPower : PCRS = (LAMBDA (i:PCRINDEX) : resetOne);
+  %% PCR flag array
+  PCRFLAGS : TYPE = ARRAY[PCRINDEX->PCRFLAG];
 
-  pcrsReset : PCRS = (LAMBDA (i:PCRINDEX) : reset);
+  %% Some common PCR sets
+
+  %% Power on - unknown state
+  pcrsPower : PCRS;
+
+  %% Following startup clear.  Nonresettable PCRs to 0 and resettable PCRs
+  %% to -1
+  pcrsReset(flags : PCRFLAGS) : PCRS =
+    (LAMBDA (i:PCRINDEX) : 
+      IF pcrReset(flags(i)) THEN resetOne ELSE reset ENDIF);
+
+  %% Followign SENTER.  Nonresettable PCRs to same and resettable PCRs to 0
+  pcrsSenter(curr : PCRS, flags : PCRFLAGS) : PCRS =
+    (LAMBDA (i:PCRINDEX) :
+      IF pcrReset(flags(i)) THEN reset ELSE curr(i) ENDIF);
+
+  %% Some common PCR flag settings
+
+  allResetAccess : PCRFLAGS =
+    (LAMBDA (i:PCRINDEX) :
+      (# 
+         pcrReset := true
+         , pcrLocality := 0
+      #))
 
   %% PCR extension operator
   pcrsExtend(pcrs:PCRS,i:PCRINDEX,hv:HV) : PCRS = 
