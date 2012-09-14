@@ -582,16 +582,34 @@ tpm [ B:TYPE+, % BLOB
   %% Power up the TPM and hit the TPM_Init signal
   TPM_Init : State = put(outNothing,tpmPostInit);
 
-  %% Start up the TPM after TPM_Init
-  TPM_Startup(st:TPM_STARTUP_TYPE) : State =
-    modify(outNothing,
-            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_Startup(st))));
-
   %% Save the TPM state in preparation for restore at startup
   TPM_SaveState : State =
     modify(outNothing,
             (LAMBDA (s:tpmAbsState):executeCom(s,ABS_SaveState)))
   
+  %% Save state actually saves the correct information
+  %% proved - Fri Sep 14 11:20:25 CDT 2012
+  save_state_post : THEOREM
+    FORALL (s0:(afterStartup?)) : 
+      LET (a,s) = runState(TPM_SaveState)(s0) IN
+       LET save = restore(s) IN
+        valid?(save)
+	AND keys(save) = keys(s0)
+	AND ek(save) = ek(s0)
+	AND srk(save) = srk(s0)
+	AND FORALL (i:PCRINDEX) : 
+	      IF pcrReset(pcrAttrib(permData(save))(i))
+	         THEN pcrs(save)(i) = resetOne
+		 ELSE pcrs(save)(i) = pcrs(s0)(i)
+	      ENDIF
+	AND permFlags(save) = permFlags(s0)
+	AND permData(save) = permData(s0)
+
+  %% Start up the TPM after TPM_Init
+  TPM_Startup(st:TPM_STARTUP_TYPE) : State =
+    modify(outNothing,
+            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_Startup(st))));
+
   %% The only command that can run and do anyting folling a TPM_Init is 
   %% TPM_Startup.  If anything else tries to run, nothing happens.  Note
   %% the use of an "anything" command in the first command sequence.  Could
