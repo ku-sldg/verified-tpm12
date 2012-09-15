@@ -588,7 +588,7 @@ tpm [ B:TYPE+, % BLOB
     modify(outNothing,
             (LAMBDA (s:tpmAbsState):executeCom(s,ABS_SaveState)))
   
-  %% Save state actually saves the correct information
+  %% Save state actually saves the correct information.
   %% proved - Fri Sep 14 11:20:25 CDT 2012
   save_state_post : THEOREM
     FORALL (s0:(afterStartup?)) : 
@@ -611,9 +611,9 @@ tpm [ B:TYPE+, % BLOB
     modify(outNothing,
             (LAMBDA (s:tpmAbsState):executeCom(s,ABS_Startup(st))));
 
-  %% Can't prove this right now because there is no guarantee that the saved
-  %% state is value.  Specifically, that resettable PCRs have been reset
-  %% appropriately.  Need to define a well-formedness condition for this.
+  %% TPM_Startup post condition covering three major cases: clear, restore
+  %% state and deactivate.
+  %% proved - Sat Sep 15 09:58:36 CDT 2012
   startup_post : THEOREM
     FORALL (s0:(afterInit?), f:TPM_STARTUP_TYPE) : 
       LET (a,s) = runState(TPM_Startup(f))(s0) IN
@@ -634,19 +634,15 @@ tpm [ B:TYPE+, % BLOB
 	  TPM_ST_DEACTIVATED : postInit(s)
         ENDCASES
 
-  %% The only command that can run and do anyting folling a TPM_Init is 
-  %% TPM_Startup.  If anything else tries to run, nothing happens.  Note
-  %% the use of an "anything" command in the first command sequence.  Could
-  %% use LET here rather than the tuple accessor
+  %% Prove that the only command that can run and do anyting folling a
+  %% TPM_Init is TPM_Startup.  If anything else tries to run, nothing happens. 
+  %% Note the use of an "anything" command in the first command sequence.
   startup_after_init: THEOREM 
-    FORALL (s0:tpmAbsState,a:tpmAbsOutput,c:tpmAbsInput) :
+    FORALL (s:tpmAbsState,a:tpmAbsOutput,c:tpmAbsInput) :
       NOT ABS_Startup?(c) =>
-        runState(TPM_Init
-                 >> state(LAMBDA (s:tpmAbsState):(a,executeCom(s,c))))
-	      (s0)`2
-        =
-        runState(TPM_Init)
-	      (s0)`2
+        LET (a0,s0) = runState(TPM_Init >> state(LAMBDA (s:tpmAbsState):(a,executeCom(s,c))))(s) IN
+          LET (a1,s1) = runState(TPM_Init)(s) IN
+	      s0=s1
 
 
   %% Prove that senter after power up results in reset PCRs followed by sinit
