@@ -149,6 +149,12 @@ tpm [ B:TYPE+, % BLOB
 		       disableForceClear : bool
 		    #];
 
+  %% Well formedness condition for abstract states.  Currently unused, but we
+  %% should show that forall commands, well formed input generates well formed
+  %% output.
+
+  wellFormed?(s:tpmAbsState):bool = wellFormedRestore?(restore(s));
+
   IMPORTING StateMonad[tpmAbsOutput,tpmAbsState];
 
   %% Define some common TPM states and state operations
@@ -156,8 +162,8 @@ tpm [ B:TYPE+, % BLOB
   %% Unknown state
   tpmUnknown : tpmAbsState
 
-  %% Power on state after init is raised by hardware
-  tpmPostInit : tpmAbsState = (#
+  %% Power on state after init is raised by hardware.
+  tpmPostInit : (wellFormed?) = (#
                          pcrs:=pcrsPower
 			 , postInit:=true
                          , locality:=4
@@ -174,7 +180,7 @@ tpm [ B:TYPE+, % BLOB
   %% Standard initial state following startup command with the TPM_ST_CLEAR
   %% option set.  Note that this should be checked against the spec before
   %% asserting goodness.
-  tpmStartup : tpmAbsState = (#
+  tpmStartup : (wellFormed?) = (#
                          pcrs:=pcrsReset(allResetAccess)
 			 , postInit:=false
 			 , locality:=4
@@ -192,7 +198,7 @@ tpm [ B:TYPE+, % BLOB
   %% restart with pcrs, keys, and pcr flags coming from the restore
   %% data.  Note that this function assumes valid data and will behave
   %% badly otherwise
-  tpmRestore(rd:restoreStateData) : tpmAbsState = (#
+  tpmRestore(rd:(wellFormedRestore?)) : (wellFormed?) = (#
                          pcrs:=pcrs(rd)
 			 , postInit:=false
 			 , locality:=4
@@ -620,7 +626,7 @@ tpm [ B:TYPE+, % BLOB
        LET save = restore(s) IN
         CASES f OF
           TPM_ST_CLEAR : s = tpmStartup,
-	  TPM_ST_STATE : valid?(save) AND wellFormed?(save) =>
+	  TPM_ST_STATE : valid?(save) AND wellFormedRestore?(save) =>
 	                      keys(save) = keys(s)
 			      AND ek(save) = ek(s)
 			      AND srk(save) = srk(s)
