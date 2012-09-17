@@ -30,7 +30,12 @@ startupData[B,K,HV : TYPE+] : THEORY
                           pcrs : PCRS,
 			  permFlags : PermFlags,
 			  permData : PermData
-			#]
+			#];
+
+  wellFormedRestore?(r:restoreStateData) : bool =
+    valid?(r) =>
+    FORALL (i:PCRINDEX) :
+      pcrReset(pcrAttrib(permData(r))(i)) => pcrs(r)(i) = resetOne;
 
   %% Create a save record with keys, pcrs, and pcr flags.  Throw out pcr
   %% values if they are resettable
@@ -39,7 +44,7 @@ startupData[B,K,HV : TYPE+] : THEORY
 	    tpmSRK : (asymKey?),
 	    tpmPcrs : PCRS,
 	    tpmPermFlags : PermFlags,
-	    tpmPermData : PermData ) : restoreStateData = 
+	    tpmPermData : PermData ) : (wellFormedRestore?) = 
     (# valid? := TRUE,
        keys := tpmKeys,
        ek := tpmEK,
@@ -59,7 +64,7 @@ startupData[B,K,HV : TYPE+] : THEORY
   ekInit : K
   srkInit : K
 
-  initSaveData : restoreStateData =
+  initSaveData : (wellFormedRestore?) =
     (# valid? := FALSE,
        keys := emptyset,
        ek := asymKey(ekInit),

@@ -1,3 +1,3 @@
 #!/bin/bash
 
-etags top.lisp tpm.lisp
+etags top.lisp tpm.lisp pcr.lisp
