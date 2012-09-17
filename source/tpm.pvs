@@ -149,6 +149,12 @@ tpm [ B:TYPE+, % BLOB
 		       disableForceClear : bool
 		    #];
 
+  %% Well formedness condition for abstract states.  Currently unused, but we
+  %% should show that forall commands, well formed input generates well formed
+  %% output.
+
+  wellFormed?(s:tpmAbsState):bool = wellFormedRestore?(restore(s));
+
   IMPORTING StateMonad[tpmAbsOutput,tpmAbsState];
 
   %% Define some common TPM states and state operations
@@ -156,8 +162,8 @@ tpm [ B:TYPE+, % BLOB
   %% Unknown state
   tpmUnknown : tpmAbsState
 
-  %% Power on state after init is raised by hardware
-  tpmPostInit : tpmAbsState = (#
+  %% Power on state after init is raised by hardware.
+  tpmPostInit : (wellFormed?) = (#
                          pcrs:=pcrsPower
 			 , postInit:=true
                          , locality:=4
@@ -171,9 +177,10 @@ tpm [ B:TYPE+, % BLOB
 			 , disableForceClear:=FALSE
 			 #);
 
-  %% Standard initial state following startup command.  Technically, there
-  %% will be many results of TPM_Startup, but this is a good starting point
-  tpmStartup : tpmAbsState = (#
+  %% Standard initial state following startup command with the TPM_ST_CLEAR
+  %% option set.  Note that this should be checked against the spec before
+  %% asserting goodness.
+  tpmStartup : (wellFormed?) = (#
                          pcrs:=pcrsReset(allResetAccess)
 			 , postInit:=false
 			 , locality:=4
@@ -191,7 +198,7 @@ tpm [ B:TYPE+, % BLOB
   %% restart with pcrs, keys, and pcr flags coming from the restore
   %% data.  Note that this function assumes valid data and will behave
   %% badly otherwise
-  tpmRestore(rd:restoreStateData) : tpmAbsState = (#
+  tpmRestore(rd:(wellFormedRestore?)) : (wellFormed?) = (#
                          pcrs:=pcrs(rd)
 			 , postInit:=false
 			 , locality:=4
@@ -582,29 +589,67 @@ tpm [ B:TYPE+, % BLOB
   %% Power up the TPM and hit the TPM_Init signal
   TPM_Init : State = put(outNothing,tpmPostInit);
 
-  %% Start up the TPM after TPM_Init
-  TPM_Startup(st:TPM_STARTUP_TYPE) : State =
-    modify(outNothing,
-            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_Startup(st))));
-
   %% Save the TPM state in preparation for restore at startup
   TPM_SaveState : State =
     modify(outNothing,
             (LAMBDA (s:tpmAbsState):executeCom(s,ABS_SaveState)))
   
-  %% The only command that can run and do anyting folling a TPM_Init is 
-  %% TPM_Startup.  If anything else tries to run, nothing happens.  Note
-  %% the use of an "anything" command in the first command sequence.  Could
-  %% use LET here rather than the tuple accessor
+  %% Save state actually saves the correct information.
+  %% proved - Fri Sep 14 11:20:25 CDT 2012
+  save_state_post : THEOREM
+    FORALL (s0:(afterStartup?)) : 
+      LET (a,s) = runState(TPM_SaveState)(s0) IN
+       LET save = restore(s) IN
+        valid?(save)
+	AND keys(save) = keys(s0)
+	AND ek(save) = ek(s0)
+	AND srk(save) = srk(s0)
+	AND FORALL (i:PCRINDEX) : 
+	      IF pcrReset(pcrAttrib(permData(save))(i))
+	         THEN pcrs(save)(i) = resetOne
+		 ELSE pcrs(save)(i) = pcrs(s0)(i)
+	      ENDIF
+	AND permFlags(save) = permFlags(s0)
+	AND permData(save) = permData(s0)
+
+  %% Start up the TPM after TPM_Init
+  TPM_Startup(st:TPM_STARTUP_TYPE) : State =
+    modify(outNothing,
+            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_Startup(st))));
+
+  %% TPM_Startup post condition covering three major cases: clear, restore
+  %% state and deactivate.
+  %% proved - Sat Sep 15 09:58:36 CDT 2012
+  startup_post : THEOREM
+    FORALL (s0:(afterInit?), f:TPM_STARTUP_TYPE) : 
+      LET (a,s) = runState(TPM_Startup(f))(s0) IN
+       LET save = restore(s) IN
+        CASES f OF
+          TPM_ST_CLEAR : s = tpmStartup,
+	  TPM_ST_STATE : valid?(save) AND wellFormedRestore?(save) =>
+	                      keys(save) = keys(s)
+			      AND ek(save) = ek(s)
+			      AND srk(save) = srk(s)
+			      AND FORALL (i:PCRINDEX) : 
+	      		      	    IF pcrReset(pcrAttrib(permData(save))(i))
+	         		    THEN pcrs(save)(i) = resetOne
+		 		    ELSE pcrs(save)(i) = pcrs(s)(i)
+	      			    ENDIF
+			      AND permFlags(save) = permFlags(s)
+			      AND permData(save) = permData(s),
+	  TPM_ST_DEACTIVATED : postInit(s)
+        ENDCASES
+
+  %% Prove that the only command that can run and do anyting folling a
+  %% TPM_Init is TPM_Startup.  If anything else tries to run, nothing happens. 
+  %% Note the use of an "anything" command in the first command sequence.
   startup_after_init: THEOREM 
-    FORALL (s0:tpmAbsState,a:tpmAbsOutput,c:tpmAbsInput) :
+    FORALL (s:tpmAbsState,a:tpmAbsOutput,c:tpmAbsInput) :
       NOT ABS_Startup?(c) =>
-        runState(TPM_Init
-                 >> state(LAMBDA (s:tpmAbsState):(a,executeCom(s,c))))
-	      (s0)`2
-        =
-        runState(TPM_Init)
-	      (s0)`2
+        LET (a0,s0) = runState(TPM_Init >> state(LAMBDA (s:tpmAbsState):(a,executeCom(s,c))))(s) IN
+          LET (a1,s1) = runState(TPM_Init)(s) IN
+	      s0=s1
+
 
   %% Prove that senter after power up results in reset PCRs followed by sinit
   %% measurement.
@@ -620,7 +665,7 @@ tpm [ B:TYPE+, % BLOB
       IN s = changeLocalityState(
                changeLocalityState(
                  extendState(
-                   extendState(tpmStartup,0,hash(sinit)),0,hash(mle))))
+                   extendState(pcrsResetSenterState(tpmStartup),0,hash(sinit)),0,hash(mle))))
       AND a = outNothing
 
   %% Extend PCR n with hash value h.
@@ -993,7 +1038,7 @@ tpm [ B:TYPE+, % BLOB
 		  (state) IN
         a = outQuote(private(k),
 	             n,
-                     map((pcrsReset(pcrAttrib(permData(s))) WITH [(0) := extend(
+                     map((pcrsSenter(pcrsReset(pcrAttrib(permData(s))),allResetAccess) WITH [(0) := extend(
                                                      extend(reset,hash(sinit)),
                                                      hash(mle))]),
 	                 pm),
