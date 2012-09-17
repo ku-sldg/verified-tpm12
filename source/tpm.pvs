@@ -94,13 +94,16 @@ tpm [ B:TYPE+, % BLOB
   %% Measurement Reporting Commands
     ABS_PcrRead(ind:PCRINDEX) : ABS_PcrRead?
     ABS_Quote(aik:wrapKey,nonce:BLOB,pm:PCRMASK) : ABS_Quote?
-  %% AIK Commands
+  %% Endorsement Key Handling
+    ABS_CreateEndorsementKeyPair(keyInfo:(asymKey?)) : ABS_CreateEndorsementKeyPair?
+    ABS_ReadPubEK : ABS_ReadPubEK?
+  %% Identity Creation and Activation
     ABS_MakeIdentity(naik:(asymKey?),k:(symKey?),auth:AUTHDATA) : ABS_MakeIdentity?
     ABS_ActivateIdentity(caik:wrapKey,k:(symKey?)) : ABS_ActivateIdentity?
   %% Cryptographic Commands
     ABS_Sign(sk:KEY,saik:wrapKey,sb:BLOB) : ABS_Sign?
   %% TPM Ownership Commands
-    ABS_TakeOwnership : ABS_TakeOwnership?
+    ABS_TakeOwnership(srkParams:(asymKey?)) : ABS_TakeOwnership?
   %% Operational Flags Commands
     ABS_OwnerClear(authK:(asymKey?)) : ABS_OwnerClear? 
     ABS_ForceClear : ABS_ForceClear? 
@@ -241,12 +244,32 @@ tpm [ B:TYPE+, % BLOB
   extendState(s:tpmAbsState,n:PCRINDEX,h:HV) : tpmAbsState =
     s WITH [`pcrs := pcrsExtend(pcrs(s),n,h)];
 
+  createEndorsementKeyPairState(s:tpmAbsState, keyInfo:(asymKey?)) : tpmAbsState = 
+    IF (ek(s) /= invalidKey)
+      THEN s
+      ELSE s WITH [`ek := private(keyInfo),
+      	     	   `permFlags(CEKPUsed) := TRUE,
+		   `permFlags(enableRevokeEK) := FALSE]
+    ENDIF;
+
+
   % Use an AIK.  This is currently unimplemented.
   activateIdentityState(s:tpmAbsState,a:wrapKey,k:(symKey?)) : tpmAbsState =
     loadKey2State(s,a);
 
+  takeOwnershipState(s:tpmAbsState,srkParams:(asymKey?)) : tpmAbsState =
+   IF ownership(permFlags(s)) AND ek(s) /= invalidKey
+     THEN s WITH [`srk:=srkParams,
+      	     	  `permFlags(readPubek):=FALSE]
+     ELSE s
+   ENDIF;
+
   clear(s:tpmAbsState) : tpmAbsState = %not fully implemented
-    s WITH [`keys:=emptyset]
+    s WITH [`keys:=emptyset,
+      	    `permFlags(ownership):=TRUE,
+	    `permFlags(operator):=FALSE,
+	    `permFlags(maintenanceDone):=FALSE
+      	   ]
 
   ownerClearState(s:tpmAbsState,auth:(asymKey?)) : tpmAbsState =
     IF auth = private(srk(s)) AND disableOwnerClear(permFlags(s))=FALSE
@@ -324,9 +347,11 @@ tpm [ B:TYPE+, % BLOB
     CASES c OF
       ABS_LoadKey2(k): loadKey2State(s,k), 
       ABS_Extend(h,n) : extendState(s,n,h),
+      ABS_CreateEndorsementKeyPair(k) : createEndorsementKeyPairState(s,k),
       ABS_ActivateIdentity(a,k) : activateIdentityState(s,a,k),
       ABS_Init : tpmPostInit,
       ABS_SaveState : saveState(s),
+      ABS_TakeOwnership(srk) : takeOwnershipState(s,srk),
       ABS_OwnerClear(k): ownerClearState(s,k),
       ABS_ForceClear: forceClearState(s),
       ABS_DisableOwnerClear: disableOwnerClearState(s),
@@ -403,6 +428,24 @@ tpm [ B:TYPE+, % BLOB
 %     ENDIF;
 
 
+  % If ek doesn't exist, create a new ek from keyInfo
+  createEndorsementKeyPairOut(s:tpmAbsState, keyInfo:(asymKey?)) : tpmAbsOutput = 
+    IF (ek(s) /= invalidKey)
+      THEN outError(TPM_DISABLED_CMD) 
+      ELSE outAsymKey(keyInfo,TPM_SUCCESS) 
+    ENDIF;
+    %% TODO: should also output checksum hash of pubEndorsmentKey and antiReplay?
+
+  readPubEKOut(s:tpmAbsState) : tpmAbsOutput =
+    IF readPubek(permFlags(s))
+      THEN IF ek(s) /= invalidKey
+      	     THEN outAsymKey(ek(s),TPM_SUCCESS)
+	     ELSE outError(TPM_NO_ENDORSEMENT)
+	   ENDIF
+      ELSE outError(TPM_DISABLED_CMD)
+    ENDIF
+
+
   % Output a newly generated AIK.  Note that a simulates the new aik.
   makeIdentityOut(s:tpmAbsState,a:(asymKey?),k:(symKey?),auth:AUTHDATA) : tpmAbsOutput =
     LET waik:wrapKey = (# 
@@ -427,9 +470,16 @@ tpm [ B:TYPE+, % BLOB
     ENDIF;
     
   % NEED TO ENSURE NEW, RANDOM SRK KEY PAIR
-  takeOwnershipOut : tpmAbsOutput =
+  % srkParams shoul = srkVal
+  takeOwnershipOut(s:tpmAbsState,srkParams:(asymKey?)) : tpmAbsOutput =
   %% TODO: Lots of flags for this one.
-    outAsymKey(srkVal,TPM_SUCCESS);
+    IF ownership(permFlags(s))
+      THEN IF ek(s) /= invalidKey
+      	     THEN outAsymKey(srkParams,TPM_SUCCESS)
+	     ELSE outError(TPM_NO_ENDORSEMENT)
+	   ENDIF
+      ELSE outError(TPM_INSTALL_DISABLED)
+    ENDIF
 
   ownerClearOut(s:tpmAbsState,auth:(asymKey?)) : tpmAbsOutput = 
     IF auth = private(srk(s))
@@ -472,10 +522,12 @@ tpm [ B:TYPE+, % BLOB
       ABS_CreateWrapKey(parent,k,k_auth) : createWrapKeyOut(parent,k,k_auth),
       ABS_PcrRead(ind) : pcrReadOut(s,ind),
       ABS_Quote(k,n,pm) : quoteOut(s,k,n,pm),
+      ABS_CreateEndorsementKeyPair(k) : createEndorsementKeyPairOut(s,k),
+      ABS_ReadPubEK : readPubEKOut(s),
       ABS_MakeIdentity(a,k,auth) : makeIdentityOut(s,a,k,auth), 
       ABS_ActivateIdentity(a,k) : activateIdentityOut(s,a,k),
       ABS_Sign(sk,aik,sb) : signOut(s,sk,aik,sb),
-      ABS_TakeOwnership : takeOwnershipOut,
+      ABS_TakeOwnership(srk) : takeOwnershipOut(s,srk),
       ABS_OwnerClear(k) : ownerClearOut(s,k),
       ABS_ForceClear : forceClearOut(s),
       ABS_certify(aik,ek,freshk) : certOut(s,aik,ek,freshk),
@@ -677,17 +729,30 @@ tpm [ B:TYPE+, % BLOB
 
 
   %% Establish SRK
-  TPM_TakeOwnership : State = 
-     output(outNothing,
-            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_TakeOwnership)));
+  TPM_TakeOwnership(srk:(asymKey?)) : State = 
+     modifyOutput(outNothing,
+            (LAMBDA (s:tpmAbsState) : executeCom(s,ABS_TakeOwnership(srk))),
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_TakeOwnership(srk))));
 
-  take_ownership_post: THEOREM 
-    FORALL (state:(afterStartup?)) : 
-      LET (a,s) = runState(
-		 TPM_TakeOwnership)
+  take_ownership_post: THEOREM FORALL (state:(afterStartup?),srk:(asymKey?)) : 
+    LET (a,s) = runState(
+		 TPM_TakeOwnership(srk))
 		 (state) IN
-          a = outAsymKey(srkVal,TPM_SUCCESS)
-      AND s = state;
+    IF ownership(permFlags(s))
+      THEN IF ek(s) /= invalidKey
+      	     THEN a = outAsymKey(srk,TPM_SUCCESS) AND
+     	     	  s = state WITH [`srk:=srk,
+		      	    	  `permFlags(readPubek):=FALSE]
+	     ELSE a = outError(TPM_NO_ENDORSEMENT) AND
+      	     	  s = state
+	   ENDIF
+      ELSE a = outError(TPM_INSTALL_DISABLED) AND
+      	   s = state
+    ENDIF
+		 
+          
+
+
 
   TPM_OwnerClear(auth:(asymKey?)) : State = 
      modifyOutput(outNothing,
@@ -702,7 +767,10 @@ tpm [ B:TYPE+, % BLOB
     IF k=private(srk(s))
       THEN IF disableOwnerClear(permFlags(s))
       	    THEN a=outError(TPM_CLEAR_DISABLED) AND keys(s)=keys(state)
-	    ELSE a=outNothing AND keys(s) = emptyset
+	    ELSE a=outNothing AND keys(s) = emptyset AND 
+	         ownership(permFlags(s)) = TRUE AND 
+		 operator(permFlags(s)) = FALSE AND
+		 maintenanceDone(permFlags(s)) = FALSE
 	   ENDIF
       ELSE a=outError(TPM_AUTHFAIL) AND keys(s)=keys(state)
     ENDIF
@@ -719,7 +787,10 @@ tpm [ B:TYPE+, % BLOB
 	       (state) IN
 	IF disableForceClear(state)
       	  THEN a=outError(TPM_CLEAR_DISABLED) AND keys(s)=keys(state)
-      	  ELSE a=outNothing and keys(s)=emptyset
+	    ELSE a=outNothing AND keys(s) = emptyset AND 
+	         ownership(permFlags(s)) = TRUE AND 
+		 operator(permFlags(s)) = FALSE AND
+		 maintenanceDone(permFlags(s)) = FALSE
     	ENDIF
 
   TPM_DisableOwnerClear : State = 
@@ -833,6 +904,43 @@ tpm [ B:TYPE+, % BLOB
 % 	AND member(k,keys(s))
 	AND a = outNothing
 
+  TPM_CreateEndorsementKeyPair(k:(asymKey?)) : State =
+     %% TODO: Perm Data stuff with RNG
+     modifyOutput(outNothing,
+            (LAMBDA (s:tpmAbsState) : executeCom(s,ABS_CreateEndorsementKeyPair(k))),
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_CreateEndorsementKeyPair(k)))
+	    );
+
+  create_endorsement_key_pair_post: THEOREM
+    FORALL (state:(afterStartup?),k:(asymKey?)) : 
+      LET (a,s) = runState(
+      	  	  TPM_CreateEndorsementKeyPair(k))
+		  (state) IN
+      IF (ek(state) = invalidKey)
+        THEN a = outAsymKey(k,TPM_SUCCESS) AND 
+	     s = state WITH [`ek := private(k),
+      	     	       	    `permFlags(CEKPUsed) := TRUE,
+		   	    `permFlags(enableRevokeEK) := FALSE]
+        ELSE a = outError(TPM_DISABLED_CMD) AND 
+	     s = state
+      ENDIF;
+
+  TPM_ReadPubEK : State =
+     output(outNothing,
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_ReadPubEK)));
+
+  read_pub_ek_post: THEOREM
+    FORALL (state:(afterStartup?)) : 
+      LET (a,s) = runState(
+      	  	  TPM_ReadPubEK)
+		  (state) IN
+      IF readPubek(permFlags(state))
+        THEN IF ek(state) /= invalidKey
+	       THEN a=outAsymKey(ek(state),TPM_SUCCESS)
+	       ELSE a=outError(TPM_NO_ENDORSEMENT)
+	     ENDIF
+	ELSE a=outError(TPM_DISABLED_CMD)
+      ENDIF
 
 
   %% Make a new identity and output it
@@ -977,14 +1085,10 @@ tpm [ B:TYPE+, % BLOB
 	AND s = state
       
   quote_with_prev_key: THEOREM
-    FORALL (k:(asymKey?),state:tpmAbsState,n:BLOB,
+    FORALL (k:(asymKey?),state:(afterStartup?),n:BLOB,
             pm:PCRMASK,sessk:(symKey?),auth:AUTHDATA) :
       LET (a,s) = runState(
-      	  	  TPM_Init
-		  >> TPM_Startup(TPM_ST_CLEAR)
-		  >> CPU_senter
-		  >> CPU_sinit
-		  >> TPM_MakeIdentity(k,sessk,auth)
+		  TPM_MakeIdentity(k,sessk,auth)
 		  >>= (LAMBDA (a:tpmAbsOutput) : 
 		       CASES a OF 
 		         outIdentity(oidentaik,oidentc,m) : TPM_Quote(oidentaik,n,pm) 
@@ -993,10 +1097,7 @@ tpm [ B:TYPE+, % BLOB
 		  (state) IN
         a = outQuote(private(k),
 	             n,
-                     map((pcrsReset(pcrAttrib(permData(s))) WITH [(0) := extend(
-                                                     extend(reset,hash(sinit)),
-                                                     hash(mle))]),
-	                 pm),
+                     map(pcrs(s),pm),
 		     TPM_SUCCESS);
 
 
@@ -1119,12 +1220,14 @@ tpm [ B:TYPE+, % BLOB
 
   srk_unchanged: THEOREM 
     FORALL (s:tpmAbsState,c:tpmAbsInput) :
-      not(ABS_Startup?(c) or ABS_Init?(c)) =>
+      not(ABS_Startup?(c) or ABS_Init?(c) or
+      	  ABS_TakeOwnership?(c)) =>
         srk(s) = srk(executeCom(s,c));
 
   ek_unchanged: THEOREM 
     FORALL (s:tpmAbsState,c:tpmAbsInput) :
-      not(ABS_Startup?(c) or ABS_Init?(c)) =>
+      not(ABS_Startup?(c) or ABS_Init?(c) or
+          ABS_CreateEndorsementKeyPair?(c) ) =>
         ek(s) = ek(executeCom(s,c));
 
   keys_unchanged: THEOREM 

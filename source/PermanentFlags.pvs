@@ -2,49 +2,49 @@ PermanentFlags : THEORY
   BEGIN
   
   PermFlags : TYPE = [#
-%     disable : bool,
-%     ownership : bool,
-%     deactivated : bool,
-%     readPubek : bool,
-    disableOwnerClear : bool
-%     allowMaintenance : bool,
-%     physicalPresenceLifetimeLock : bool,
-%     physicalPresenceHWEnable : bool,
-%     physicalPresenceCMDEnable : bool,
-%     CEKPUsed : bool,
-%     TPMpost : bool,
-%     TPMpostLock : bool,
-%     FIPS : bool,
-%     operator : bool,
-%     enableRevokeEK : bool,
-%     nvLocked : bool,
-%     readSRKPub : bool,
-%     tpmEstablished : bool,
-%     maintenanceDone : bool,
-%     disableFullDALogicInfo : bool
+%     disable : bool
+    ownership : bool
+%     , deactivated : bool
+    , readPubek : bool
+    , disableOwnerClear : bool
+%     , allowMaintenance : bool
+%     , physicalPresenceLifetimeLock : bool
+%     , physicalPresenceHWEnable : bool
+%     , physicalPresenceCMDEnable : bool
+    , CEKPUsed : bool
+%     , TPMpost : bool
+%     , TPMpostLock : bool
+%     , FIPS : bool
+    , operator : bool
+    , enableRevokeEK : bool
+%     , nvLocked : bool
+%     , readSRKPub : bool
+%     , tpmEstablished : bool
+    , maintenanceDone : bool
+%     , disableFullDALogicInfo : bool
   #];
 
   permFlagsInit : PermFlags = (#
-%     disable:=FALSE,
-%     ownership:=FALSE,
-%     deactivated:=FALSE,
-%     readPubek:=FALSE,
-    disableOwnerClear:=FALSE
-%     allowMaintenance:=FALSE,
-%     physicalPresenceLifetimeLock:=FALSE,
-%     physicalPresenceHWEnable:=FALSE,
-%     physicalPresenceCMDEnable:=FALSE,
-%     CEKPUsed:=FALSE,
-%     TPMpost:=FALSE,
-%     TPMpostLock:=FALSE,
-%     FIPS:=FALSE,
-%     operator:=FALSE,
-%     enableRevokeEK:=FALSE,
-%     nvLocked:=FALSE,
-%     readSRKPub:=FALSE,
-%     tpmEstablished:=FALSE,
-%     maintenanceDone:=FALSE,
-%     disableFullDALogicInfo:=FALSE
+%     disable:=FALSE
+    ownership:=FALSE
+%     , deactivated:=FALSE
+    , readPubek:=FALSE
+    , disableOwnerClear:=FALSE
+%     , allowMaintenance:=FALSE
+%     , physicalPresenceLifetimeLock:=FALSE
+%     , physicalPresenceHWEnable:=FALSE
+%     , physicalPresenceCMDEnable:=FALSE
+    , CEKPUsed:=TRUE
+%     , TPMpost:=FALSE
+%     , TPMpostLock:=FALSE
+%     , FIPS:=FALSE
+    , operator:=FALSE
+    , enableRevokeEK:=FALSE
+%     , nvLocked:=FALSE
+%     , readSRKPub:=FALSE
+%     , tpmEstablished:=FALSE
+    , maintenanceDone:=FALSE
+%     , disableFullDALogicInfo:=FALSE
   #);
 
   END PermanentFlags

@@ -30,9 +30,9 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   
   KEY : DATATYPE
   BEGIN
+    invalidKey : invalidKey?
     symKey(skey:KVAL) : symKey?
     asymKey(askey:KVAL) : asymKey?
-%    wrapKey(parentKey:(asymKey?),childKey:(asymKey?),a:AUTHDATA) : wrapKey?
   END KEY;		
 
   private(k:(asymKey?)):(asymKey?)
@@ -84,6 +84,7 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   %% Decryption for all key types
   decrypt(b:(encryptBlob?),k:KEY):BLOB = 
     CASES k OF 
+      invalidKey : nothing,
       symKey(k0) : decryptSym(b,k),
       asymKey(k0) : decryptAsym(b,k)
   ENDCASES;
@@ -103,14 +104,13 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   sigCheckAsym(b:(signBlob?),k:(asymKey?)):boolean =
     asymKey?(key(b)) AND asymKey?(k) AND key(b) = private(k);
 
-%  sigCheckWrapped(b:(signBlob?),k:(wrapKey?)):boolean = FALSE;
 
   %% Signature checking for all keys
   sigCheck(b:(signBlob?),k:KEY):boolean =
     CASES k OF
+      invalidKey : FALSE,
       symKey(k0) : sigCheckSym(b,k),
       asymKey(k0) : sigCheckAsym(b,k)
-%      wrapKey(k0,k1,a) : FALSE
     ENDCASES;
 
   %% A keyset is simply a set of asymetric keys
