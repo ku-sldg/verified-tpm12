@@ -665,7 +665,7 @@ tpm [ B:TYPE+, % BLOB
       IN s = changeLocalityState(
                changeLocalityState(
                  extendState(
-                   extendState(tpmStartup,0,hash(sinit)),0,hash(mle))))
+                   extendState(pcrsResetSenterState(tpmStartup),0,hash(sinit)),0,hash(mle))))
       AND a = outNothing
 
   %% Extend PCR n with hash value h.
