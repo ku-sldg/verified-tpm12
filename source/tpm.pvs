@@ -1038,7 +1038,7 @@ tpm [ B:TYPE+, % BLOB
 		  (state) IN
         a = outQuote(private(k),
 	             n,
-                     map((pcrsReset(pcrAttrib(permData(s))) WITH [(0) := extend(
+                     map((pcrsSenter(pcrsReset(pcrAttrib(permData(s))),allResetAccess) WITH [(0) := extend(
                                                      extend(reset,hash(sinit)),
                                                      hash(mle))]),
 	                 pm),
