@@ -113,7 +113,7 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
       asymKey(k0) : sigCheckAsym(b,k)
     ENDCASES;
 
-  %% A keyset is simply a set of asymetric keys
+  %% A keyset is simply a set of asymmetric keys
   KEYSET : TYPE = set[(asymKey?)];
 
   %% Check against the root key passed in as rk

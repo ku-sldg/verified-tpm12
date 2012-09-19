@@ -697,7 +697,9 @@ tpm [ B:TYPE+, % BLOB
   startup_after_init: THEOREM 
     FORALL (s:tpmAbsState,a:tpmAbsOutput,c:tpmAbsInput) :
       NOT ABS_Startup?(c) =>
-        LET (a0,s0) = runState(TPM_Init >> state(LAMBDA (s:tpmAbsState):(a,executeCom(s,c))))(s) IN
+        LET (a0,s0) = runState(
+	    	      TPM_Init 
+		      >> state(LAMBDA (s:tpmAbsState):(a,executeCom(s,c))))(s) IN
           LET (a1,s1) = runState(TPM_Init)(s) IN
 	      s0=s1
 
