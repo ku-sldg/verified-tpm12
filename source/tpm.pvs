@@ -820,9 +820,10 @@ tpm [ B:TYPE+ % BLOB
       LET (a,s) = runState(
      	          TPM_CreateWrapKey(p,a))
 		  (state) IN
-      LET wk : wrapKey = (# parentKey:=p, childKey:=asymKey(keyGenCnt(s)) #) IN
-          a = outWrapKey(wk,TPM_SUCCESS)
-      AND s = state;
+        LET wk : wrapKey = (# parentKey:=p,
+                              childKey:=asymKey(keyGenCnt(state)) #) IN
+           a = outWrapKey(wk,TPM_SUCCESS)
+           AND keyGenCnt(s) = keyGenCnt(state)+1;
 
 
   %% Install key k in a TPM
