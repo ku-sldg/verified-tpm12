@@ -348,6 +348,7 @@ tpm [ B:TYPE+ % BLOB
       ABS_Extend(h,n) : extendState(s,n,h),
       ABS_ActivateIdentity(a,k) : activateIdentityState(s,a,k),
       ABS_Init : tpmPostInit,
+      ABS_CreateWrapKey(parent,k_auth) : genKeyState(s),
       ABS_SaveState : saveState(s),
       ABS_OwnerClear(k): ownerClearState(s,k),
       ABS_ForceClear: forceClearState(s),
@@ -819,7 +820,7 @@ tpm [ B:TYPE+ % BLOB
       LET (a,s) = runState(
      	          TPM_CreateWrapKey(p,a))
 		  (state) IN
-      LET wk : wrapKey = (# parentKey:=p, childKey:=k #) IN
+      LET wk : wrapKey = (# parentKey:=p, childKey:=asymKey(keyGenCnt(s)) #) IN
           a = outWrapKey(wk,TPM_SUCCESS)
       AND s = state;
 
