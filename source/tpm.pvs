@@ -41,7 +41,7 @@ tpm [ B:TYPE+ % BLOB
       FORALL (b0,b1:B) : hash(b0)=hash(b1) iff b0=b1;
   ENDASSUMING
 
-  K : TYPE = posint;
+  K : TYPE = nat;
 
   IMPORTING pcr[HV];
   IMPORTING key[B,K,HV];
@@ -88,7 +88,7 @@ tpm [ B:TYPE+ % BLOB
     ABS_Seal(sk:(asymKey?),data:BLOB) : ABS_Seal?
     ABS_Unseal(s:(sealBlob?),uk:(asymKey?)) : ABS_Unseal?   
     ABS_UnBind(inData:(encryptBlob?),dk:(asymKey?)) : ABS_UnBind?
-    ABS_CreateWrapKey(parentk,wk:(asymKey?),wk_auth:AUTHDATA): ABS_CreateWrapKey?  
+    ABS_CreateWrapKey(parentk:(asymKey?),wk_auth:AUTHDATA): ABS_CreateWrapKey?  
   %% Key Management Commands
     ABS_LoadKey2(lk:wrapKey): ABS_LoadKey2? 
   %% Measurement Collection Commands
@@ -245,6 +245,10 @@ tpm [ B:TYPE+ % BLOB
 			 ELSE 0
 			 ENDIF];
   
+  %% Generate a new key
+  genKeyState(s:tpmAbsState) : tpmAbsState =
+    s WITH [`keyGenCnt := keyGenCnt(s)+1];
+
   %% Revoke key operation on TPM state
   revokeKeyState(s:tpmAbsState,k:wrapKey) : tpmAbsState =
     s WITH [`keys := removeKey(k,keys(s))];
@@ -392,10 +396,10 @@ tpm [ B:TYPE+ % BLOB
     
 
   % Generate a NEW RANDOM key pair.
-  createWrapKeyOut(parent,k:(asymKey?),a:AUTHDATA):tpmAbsOutput = 
+  createWrapKeyOut(s:tpmAbsState,parent:(asymKey?),a:AUTHDATA):tpmAbsOutput = 
      LET wk:wrapKey = (#
      	 	      parentKey:=parent, 
-		      childKey:=k
+		      childKey:=asymKey(keyGenCnt(s))
 		      #)
      IN outWrapKey(wk,TPM_SUCCESS)
 
@@ -487,7 +491,7 @@ tpm [ B:TYPE+ % BLOB
       ABS_Seal(k,data) : sealOut(s,k,data),
       ABS_Unseal(d,k) : unsealOut(s,d,k),
       ABS_UnBind(d,k) : unBindOut(s,d,k),
-      ABS_CreateWrapKey(parent,k,k_auth) : createWrapKeyOut(parent,k,k_auth),
+      ABS_CreateWrapKey(parent,k_auth) : createWrapKeyOut(s,parent,k_auth),
       ABS_PcrRead(ind) : pcrReadOut(s,ind),
       ABS_Quote(k,n,pm) : quoteOut(s,k,n,pm),
       ABS_MakeIdentity(a,k,auth) : makeIdentityOut(s,a,k,auth), 
@@ -802,15 +806,18 @@ tpm [ B:TYPE+ % BLOB
 
 
   %% Wrap new key k with parent key
-  TPM_CreateWrapKey(parent,k:(asymKey?),k_auth:AUTHDATA) : State = 
-     output(outNothing,
-            (LAMBDA (s:tpmAbsState) :
-	      outputCom(s,ABS_CreateWrapKey(parent,k,k_auth))));
+  TPM_CreateWrapKey(parent:(asymKey?),k_auth:AUTHDATA) : State = 
+     modifyOutput(outNothing,
+	  (LAMBDA (s:tpmAbsState) :
+	      executeCom(s,ABS_CreateWrapKey(parent,k_auth))),
+          (LAMBDA (s:tpmAbsState) :
+	      outputCom(s,ABS_CreateWrapKey(parent,k_auth)))
+	      );
 
   create_wrap_key_post: THEOREM 
     FORALL (p,k:(asymKey?),a:AUTHDATA,state:(afterStartup?)) : 
       LET (a,s) = runState(
-     	          TPM_CreateWrapKey(p,k,a))
+     	          TPM_CreateWrapKey(p,a))
 		  (state) IN
       LET wk : wrapKey = (# parentKey:=p, childKey:=k #) IN
           a = outWrapKey(wk,TPM_SUCCESS)
@@ -852,7 +859,7 @@ tpm [ B:TYPE+ % BLOB
   load_key_prev_post: THEOREM 
     FORALL (k,p:(asymKey?),auth:AUTHDATA,state:(afterStartup?)) :
       LET (out,s) = runState(
-      	  	    TPM_CreateWrapKey(p,k,auth)
+      	  	    TPM_CreateWrapKey(p,auth)
 		    >>= (LAMBDA (a:tpmAbsOutput) :
 		    	 CASES a OF
 		           outWrapKey(wk,m) : TPM_LoadKey2(wk)
@@ -871,13 +878,13 @@ tpm [ B:TYPE+ % BLOB
   nested_wrapped_keys_post: THEOREM 
     FORALL (k,j,p:(asymKey?),a1,a2:AUTHDATA,state:(afterStartup?)) :
       LET (a,s) = runState(
-		  TPM_CreateWrapKey(p,k,a1)
+		  TPM_CreateWrapKey(p,a1)
 		  >>= (LAMBDA (a:tpmAbsOutput) : 
 		       CASES a OF 
 		         outWrapKey(wk,m) : TPM_LoadKey2(wk) 
 			 ELSE TPM_Noop(a) 
 		       ENDCASES)
-		  >> TPM_CreateWrapKey(k,j,a2)
+		  >> TPM_CreateWrapKey(k,a2)
 		  >>= (LAMBDA (a:tpmAbsOutput) : 
 		       CASES a OF
 		         outWrapKey(wk,m) : TPM_LoadKey2(wk) 
@@ -1137,7 +1144,7 @@ tpm [ B:TYPE+ % BLOB
       		  >> TPM_Startup(TPM_ST_CLEAR)
 		  >> CPU_senter
 		  >> CPU_sinit
-		  >> TPM_CreateWrapKey(j,k,auth)
+		  >> TPM_CreateWrapKey(j,auth)
 		  >>= LAMBDA (a:tpmAbsOutput) : 
 		      CASES a OF 
 		        outWrapKey(owk,m) : TPM_LoadKey2(owk) 
