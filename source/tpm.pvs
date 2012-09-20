@@ -869,7 +869,7 @@ tpm [ B:TYPE+ % BLOB
 			 ENDCASES))
 		    (state) IN 
       checkKey(p,srk(state),keys(state)) =>
-      		member(k,keys(s))
+      		member(asymKey(keyGenCnt(state)),keys(s))
 %       IF not(member(k,keys(state))) AND checkKey(p,srk(state),keys(state))
 %       	 THEN member(k,keys(s))
 % 	 ELSE not(member(k,keys(s)))
