@@ -97,7 +97,7 @@ tpm [ B:TYPE+ % BLOB
     ABS_PcrRead(ind:PCRINDEX) : ABS_PcrRead?
     ABS_Quote(aik:wrapKey,nonce:BLOB,pm:PCRMASK) : ABS_Quote?
   %% AIK Commands
-    ABS_MakeIdentity(naik:(asymKey?),k:(symKey?),auth:AUTHDATA) : ABS_MakeIdentity?
+    ABS_MakeIdentity(k:(symKey?),auth:AUTHDATA) : ABS_MakeIdentity?
     ABS_ActivateIdentity(caik:wrapKey,k:(symKey?)) : ABS_ActivateIdentity?
   %% Cryptographic Commands
     ABS_Sign(sk:KEY,saik:wrapKey,sb:BLOB) : ABS_Sign?
@@ -349,6 +349,7 @@ tpm [ B:TYPE+ % BLOB
       ABS_ActivateIdentity(a,k) : activateIdentityState(s,a,k),
       ABS_Init : tpmPostInit,
       ABS_CreateWrapKey(parent,k_auth) : genKeyState(s),
+      ABS_MakeIdentity(k,auth) : genKeyState(s), 
       ABS_SaveState : saveState(s),
       ABS_OwnerClear(k): ownerClearState(s,k),
       ABS_ForceClear: forceClearState(s),
@@ -427,10 +428,10 @@ tpm [ B:TYPE+ % BLOB
 
 
   % Output a newly generated AIK.  Note that a simulates the new aik.
-  makeIdentityOut(s:tpmAbsState,a:(asymKey?),k:(symKey?),auth:AUTHDATA) : tpmAbsOutput =
+  makeIdentityOut(s:tpmAbsState,k:(symKey?),auth:AUTHDATA) : tpmAbsOutput =
     LET waik:wrapKey = (# 
     		       parentKey:=srk(s),
-		       childKey:=a 
+		       childKey:=asymKey(keyGenCnt(s))
 		       #) 
     IN outIdentity(waik,outCertReq(waik,ekVal,k,TPM_SUCCESS),TPM_SUCCESS);
 
@@ -495,7 +496,7 @@ tpm [ B:TYPE+ % BLOB
       ABS_CreateWrapKey(parent,k_auth) : createWrapKeyOut(s,parent,k_auth),
       ABS_PcrRead(ind) : pcrReadOut(s,ind),
       ABS_Quote(k,n,pm) : quoteOut(s,k,n,pm),
-      ABS_MakeIdentity(a,k,auth) : makeIdentityOut(s,a,k,auth), 
+      ABS_MakeIdentity(k,auth) : makeIdentityOut(s,k,auth), 
       ABS_ActivateIdentity(a,k) : activateIdentityOut(s,a,k),
       ABS_Sign(sk,aik,sb) : signOut(s,sk,aik,sb),
       ABS_TakeOwnership : takeOwnershipOut,
@@ -907,14 +908,16 @@ tpm [ B:TYPE+ % BLOB
 
 
   %% Make a new identity and output it
-  TPM_MakeIdentity(n:(asymKey?),k:(symKey?),a:AUTHDATA) : State =
-     output(outNothing,
-            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_MakeIdentity(n,k,a))));
+  TPM_MakeIdentity(k:(symKey?),a:AUTHDATA) : State =
+     modifyOutput(outNothing,
+	    (LAMBDA (s:tpmAbsState) : executeCom(s,ABS_MakeIdentity(k,a))),
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_MakeIdentity(k,a)))
+	    );
 
   make_identity_post: THEOREM 
     FORALL (ak:(asymKey?),k:(symKey?),auth:AUTHDATA,state:(afterStartup?)) :
       LET (a,s) = runState(
-     	 	   TPM_MakeIdentity(ak,k,auth))
+     	 	   TPM_MakeIdentity(k,auth))
 		 (state) IN
       LET waik:wrapKey = (# parentKey:=srk(s),childKey:=ak #) IN
             a = outIdentity(waik,outCertReq(waik,ekVal,k,TPM_SUCCESS),TPM_SUCCESS)
@@ -943,7 +946,7 @@ tpm [ B:TYPE+ % BLOB
   activate_prev_post: THEOREM 
     FORALL (aik:(asymKey?),k:(symKey?),auth:AUTHDATA,state:(afterStartup?)) :
       LET  (out,s) = runState(
- 		     TPM_MakeIdentity(aik,k,auth) % identity is output
+ 		     TPM_MakeIdentity(k,auth) % identity is output
 		     >>= (LAMBDA (a:tpmAbsOutput) : 
 		       	  CASES a OF
 		            outIdentity(oidentaik,oidentc,m) : TPM_ActivateIdentity(oidentaik,k)
@@ -1055,7 +1058,7 @@ tpm [ B:TYPE+ % BLOB
 		  >> TPM_Startup(TPM_ST_CLEAR)
 		  >> CPU_senter
 		  >> CPU_sinit
-		  >> TPM_MakeIdentity(k,sessk,auth)
+		  >> TPM_MakeIdentity(sessk,auth)
 		  >>= (LAMBDA (a:tpmAbsOutput) : 
 		       CASES a OF 
 		         outIdentity(oidentaik,oidentc,m) : TPM_Quote(oidentaik,n,pm) 
@@ -1270,7 +1273,7 @@ tpm [ B:TYPE+ % BLOB
  		   >> TPM_Startup(TPM_ST_CLEAR)
  		   >> CPU_senter
  		   >> CPU_sinit
- 		   >> TPM_MakeIdentity(aik,k,auth) % identity is output
+ 		   >> TPM_MakeIdentity(k,auth) % identity is output
 		   >>= CPU_saveOutput(0)
 		   >>= (LAMBDA (a:tpmAbsOutput) :
 		         CASES a OF
