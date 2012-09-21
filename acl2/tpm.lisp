@@ -20,15 +20,17 @@
 ; (include-book "tools/defconsts" :dir :system)
 (include-book "misc/assert" :dir :system)
 (include-book "misc/defun-plus" :dir :system)
+(include-book "cutil/defaggregate" :dir :system)
 
 (include-book "pcr")
+(include-book "crypto")
+(include-book "key")
+(include-book "perm-flags")
 
 ; potentially useful for proof debugging
 (include-book "misc/untranslate-patterns" :dir :system)
-(add-untranslate-pattern (cddddr (cddr ?x)) (asdf ?tpm-s))
-(add-untranslate-pattern (cadddr (cdr tpm-s)) (keys tpm-s))
 
-
+#|
 (defrec tpm-state
   (mem post-init srk ek keys pcrs locality)
   t)
@@ -44,21 +46,25 @@
                          (pcrs tpm-s))
 (add-untranslate-pattern (car (cdr (cdr (cdr (cdr (cdr (cdr tpm-s))))))) 
                          (locality tpm-s))
+|#
 
-(defun srk-p (srk)
-  (declare (xargs :guard t))
-  (declare (ignore srk))
-  t
-  ;(integerp srk)
-  )
-  
+(defn srk-p (srk)
+  (asymmetric-key-p srk))
 
-(defun ek-p (ek)
-  (declare (xargs :guard t))
-  (declare (ignore ek))
-  ;(integerp ek)
-  t)
+(defthm srk-p-implies-asymmetric-key-p
+  (implies (srk-p key)
+           (asymmetric-key-p key)))
 
+(defn ek-p (ek)
+  (asymmetric-key-p ek))
+
+(defthm ek-p-implies-asymmetric-key-p
+  (implies (ek-p key)
+           (asymmetric-key-p key)))
+
+(in-theory (disable srk-p ek-p))
+
+#|
 (defun key-p (key) 
   (declare (xargs :guard t))
   (integerp key))
@@ -74,143 +80,228 @@
 ; requires induction, so we go ahead and write the lemma
   (implies (keys-p x) 
            (true-listp x)))
+|#
 
 (defconst *pcrs-reset* nil)
 
-(defun locality-p (locality)
-  (declare (xargs :guard t))
+(defnd locality-p (locality)
   (and (integerp locality)
        (<= locality 4)
        (>= locality 0)))
 
-(defun tpm-state-p (tpm-s)
-  (declare (xargs :guard t)) ; "type" predicate functions typically have a guard of t
-  (and (true-listp tpm-s)
-       (equal (length tpm-s) 7)
-       (true-listp (access tpm-state tpm-s :mem))
-       (booleanp (access tpm-state tpm-s :post-init))
-       (srk-p (access tpm-state tpm-s :srk))
-       (ek-p (access tpm-state tpm-s :ek))
-       (keys-p (access tpm-state tpm-s :keys))
-       (pcrs-p (access tpm-state tpm-s :pcrs))
-       (locality-p (access tpm-state tpm-s :locality))))
+
+(cutil::defaggregate tpm-state
+  (mem post-init srk ek keys pcrs locality perm-flags perm-data disable-force-clear)
+  :require ((tpm-state->mem-true-listp
+             (true-listp mem)
+             ;:rule-classes :type-prescription
+             )
+            (tpm-state->post-init-booleanp
+             (booleanp post-init)
+             ;:rule-classes :type-prescription
+             )
+            (tpm-state->srk-srk-p
+             (srk-p srk)
+             ;:rule-classes :type-prescription
+             )
+            (tpm-state->ek-ek-p
+             (ek-p ek)
+             ;:rule-classes :type-prescription
+             )
+            (tpm-state->keyset-keyset-p
+             (keyset-p keys)
+             ;:rule-classes :type-prescription
+             )
+            (tpm-state->pcrs-pcrs-p
+             (pcrs-p pcrs)
+             ;:rule-classes :type-prescription
+             )
+            (tpm-state->locality-locality-p
+             (locality-p locality)
+             ;:rule-classes :type-prescription
+             )
+            (tpm-state->perm-flags-perm-flags-p
+             (perm-flags-p perm-flags))
+            (tpm-state->disable-force-clear-booleanp
+             (booleanp disable-force-clear)
+             :rule-classes :type-prescription))
+  :tag :tpm-state)
+
+;; (defun tpm-state-p (tpm-s)
+;;   (declare (xargs :guard t)) ; "type" predicate functions typically have a guard of t
+;;   (and (true-listp tpm-s)
+;;        (equal (length tpm-s) 7)
+;;        (true-listp (access tpm-state tpm-s :mem))
+;;        (booleanp (access tpm-state tpm-s :post-init))
+;;        (srk-p (access tpm-state tpm-s :srk))
+;;        (ek-p (access tpm-state tpm-s :ek))
+;;        (keyset-p (access tpm-state tpm-s :keys))
+;;        (pcrs-p (access tpm-state tpm-s :pcrs))
+;;        (locality-p (access tpm-state tpm-s :locality))))
 
 (defconst *tpm-post-init* 
-  (make tpm-state						
+  (make-tpm-state						
         :mem nil
         :post-init t
-        :srk :srkval
-        :ek :ekval
+        :srk 1
+        :ek 1
         :keys nil
         :pcrs nil
-        :locality 4))
+        :locality 4
+        :perm-flags *perm-flags-init*))
 
 (assert! (tpm-state-p *tpm-post-init*))
 
 ; Example usage that accesses the mem field inside the variable tpm-s, which is
 ; of type tpm-state.
 
-(access tpm-state *tpm-post-init* :mem)
+(tpm-state->mem *tpm-post-init*)
 
 ; Example usage that changes the mem field inside the variable tpm-s, which is
 ; of type tpm-state.
 
-(change tpm-state *tpm-post-init*
+(change-tpm-state *tpm-post-init*
         :mem '(1 2 3))
 
 (defconst *tpm-startup*
-  (make tpm-state
+  (make-tpm-state
         :mem nil
         :post-init nil
-        :srk :srkval
-        :ek :ekval
+        :srk 1
+        :ek 1
         :keys nil
         :pcrs nil
-        :locality 4))
+        :locality 4
+        :perm-flags *perm-flags-init*))
 
 (assert! (tpm-state-p *tpm-startup*))
 
 (defun after-init-p (tpm-s)
   (declare (xargs :guard (tpm-state-p tpm-s)))
-  (access tpm-state tpm-s :post-init))
+  (tpm-state->post-init tpm-s))
+
+(defthm after-init-p-boolean-p
+  (implies (tpm-state-p tpm-s)
+           (booleanp (after-init-p tpm-s)))
+  :rule-classes :type-prescription)
 
 (defun after-startup-p (tpm-s)
   (declare (xargs :guard (tpm-state-p tpm-s)))
-  (not (access tpm-state tpm-s :post-init)))
+  (not (tpm-state->post-init tpm-s)))
 
 ; TODO: consider removing the "state" suffix from the following functions.  If
 ; Perry or someone else reads this, feel free to articulate the reason that
 ; "state" is a suffix and then remove this todo if I (Rager) was just missing
 ; something.
 
+;(in-theory (enable tpm-state-p tpm-state->srk))
+
 (defun+ pcrs-reset-senter-state (tpm-s)
   (declare (xargs :guard (tpm-state-p tpm-s)
                   :output (tpm-state-p (pcrs-reset-senter-state tpm-s))))
-  (change tpm-state tpm-s
-          :pcrs *pcrs-reset*))
+  (change-tpm-state tpm-s
+                    :pcrs *pcrs-reset*))
+
+(local
+ (defthm change-locality-state-lemma1
+   (implies (and (tpm-state-p tpm-s)
+                 (< 0 (tpm-state->locality tpm-s)))
+            (locality-p (1- (tpm-state->locality tpm-s))))
+   :hints (("Goal" :in-theory (enable locality-p tpm-state-p
+                                      tpm-state->locality)))))
+
+(local
+ (defthm change-locality-state-lemma2
+   (implies (tpm-state-p tpm-s)
+            (rationalp (tpm-state->locality tpm-s)))
+   :hints (("Goal" :in-theory (enable tpm-state-p tpm-state->locality locality-p)))))
+
 
 (defun+ change-locality-state (tpm-s)
+
+; Here is an example where our inability to restrict reasoning about the
+; locality to be a natural number (as is done in tpm.pvs) bites us in the tail
+; a bit.
+
   (declare (xargs :guard (tpm-state-p tpm-s)
                   :output (tpm-state-p (change-locality-state tpm-s))))
-  (let ((prev-locality (access tpm-state tpm-s :locality)))
-    (change tpm-state tpm-s
-            :locality 
-            (if (> prev-locality 0)
-                (1- prev-locality)
-              prev-locality))))
+  (let ((prev-locality (tpm-state->locality tpm-s)))
+    (change-tpm-state tpm-s
+                      :locality 
+                      (if (> prev-locality 0)
+                          (1- prev-locality)
+                        prev-locality))))
 
-(defun+ remove-key (key keys)
-  (declare (xargs :guard (and (key-p key)
-                              (keys-p keys))
-                  :output (keys-p (remove-key key keys))))
-  (remove key keys))
-
-(defun revoke-key-state (key tpm-s)
+(defun+ revoke-key-state (wrap-key tpm-s)
   (declare (xargs :guard (and (tpm-state-p tpm-s)
-                              (key-p key))))
-  (change tpm-state tpm-s
-          :keys (remove-key key
-                            (access tpm-state tpm-s
-                                    :keys))))
+                              (wrap-key-p wrap-key))
+                  :output (tpm-state-p (revoke-key-state wrap-key tpm-s))))
+  (change-tpm-state tpm-s
+          :keys (remove-key wrap-key
+                            (tpm-state->keys tpm-s))))
 
-(skip-proofs
+(defthm revoke-key-state-preserves-tpm-state-p
+  (implies (and (tpm-state-p tpm-s)
+                (wrap-key-p wrap-key))
+           (tpm-state-p (revoke-key-state wrap-key tpm-s))))
 
-; ACL2 should probably be able to prove this automatically, so there's a good
-; chance there is a bug in remove-key or revoke-key-state.
-
- (defthm revoke-key-state-preserves-tpm-state-p
-
-   (implies (and (tpm-state-p tpm-s)
-                 (key-p key))
-            (tpm-state-p (revoke-key-state key tpm-s)))))
-
-(defun+ add-key (key keys)
-  (declare (xargs :guard (and (key-p key)
-                              (keys-p keys))
-                  :output (keys-p (add-key key keys))))
-  (cons key keys))
-
-(defun+ load-key-to-state (key tpm-s)
+(defun+ load-key-to-state (wrap-key tpm-s)
   (declare (xargs :guard (and (tpm-state-p tpm-s)
-                              (key-p key))
-                  :output (tpm-state-p (load-key-to-state key tpm-s))))
-  (change tpm-state tpm-s
-          :keys (add-key key
-                         (access tpm-state tpm-s :keys))))
+                              (wrap-key-p wrap-key))
+                  :output (tpm-state-p (load-key-to-state wrap-key tpm-s))))
+  (change-tpm-state tpm-s
+                    :keys (add-key wrap-key
+                                   (tpm-state->srk tpm-s)
+                                   (tpm-state->keys tpm-s))))
 
-(skip-proofs
- (defun+ extend-state (index hash-value tpm-s)
+(defun+ extend-state (index hash-value tpm-s)
+  (declare (xargs :guard (and (pcr-index-p index)
+                              (valid-extension-value-p hash-value)
+                              (tpm-state-p tpm-s))
+                  :output (tpm-state-p (extend-state index hash-value
+                                                     tpm-s))))
+  (change-tpm-state tpm-s :pcrs
+          (pcrs-extend (tpm-state->pcrs tpm-s)
+                       index
+                       hash-value)))
 
-; TODO: ask Perry/Brigid whether this function should have a diff name
+(defun+ activate-identity-state (wrap-key key tpm-s)
 
-   (declare (xargs :guard (and (integerp index)
-                               (valid-extension-value-p hash-value)
-                               (tpm-state-p tpm-s))
-                   :output (tpm-state-p (extend-state index hash-value
-                                                      tpm-s))))
-   (change tpm-state tpm-s :pcrs
-           (pcrs-extend (access tpm-state tpm-s :pcrs)
-                        index
-                        hash-value))))
+; The function in tpm.pvs accepts a third argument, called "key", which is of
+; the type symKey.  We accept this third argument but ignore it for now.  In
+; the long run, this argument should be either removed or used.
+
+  (declare (xargs :guard (and (wrap-key-p wrap-key)
+                              (tpm-state-p tpm-s))
+                  :output (tpm-state-p (activate-identity-state wrap-key
+                                                                free-var-key 
+                                                                tpm-s)))
+           (ignore key))
+  (load-key-to-state wrap-key tpm-s))
+
+(defun+ clear (tpm-s) ; not fully implemented
+  (declare (xargs :guard (tpm-state-p tpm-s)
+                  :output (tpm-state-p (clear tpm-s))))
+  (change-tpm-state tpm-s :keys nil))
 
 
+#|
+(defun+ owner-clear-state (auth tpm-s)
+  (declare (xargs :guard (and (tpm-state-p tpm-s)
+                              (asymmetric-key-p auth))
+                  :output (tpm-state-p (owner-clear-state auth tpm-s))))
+  (cond ((and (equal auth (compute-private-key-from-public-key 
+                           (tpm-state->srk tpm-s)))
+              (not *disable-owner-clear-flag*))
+         (clear tpm-s))
+        (t 
+         tpm-s)))
+
+(defun+ force-clear-state (tpm-s)
+  (declare (xargs :guard (tpm-state-p tpm-s)
+                  :output (tpm-state-p (force-clear-state tpm-s))))
+  (cond (*disable-force-clear*
+         tpm-s)
+        (t
+         tpm-s)))
+|#
