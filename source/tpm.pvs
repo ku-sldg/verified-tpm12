@@ -878,23 +878,29 @@ tpm [ B:TYPE+ % BLOB
 
   %%install nested wrapped keys?
   nested_wrapped_keys_post: THEOREM 
-    FORALL (k,j,p:(asymKey?),a1,a2:AUTHDATA,state:(afterStartup?)) :
+    FORALL (p:(asymKey?),a1,a2:AUTHDATA,state:(afterStartup?)) :
       LET (a,s) = runState(
 		  TPM_CreateWrapKey(p,a1)
+		  >>= CPU_saveOutput(0)
 		  >>= (LAMBDA (a:tpmAbsOutput) : 
 		       CASES a OF 
 		         outWrapKey(wk,m) : TPM_LoadKey2(wk) 
 			 ELSE TPM_Noop(a) 
 		       ENDCASES)
-		  >> TPM_CreateWrapKey(k,a2)
+		  >>= (LAMBDA (a:tpmAbsOutput) :
+		       CASES a OF
+		         outWrapKey(wk,m) : TPM_CreateWrapKey(childKey(wk),a2)
+			 ELSE TPM_Noop(a)
+		       ENDCASES)
+		  >>= CPU_saveOutput(1)
 		  >>= (LAMBDA (a:tpmAbsOutput) : 
 		       CASES a OF
 		         outWrapKey(wk,m) : TPM_LoadKey2(wk) 
 			 ELSE TPM_Noop(a) 
 		       ENDCASES))
 		  (state) IN
-	checkKey(p,srk(s),keys(s)) =>
-		 member(j,keys(s)) 
+	checkKey(p,srk(s),keys(s)) AND outWrapKey?(memory(s)(1)) =>
+		 member(childKey(owk(memory(s)(1))),keys(s)) 
 % 	AND member(k,keys(s))
 	AND a = outNothing
 
