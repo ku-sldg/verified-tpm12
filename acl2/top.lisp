@@ -1,3 +1,3 @@
-(include-book "security/jfrk/crypto" :dir :system)
+(in-package "ACL2")
 
 (include-book "tpm")

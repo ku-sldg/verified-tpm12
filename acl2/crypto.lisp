@@ -173,4 +173,3 @@
 ;;   (and (consp wkey)
 ;;        (asymmetric-key-p (car wkey))
 ;;        (asymmetric-key-p (cdr wkey))))
-

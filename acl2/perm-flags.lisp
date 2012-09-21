@@ -1,5 +1,7 @@
 (in-package "ACL2")
 
+(include-book "cutil/defaggregate" :dir :system)
+
 (cutil::defaggregate perm-flags
 
   (disable

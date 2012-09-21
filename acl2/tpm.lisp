@@ -1,3 +1,5 @@
+(in-package "ACL2")
+
 ; Some notes on ACL2 coding conventions:
 
 ; Typically Rager will simply append a "p" to the name of functions that he
@@ -22,13 +24,20 @@
 (include-book "misc/defun-plus" :dir :system)
 (include-book "cutil/defaggregate" :dir :system)
 
+(defmacro why (rule)
+  ;; BOZO eventually improve this to handle other rule-classes and
+  ;; such automatically.  That is, look up the name of the rule, etc.
+  `(ACL2::er-progn
+    (ACL2::brr t)
+    (ACL2::monitor '(:rewrite ,rule) ''(:eval :go t))))
+
 (include-book "pcr")
 (include-book "crypto")
 (include-book "key")
 (include-book "perm-flags")
 
 ; potentially useful for proof debugging
-(include-book "misc/untranslate-patterns" :dir :system)
+;(include-book "misc/untranslate-patterns" :dir :system)
 
 #|
 (defrec tpm-state
@@ -89,43 +98,68 @@
        (<= locality 4)
        (>= locality 0)))
 
-
 (cutil::defaggregate tpm-state
   (mem post-init srk ek keys pcrs locality perm-flags perm-data disable-force-clear)
   :require ((tpm-state->mem-true-listp
              (true-listp mem)
-             ;:rule-classes :type-prescription
+;             :rule-classes :forward-chaining
              )
             (tpm-state->post-init-booleanp
              (booleanp post-init)
-             ;:rule-classes :type-prescription
+ ;            :rule-classes :forward-chaining
              )
             (tpm-state->srk-srk-p
              (srk-p srk)
-             ;:rule-classes :type-prescription
+  ;           :rule-classes :forward-chaining
              )
             (tpm-state->ek-ek-p
              (ek-p ek)
-             ;:rule-classes :type-prescription
+   ;          :rule-classes :forward-chaining
              )
             (tpm-state->keyset-keyset-p
              (keyset-p keys)
-             ;:rule-classes :type-prescription
+    ;         :rule-classes :forward-chaining
              )
             (tpm-state->pcrs-pcrs-p
              (pcrs-p pcrs)
-             ;:rule-classes :type-prescription
+     ;        :rule-classes :forward-chaining
              )
             (tpm-state->locality-locality-p
              (locality-p locality)
-             ;:rule-classes :type-prescription
+      ;       :rule-classes :forward-chaining
              )
             (tpm-state->perm-flags-perm-flags-p
              (perm-flags-p perm-flags))
+
             (tpm-state->disable-force-clear-booleanp
              (booleanp disable-force-clear)
              :rule-classes :type-prescription))
   :tag :tpm-state)
+
+(defthm locality-p-implies-natp
+  
+; TODO: ask someone why this is needed for the proof of
+; change-locality-state-lemma1.  Shouldn't tpm-state->locality-locality-p
+; suffice?
+
+  (implies (locality-p x)
+           (and (natp x)
+                (<= x 4)
+                (>= x 0)))
+            
+  :rule-classes :compound-recognizer
+  :hints (("Goal" :in-theory (enable locality-p))))
+
+(defthm tpm-state->locality-nat-p
+  (implies (force (tpm-state-p x))
+           (natp (tpm-state->locality x)))
+  :rule-classes :type-prescription)
+
+; locality < 5 as a linear rule
+
+
+
+; (why tpm-state->locality-locality-p)
 
 ;; (defun tpm-state-p (tpm-s)
 ;;   (declare (xargs :guard t)) ; "type" predicate functions typically have a guard of t
@@ -155,13 +189,13 @@
 ; Example usage that accesses the mem field inside the variable tpm-s, which is
 ; of type tpm-state.
 
-(tpm-state->mem *tpm-post-init*)
+; (tpm-state->mem *tpm-post-init*)
 
 ; Example usage that changes the mem field inside the variable tpm-s, which is
 ; of type tpm-state.
 
-(change-tpm-state *tpm-post-init*
-        :mem '(1 2 3))
+; (change-tpm-state *tpm-post-init*
+;         :mem '(1 2 3))
 
 (defconst *tpm-startup*
   (make-tpm-state
@@ -203,19 +237,52 @@
                     :pcrs *pcrs-reset*))
 
 (local
- (defthm change-locality-state-lemma1
+ (defthmd change-locality-state-lemma
    (implies (and (tpm-state-p tpm-s)
                  (< 0 (tpm-state->locality tpm-s)))
             (locality-p (1- (tpm-state->locality tpm-s))))
-   :hints (("Goal" :in-theory (enable locality-p tpm-state-p
-                                      tpm-state->locality)))))
+   :hints (("Goal" :use ((:instance tpm-state->locality-locality-p
+                                    (x tpm-s)))
+            :in-theory (e/d (locality-p) (tpm-state->locality-locality-p))))))
 
+;; (local 
+;;  (defthm change-locality-state-lemma-other-option
+;;    (implies (and (tpm-state-p tpm-s)
+;;                  (< 0 (tpm-state->locality tpm-s)))
+;;             (<= (tpm-state->locality tpm-s)
+;;                 5))
+;;    :hints (("Goal" :use ((:instance tpm-state->locality-locality-p
+;;                                     (x tpm-s)))
+;;             :in-theory (e/d (locality-p) (tpm-state->locality-locality-p))))
+;;    :rule-classes :linear))
+
+;; "Hand" proof of change-locality-state-lemma2, based off of forward-chaining
+;; (adding hypotheses until you get the conclusion).  ACL2 doesn't do this
+;; forward-chaining on its own, so we added lemmas locality-p-implies-natp and
+;; tpm-state->locality-nat-p.
+
+;; (implies (tpm-state-p tpm-s)
+;;          (rationalp (tpm-state->locality tpm-s)))
+
+;; < tpm-state->locality-locality-p >
+
+;; (implies (and (tpm-state-p tpm-s)
+;;               (locality-p (tpm-state->locality tpm-s)))
+;;          (rationalp (tpm-state->locality tpm-s)))
+
+;; < definition of locality-p >
+
+;; (implies (and (tpm-state-p tpm-s)
+;;               (locality-p (tpm-state->locality tpm-s))
+;;               (rationalp (tpm-state->locality tpm-s)))
+;;          (rationalp (tpm-state->locality tpm-s)))
+
+#|
 (local
  (defthm change-locality-state-lemma2
    (implies (tpm-state-p tpm-s)
-            (rationalp (tpm-state->locality tpm-s)))
-   :hints (("Goal" :in-theory (enable tpm-state-p tpm-state->locality locality-p)))))
-
+            (rationalp (tpm-state->locality tpm-s)))))
+|#
 
 (defun+ change-locality-state (tpm-s)
 
@@ -224,7 +291,11 @@
 ; a bit.
 
   (declare (xargs :guard (tpm-state-p tpm-s)
-                  :output (tpm-state-p (change-locality-state tpm-s))))
+                  :guard-hints (("Goal" :in-theory 
+                                 (enable change-locality-state-lemma)))
+                  :output (tpm-state-p (change-locality-state tpm-s))
+                  :output-hints (("Goal" :in-theory 
+                                  (enable change-locality-state-lemma)))))
   (let ((prev-locality (tpm-state->locality tpm-s)))
     (change-tpm-state tpm-s
                       :locality 
