@@ -13,11 +13,6 @@
 %%  pcr.pvs
 %%
 %% Todo: (key - => pending, + => done)
-%%  + AIKs are all wrapped by SRK - no chaining allowed
-%%  - AIKs need to be installed, not just checked, when used
-%%  + MakeIdentity creates a pair
-%%  - data sent to the CA is encrypted with the CA public key
-%%  - noop needs to generate a message when used in error cases
 %% ----
 
 %% Standard Error IDs
@@ -1178,7 +1173,7 @@ tpm [ B:TYPE+ % BLOB
   %% Monotonicity of locality
   %% Assuming that we're not resetting or powering on, locality goes down
   %% or remains the same
-  %% unproven - Wed Jun 13 23:15:36 CDT 2012
+  %% proved - Fri Sep 21 15:07:30 CDT 2012
   monotonic_locality: THEOREM 
     FORALL (s:tpmAbsState,c:tpmAbsInput) :
       not(ABS_Init?(c) or ABS_Startup?(c)) =>
@@ -1246,7 +1241,7 @@ tpm [ B:TYPE+ % BLOB
 		  >> CPU_sinit
 		  >> TPM_Quote(aik,b,pm))
 		  (state) IN
-       NOT checkKeyRoot(aik,srk(s)) => out=outError(TPM_INVALID_KEYUSAGE);              
+       NOT checkKeyRoot(aik,srk(s)) => out=outError(TPM_INVALID_KEYUSAGE);
 
    %% Simple verification of the quote generation process from init
    %% through generation of the appraiser's quote.  Yay.  This is what
