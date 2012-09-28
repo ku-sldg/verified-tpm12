@@ -1,3 +1,5 @@
 ; Setup packages
 
 (include-book "cutil/portcullis" :dir :system)
+
+; (set-waterfall-parallelism t)

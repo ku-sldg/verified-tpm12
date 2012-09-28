@@ -96,11 +96,21 @@
                            (compute-private-key-from-public-key public-key))))
   (- public-key))
 
-
 (defun public-private-key-pair-p (x y)
   (declare (xargs :guard (and (asymmetric-key-p x)
                               (asymmetric-key-p y))))
   (equal x (- y)))
+
+(defthm computed-private-key-is-paired-with-given-public-key
+  (implies (asymmetric-key-p public-key)
+           (and (public-private-key-pair-p public-key
+                                           (compute-private-key-from-public-key
+                                   public-key))
+         (public-private-key-pair-p (compute-private-key-from-public-key
+                                     public-key)
+                                    public-key))))
+
+(in-theory (disable compute-private-key-from-public-key))
 
 (defun+ encrypt-asymmetric-list (lst key)
   (declare (xargs :guard (and (asymmetric-key-p key)
