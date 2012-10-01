@@ -67,12 +67,13 @@ tpm [ B:TYPE+, % BLOB
   END tpmAbsOutput;
 
   IMPORTING memory[tpmAbsOutput,outNothing];
+  
 
   %% State monad input type.  All inputs are in the form of a command with
   %% parameters.
   tpmAbsInput : DATATYPE
   BEGIN
-  %% Startup commands
+  %% Admin Startup and State commands (4)
     ABS_Reset : ABS_Reset? %unimplemented
     ABS_Init : ABS_Init? 
     ABS_SaveState : ABS_SaveState?
@@ -81,12 +82,10 @@ tpm [ B:TYPE+, % BLOB
     ABS_Seal(sk:(asymKey?),data:BLOB) : ABS_Seal?
     ABS_Unseal(s:(sealBlob?),uk:(asymKey?)) : ABS_Unseal?   
     ABS_UnBind(inData:(encryptBlob?),dk:(asymKey?)) : ABS_UnBind?
-    ABS_CreateWrapKey(parentk,wk:(asymKey?),wk_auth:AUTHDATA): ABS_CreateWrapKey?  
-  %% Key Management Commands
+    ABS_CreateWrapKey(parentk,wk:(asymKey?)): ABS_CreateWrapKey?  
     ABS_LoadKey2(lk:wrapKey): ABS_LoadKey2? 
-  %% Measurement Collection Commands
+  %% Integrity Collection and Reporting (16)
     ABS_Extend(h:HV,i:PCRINDEX) : ABS_Extend?
-  %% Measurement Reporting Commands
     ABS_PcrRead(ind:PCRINDEX) : ABS_PcrRead?
     ABS_Quote(aik:wrapKey,nonce:BLOB,pm:PCRMASK) : ABS_Quote?
   %% Endorsement Key Handling (14)
@@ -103,6 +102,13 @@ tpm [ B:TYPE+, % BLOB
     ABS_ForceClear : ABS_ForceClear? 
     ABS_DisableOwnerClear : ABS_DisableOwnerClear? 
     ABS_DisableForceClear : ABS_DisableForceClear? 
+  %% Migration Commands (11)
+    ABS_CreateMigrationBlob(pk:(asymKey?),m:migrateScheme,encData:BLOB) : ABS_CreateMigrationBlob?
+    ABS_ConvertMigrationBlob : ABS_ConvertMigrationBlob?
+    ABS_AuthorizeMigrationKey(migKey:KEY,migScheme:migrateScheme) : ABS_AuthorizeMigrationKey?
+    ABS_MigrateKey : ABS_MigrateKey?
+  %% Changing AuthData (17)
+    ABS_ChangeAuth : ABS_ChangeAuth?
   %% Software Commands
     ABS_senter : ABS_senter? % implemented all actions as one senter
     ABS_sinit : ABS_sinit? % partially implemented
@@ -290,6 +296,12 @@ tpm [ B:TYPE+, % BLOB
   disableForceClearState(s:tpmAbsState) : tpmAbsState = 
     s WITH [`disableForceClear:=TRUE];
 
+%   createMigrationBlobState(s:tpmAbsState,pk:(asymKey?),m:migrateScheme,encData:BLOB) : tpmAbsState 
+%   convertMigrationBlobState(s:tpmAbsState) : tpmAbsState 
+%   migrateKeyState(s:tpmAbsState) : tpmAbsState 
+%   changeAuthState(s:tpmAbsState) : tpmAbsState 
+
+
   saveState(s:tpmAbsState) : tpmAbsState =
     s WITH [`restore:=saveState(keys(s)
                                 , ek(s)
@@ -357,6 +369,10 @@ tpm [ B:TYPE+, % BLOB
       ABS_ForceClear: forceClearState(s),
       ABS_DisableOwnerClear: disableOwnerClearState(s),
       ABS_DisableForceClear: disableForceClearState(s),
+%       ABS_CreateMigrationBlob(pk,m,encData) : createMigrationBlobState(s,pk,m,encData),
+%       ABS_ConvertMigrationBlob : convertMigrationBlobState(s),
+%       ABS_MigrateKey : migrateKeyState(s),
+%       ABS_ChangeAuth : changeAuthState(s),
       ABS_senter : 
         changeLocalityState(extendState(pcrsResetSenterState(s),0,hash(sinit))),
       ABS_sinit : changeLocalityState(extendState(s,0,hash(mle))),
@@ -400,7 +416,7 @@ tpm [ B:TYPE+, % BLOB
     
 
   % Generate a NEW RANDOM key pair.
-  createWrapKeyOut(parent,k:(asymKey?),a:AUTHDATA):tpmAbsOutput = 
+  createWrapKeyOut(parent,k:(asymKey?)):tpmAbsOutput = 
      LET wk:wrapKey = (#
      	 	      parentKey:=parent, 
 		      childKey:=k
@@ -497,6 +513,30 @@ tpm [ B:TYPE+, % BLOB
       ELSE outNothing
     ENDIF
 
+  createMigrationBlobOut(s:tpmAbsState,k:(asymKey?),migType:migrateScheme,
+			 migKeyAuth:(authorizationBlob?),encData:BLOB) : tpmAbsOutput =
+    CASES migType OF
+      migrate : outError(TPM_INSTALL_DISABLED),
+      rewrap  : LET wk:wrapKey = (#
+     	 	      	       	 parentKey:=(migKey(migKeyAuth)), 
+		      	       	 childKey:=k
+				 #)
+     		IN outWrapKey(wk,TPM_SUCCESS)
+
+%      ELSE outError(TPM_BAD_PARAMETER)
+    ENDCASES	
+
+  convertMigrationBlobOut(s:tpmAbsState,k:(asymKey?),inData:BLOB) : tpmAbsOutput
+    %%outData = encrypted private key that can be loaded with tpm_loadkey 
+    %%inData:BLOB may be wrong
+
+  authorizeMigrationKeyOut(s:tpmAbsState,migKey:KEY,migrationScheme:migrateScheme) : tpmAbsOutput = 
+    outBlob(authorizationBlob(migKey,migrationScheme),TPM_SUCCESS);
+
+  migrateKeyOut(s:tpmAbsState) : tpmAbsOutput
+  changeAuthOut(s:tpmAbsState) : tpmAbsOutput
+
+
   % Generate a certified AIK from an AIK.  Certification assumes that the
   % EK really does belong to the TPM.  We're abstracting away that check.
   certOut(s:tpmAbsState,aik:wrapKey,ek:(asymKey?),freshk:(symKey?)) : tpmAbsOutput =
@@ -520,7 +560,7 @@ tpm [ B:TYPE+, % BLOB
       ABS_Seal(k,data) : sealOut(s,k,data),
       ABS_Unseal(d,k) : unsealOut(s,d,k),
       ABS_UnBind(d,k) : unBindOut(s,d,k),
-      ABS_CreateWrapKey(parent,k,k_auth) : createWrapKeyOut(parent,k,k_auth),
+      ABS_CreateWrapKey(parent,k) : createWrapKeyOut(parent,k),
       ABS_PcrRead(ind) : pcrReadOut(s,ind),
       ABS_Quote(k,n,pm) : quoteOut(s,k,n,pm),
       ABS_CreateEndorsementKeyPair(k) : createEndorsementKeyPairOut(s,k),
@@ -531,6 +571,11 @@ tpm [ B:TYPE+, % BLOB
       ABS_TakeOwnership(srk) : takeOwnershipOut(s,srk),
       ABS_OwnerClear(k) : ownerClearOut(s,k),
       ABS_ForceClear : forceClearOut(s),
+%       ABS_CreateMigrationBlob(pk,m,encData) : createMigrationBlobOut(s,pk,m,encData),
+%       ABS_ConvertMigrationBlob : convertMigrationBlobOut(s),
+      ABS_AuthorizeMigrationKey(mk,ms) : authorizeMigrationKeyOut(s,mk,ms),
+      ABS_MigrateKey : migrateKeyOut(s),
+      ABS_ChangeAuth : changeAuthOut(s),
       ABS_certify(aik,ek,freshk) : certOut(s,aik,ek,freshk),
       ABS_read(i) : readOut(s,i),
       ABS_Data_Bind(k,d) : dataBindOut(s,k,d)
@@ -854,17 +899,21 @@ tpm [ B:TYPE+, % BLOB
       disableForceClear(s) = TRUE
       AND a = outNothing;
 
-
-  %% Wrap new key k with parent key
-  TPM_CreateWrapKey(parent,k:(asymKey?),k_auth:AUTHDATA) : State = 
+  TPM_AuthorizeMigrationKey(migKey:KEY,migScheme:migrateScheme) : State = 
      output(outNothing,
             (LAMBDA (s:tpmAbsState) :
-	      outputCom(s,ABS_CreateWrapKey(parent,k,k_auth))));
+	      outputCom(s,ABS_AuthorizeMigrationKey(migKey,migScheme))));
+  
+  %% Wrap new key k with parent key
+  TPM_CreateWrapKey(parent,k:(asymKey?)) : State = 
+     output(outNothing,
+            (LAMBDA (s:tpmAbsState) :
+	      outputCom(s,ABS_CreateWrapKey(parent,k))));
 
   create_wrap_key_post: THEOREM 
-    FORALL (p,k:(asymKey?),a:AUTHDATA,state:(afterStartup?)) : 
+    FORALL (p,k:(asymKey?),state:(afterStartup?)) : 
       LET (a,s) = runState(
-     	          TPM_CreateWrapKey(p,k,a))
+     	          TPM_CreateWrapKey(p,k))
 		  (state) IN
       LET wk : wrapKey = (# parentKey:=p, childKey:=k #) IN
           a = outWrapKey(wk,TPM_SUCCESS)
@@ -904,9 +953,9 @@ tpm [ B:TYPE+, % BLOB
            member(childKey(j),keys(s));
 	
   load_key_prev_post: THEOREM 
-    FORALL (k,p:(asymKey?),auth:AUTHDATA,state:(afterStartup?)) :
+    FORALL (k,p:(asymKey?),state:(afterStartup?)) :
       LET (out,s) = runState(
-      	  	    TPM_CreateWrapKey(p,k,auth)
+      	  	    TPM_CreateWrapKey(p,k)
 		    >>= (LAMBDA (a:tpmAbsOutput) :
 		    	 CASES a OF
 		           outWrapKey(wk,m) : TPM_LoadKey2(wk)
@@ -923,15 +972,15 @@ tpm [ B:TYPE+, % BLOB
 
   %%install nested wrapped keys?
   nested_wrapped_keys_post: THEOREM 
-    FORALL (k,j,p:(asymKey?),a1,a2:AUTHDATA,state:(afterStartup?)) :
+    FORALL (k,j,p:(asymKey?),state:(afterStartup?)) :
       LET (a,s) = runState(
-		  TPM_CreateWrapKey(p,k,a1)
+		  TPM_CreateWrapKey(p,k)
 		  >>= (LAMBDA (a:tpmAbsOutput) : 
 		       CASES a OF 
 		         outWrapKey(wk,m) : TPM_LoadKey2(wk) 
 			 ELSE TPM_Noop(a) 
 		       ENDCASES)
-		  >> TPM_CreateWrapKey(k,j,a2)
+		  >> TPM_CreateWrapKey(k,j)
 		  >>= (LAMBDA (a:tpmAbsOutput) : 
 		       CASES a OF
 		         outWrapKey(wk,m) : TPM_LoadKey2(wk) 
@@ -1215,13 +1264,13 @@ tpm [ B:TYPE+, % BLOB
 
   %% UnBind an encrypted blob successfully
   unBind_prev_post: THEOREM 
-    FORALL (d:BLOB,k,j:(asymKey?),auth:AUTHDATA,state:tpmAbsState) : 
+    FORALL (d:BLOB,k,j:(asymKey?),state:tpmAbsState) : 
       LET (a,s) = runState(
                   TPM_Init
       		  >> TPM_Startup(TPM_ST_CLEAR)
 		  >> CPU_senter
 		  >> CPU_sinit
-		  >> TPM_CreateWrapKey(j,k,auth)
+		  >> TPM_CreateWrapKey(j,k)
 		  >>= LAMBDA (a:tpmAbsOutput) : 
 		      CASES a OF 
 		        outWrapKey(owk,m) : TPM_LoadKey2(owk) 
@@ -1281,7 +1330,37 @@ tpm [ B:TYPE+, % BLOB
       not(ABS_Startup?(c) or ABS_Init?(c)) =>
         postInit(s) = postInit(executeCom(s,c));
 
+  disableForceClear_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c) or
+      	  ABS_DisableForceClear?(c)) =>
+        disableForceClear(s) = disableForceClear(executeCom(s,c));
+
+  restore_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c) or
+      	  ABS_SaveState?(c)) =>
+        restore(s) = restore(executeCom(s,c));
+
+  memory_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c) or
+      	  ABS_save?(c)) =>
+        memory(s) = memory(executeCom(s,c));
+
+  permFlags_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c) or
+          ABS_DisableOwnerClear?(c) or ABS_ForceClear?(c) or
+	  ABS_OwnerClear?(c) or ABS_TakeOwnership?(c)) =>
+        permFlags(s) = permFlags(executeCom(s,c));
+
+  permData_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c)) =>
+        permData(s) = permData(executeCom(s,c));
   
+
   %% Prove that skipping SENTER is detectable by showing the quote following
   %% a command differs when SENTER is excluded.
   %% proved - Tue Jun 12 15:34:24 CDT 2012

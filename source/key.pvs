@@ -53,6 +53,13 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   %% Blobs in this context are things that can be encrypted or signed
   %% Note that encrypted and signed things can be encrypted and signed
 
+  migrateScheme : DATATYPE
+  BEGIN 
+    migrate : migrate?
+    rewrap : rewrap?
+  END migrateScheme;
+
+
   BLOB : DATATYPE
   BEGIN
     nothing : nothing?
@@ -64,6 +71,7 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
     certBlob(key:KEY,wkey:wrapKey) : certBlob?
     %certBlob(key:KEY,blob:BLOB) : certBlob?
     pairBlob(left,right : BLOB) : pairBlob?
+    authorizationBlob(migKey:KEY,migrationScheme:migrateScheme) : authorizationBlob?
   END BLOB;
 
   %% Decryption for specific key types.  Key types not matching automatically
