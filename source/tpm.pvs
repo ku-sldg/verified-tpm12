@@ -910,13 +910,14 @@ tpm [ B:TYPE+ % BLOB
 	    );
 
   make_identity_post: THEOREM 
-    FORALL (ak:(asymKey?),k:(symKey?),auth:AUTHDATA,state:(afterStartup?)) :
+    FORALL (k:(symKey?),auth:AUTHDATA,state:(afterStartup?)) :
       LET (a,s) = runState(
      	 	   TPM_MakeIdentity(k,auth))
 		 (state) IN
-      LET waik:wrapKey = (# parentKey:=srk(s),childKey:=ak #) IN
+        LET waik:wrapKey = (# parentKey:=srk(s),childKey:=asymKey(keyGenCnt(state)) #) IN
             a = outIdentity(waik,outCertReq(waik,ekVal,k,TPM_SUCCESS),TPM_SUCCESS)
-	AND s = state;
+	AND
+	s = state WITH [`keyGenCnt := keyGenCnt(state)+1];
    
   %% Use an AIK
   TPM_ActivateIdentity(a:wrapKey,k:(symKey?)) : State =
@@ -948,10 +949,7 @@ tpm [ B:TYPE+ % BLOB
 			    ELSE TPM_Noop(a)
 			  ENDCASES))
 		  (state) IN
-      out = outSymKey(k,TPM_SUCCESS)
-       AND 
-      member(aik,keys(s));
-
+      out = outSymKey(k,TPM_SUCCESS);
 
   %% Generate and output a signature
   TPM_Sign(k:KEY,aik:wrapKey,b:BLOB) : State = 
@@ -1060,7 +1058,7 @@ tpm [ B:TYPE+ % BLOB
 			 ELSE TPM_Noop(a) 
 		       ENDCASES))
 		  (state) IN
-        a = outQuote(private(k),
+        a = outQuote(private(asymKey(100)),
 	             n,
                      map((pcrsSenter(pcrsReset(pcrAttrib(permData(s))),allResetAccess) WITH [(0) := extend(
                                                      extend(reset,hash(sinit)),
@@ -1256,8 +1254,7 @@ tpm [ B:TYPE+ % BLOB
    %% appraiser's quote
    %% proved Sat Jul 14 11:19:56 CDT 2012
    cert_and_quote_with_prev_key: THEOREM
-     FORALL (aik:(asymKey?),
-             state:tpmAbsState,
+     FORALL (state:tpmAbsState,
 	     n:BLOB,
 	     pm:PCRMASK,
 	     k:(symKey?),
@@ -1292,11 +1289,11 @@ tpm [ B:TYPE+ % BLOB
 		   )
  		   (state) IN
 		   LET wk:wrapKey = (# parentKey:= private(asymKey(srkKeyVal)),
-                                       childKey := aik #)
+                                       childKey := asymKey(100) #)
 				       IN
          out = outFullQuote(certBlob(private(asymKey(caKeyVal)),wk),
                                sml,
-                               outQuote(private(aik),
+                               outQuote(private(asymKey(100)),
                                         n,
                                         map
                                         ((pcrsSenter(pcrsReset(pcrAttrib(permData(s))),pcrAttrib(permData(s)))
