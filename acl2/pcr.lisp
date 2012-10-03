@@ -201,6 +201,14 @@
       (reset-one)
     (reset-zero)))
 
+(defun+ pcr-senter (pcr flag)
+  (declare (xargs :guard (and (pcr-flag-p flag)
+                              (pcr-p pcr))
+                  :output (pcr-p (pcr-senter pcr flag))))
+  (if (pcr-flag->resettable flag)
+      (reset-zero)
+    pcr))
+
 (defthm pcr-flag-p-of-nth-pcr-flag-list
   (implies (and (pcr-flag-list-p flags)
                 (natp n)
@@ -229,6 +237,15 @@
                 (< n (len flags)))
            (equal (pcr-flag-p (nth n flags))
                   t)))
+
+(defthm pcr-p-of-nth-of-pcr-list
+  (implies (and (pcr-list-p pcrs)
+                (natp n)
+                (< n (len pcrs)))
+           (equal (pcr-p (nth n pcrs))
+                  t)))
+
+
 
 ;; (defthm ahcak
 ;;   (implies (and (all-pcr-indexes-are-within-range indexes (len pcr-flags))
@@ -272,45 +289,10 @@
                               (pcr-list-p pcrs)
                               (pcr-flag-list-p flags)
                               (pcr-index-list-p indexes)
-                              ;(if (consp indexes)
-                              ;    (index-within-range-of-flag (car indexes)
-                              ;                                (nth (car indexes)
-                              ;                                     flags))
-                              ;  t))
-
                               (all-pcr-indexes-are-within-range indexes 
                                                                 (len flags))
                               (all-pcr-indexes-are-within-range indexes 
-                                                                (len pcrs))
-                              
-                              ;; (if (atom indexes)
-                              ;;     t
-                              ;;   (and (pcr-flag-p (nth (car indexes) flags))
-                              ;;        (pcr-flag-p (nth (cadr indexes) flags))
-                              ;;        ))
-;pcr-flag-p-of-nth-of-pcr-flag-list
-                              )
-                  :guard-debug t
-                  :Guard-hints (;; ("Subgoal 2.2'" 
-                                ;;  :in-theory (disable
-                                ;; ;             PCR-INDEX-P-WHEN-MEMBER-EQUAL-OF-PCR-INDEX-LIST-P
-                                ;; ;             PCR-INDEX-LIST-P-OF-CDR-WHEN-PCR-INDEX-LIST-P
-                                ;; ;             pcr-index-p (:type-prescription
-                                ;; ;                          pcr-index-p)
-                                ;;              pcrs-reset-hack)
-                                ;;  :use ((:instance pcrs-reset-hack
-                                ;;                   (indexes indexes))))
-                                ;; ("Subgoal 2.2'''"
-                                ;;  :expand (all-pcr-indexes-are-within-range 
-                                ;;           (cdr indexes)
-                                ;;           (len pcrs)))
-                                ("Subgoal 6"
-                                 :use ((:instance
-                                        pcr-flag-p-of-nth-of-pcr-flag-list
-                                        (n (car indexes))
-                                        (flags flags)))
-                                 :in-theory (disable pcr-flag-p-of-nth-of-pcr-flag-list))
-                                )
+                                                                (len pcrs)))
                   :output (pcr-list-p (pcrs-reset pcrs flags indexes))))
   (cond ((atom indexes)
          pcrs)
@@ -322,7 +304,31 @@
                                      pcrs)
                          flags
                          (cdr indexes))))))
-(i-am-here)
+
+(defun+ pcrs-senter (pcrs flags indexes)
+  (declare (xargs :guard (and (true-listp pcrs)
+                              (true-listp flags)
+                              (true-listp indexes)
+                              (pcr-list-p pcrs)
+                              (pcr-flag-list-p flags)
+                              (pcr-index-list-p indexes)
+                              (all-pcr-indexes-are-within-range indexes 
+                                                                (len flags))
+                              (all-pcr-indexes-are-within-range indexes 
+                                                                (len pcrs)))
+                  :guard-hints (("Goal" :in-theory (disable pcr-p)))
+                  :output (pcr-list-p (pcrs-senter pcrs flags indexes))))
+  (cond ((atom indexes)
+         pcrs)
+        (t (let* ((index (car indexes))
+                  (pcr-flag (nth index flags))
+                  (curr-pcr (nth index pcrs))
+                  (new-pcr (pcr-senter curr-pcr pcr-flag)))
+             (pcrs-senter (update-nth index
+                                      new-pcr
+                                      pcrs)
+                          flags
+                          (cdr indexes))))))
 
 #|
 (defun pcr-reset-ones-p (pcr)
