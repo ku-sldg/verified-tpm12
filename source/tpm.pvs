@@ -133,9 +133,9 @@ tpm [ B:TYPE+, % BLOB
   caKeyVal : K
 
   %% Key definitions that make ek and srk values asymmetric keys.
-  ekVal : KEY = asymKey(ekKeyVal);
-  srkVal : KEY = asymKey(srkKeyVal);
-  caVal : KEY = asymKey(caKeyVal); % Certificate Authority key
+  ekVal : KEY = asymKey(ekKeyVal,legacy,keyFlagsF);
+  srkVal : KEY = asymKey(srkKeyVal,storage,keyFlagsF);
+  caVal : KEY = asymKey(caKeyVal,legacy,keyFlagsF); % Certificate Authority key
 
   %% Abstract TPM State with keys, PCR array and locality
   tpmAbsState : TYPE = [#
@@ -245,7 +245,12 @@ tpm [ B:TYPE+, % BLOB
 
   %% Install key operation on TPM state.
   loadKey2State(s:tpmAbsState,k:wrapKey) : tpmAbsState =
-    s WITH [`keys := addKey(k,srk(s),keys(s))];
+    IF not(storage?(keyUsage(parentKey(k)))) OR 
+       (identity?(keyUsage(childKey(k))) AND migratable(keyFlags(childKey(k)))=FALSE) OR
+       authChange?(keyUsage(childKey(k)))
+      	   THEN s
+	   ELSE s WITH [`keys := addKey(k,srk(s),keys(s))]
+    ENDIF;
 
   %% Extend operation on TPM state
   extendState(s:tpmAbsState,n:PCRINDEX,h:HV) : tpmAbsState =
@@ -295,12 +300,6 @@ tpm [ B:TYPE+, % BLOB
 
   disableForceClearState(s:tpmAbsState) : tpmAbsState = 
     s WITH [`disableForceClear:=TRUE];
-
-%   createMigrationBlobState(s:tpmAbsState,pk:(asymKey?),m:migrateScheme,encData:BLOB) : tpmAbsState 
-%   convertMigrationBlobState(s:tpmAbsState) : tpmAbsState 
-%   migrateKeyState(s:tpmAbsState) : tpmAbsState 
-%   changeAuthState(s:tpmAbsState) : tpmAbsState 
-
 
   saveState(s:tpmAbsState) : tpmAbsState =
     s WITH [`restore:=saveState(keys(s)
@@ -369,10 +368,6 @@ tpm [ B:TYPE+, % BLOB
       ABS_ForceClear: forceClearState(s),
       ABS_DisableOwnerClear: disableOwnerClearState(s),
       ABS_DisableForceClear: disableForceClearState(s),
-%       ABS_CreateMigrationBlob(pk,m,encData) : createMigrationBlobState(s,pk,m,encData),
-%       ABS_ConvertMigrationBlob : convertMigrationBlobState(s),
-%       ABS_MigrateKey : migrateKeyState(s),
-%       ABS_ChangeAuth : changeAuthState(s),
       ABS_senter : 
         changeLocalityState(extendState(pcrsResetSenterState(s),0,hash(sinit))),
       ABS_sinit : changeLocalityState(extendState(s,0,hash(mle))),
@@ -417,11 +412,27 @@ tpm [ B:TYPE+, % BLOB
 
   % Generate a NEW RANDOM key pair.
   createWrapKeyOut(parent,k:(asymKey?)):tpmAbsOutput = 
-     LET wk:wrapKey = (#
-     	 	      parentKey:=parent, 
-		      childKey:=k
-		      #)
-     IN outWrapKey(wk,TPM_SUCCESS)
+    IF not(storage?(keyUsage(parent))) OR 
+       (migratable(keyFlags(parent)) AND not(migratable(keyFlags(k))))
+       THEN outError(TPM_INVALID_KEYUSAGE)
+       ELSE IF identity?(keyUsage(k)) OR authChange?(keyUsage(k)) OR
+       	       migrateAuthority(keyFlags(k))
+              THEN outError(TPM_INVALID_KEYUSAGE)
+	      ELSE LET wk:wrapKey = (# parentKey:=parent,childKey:=k #)
+	      	   IN outWrapKey(wk,TPM_SUCCESS)
+	    ENDIF
+    ENDIF
+    
+  loadKey2Out(k:wrapKey):tpmAbsOutput = 
+    IF not(storage?(keyUsage(parentKey(k))))
+      THEN outError(TPM_INVALID_KEYUSAGE)
+      ELSE IF (identity?(keyUsage(childKey(k))) AND migratable(keyFlags(childKey(k)))=FALSE)
+      	      OR authChange?(keyUsage(childKey(k)))
+      	     THEN outError(TPM_INVALID_KEYUSAGE)
+	     ELSE outNothing %%still need to return success?
+    	   ENDIF
+    ENDIF
+
 
   % Output PCR of given index
   pcrReadOut(s:tpmAbsState,ind:PCRINDEX) : tpmAbsOutput = 
@@ -561,6 +572,7 @@ tpm [ B:TYPE+, % BLOB
       ABS_Unseal(d,k) : unsealOut(s,d,k),
       ABS_UnBind(d,k) : unBindOut(s,d,k),
       ABS_CreateWrapKey(parent,k) : createWrapKeyOut(parent,k),
+      ABS_LoadKey2(k) : loadKey2Out(k),
       ABS_PcrRead(ind) : pcrReadOut(s,ind),
       ABS_Quote(k,n,pm) : quoteOut(s,k,n,pm),
       ABS_CreateEndorsementKeyPair(k) : createEndorsementKeyPairOut(s,k),
@@ -915,31 +927,44 @@ tpm [ B:TYPE+, % BLOB
       LET (a,s) = runState(
      	          TPM_CreateWrapKey(p,k))
 		  (state) IN
-      LET wk : wrapKey = (# parentKey:=p, childKey:=k #) IN
-          a = outWrapKey(wk,TPM_SUCCESS)
-      AND s = state;
+      IF storage?(keyUsage(p)) AND 
+         not(migratable(keyFlags(p)) AND not(migratable(keyFlags(k)))) AND
+	 not(identity?(keyUsage(k)) OR authChange?(keyUsage(k)) OR 
+	 			    (migrateAuthority(keyFlags(k))))
+        THEN LET wk : wrapKey = (# parentKey:=p, childKey:=k #) IN
+             	 a = outWrapKey(wk,TPM_SUCCESS)
+      	     AND s = state
+        ELSE 	 a = outError(TPM_INVALID_KEYUSAGE)
+      	     AND s = state
+      ENDIF
 
 
   %% Install key k in a TPM
   TPM_LoadKey2(k:wrapKey):State =
-    modify(outNothing,
-           (LAMBDA (s:tpmAbsState):executeCom(s,ABS_LoadKey2(k))));
+    modifyOutput(outNothing,
+           (LAMBDA (s:tpmAbsState):executeCom(s,ABS_LoadKey2(k))),
+	   (LAMBDA (s:tpmAbsState):outputCom(s,ABS_LoadKey2(k))));
 
   % A key is installed if it is wrapped with SRK
   load_key_post: THEOREM 
     FORALL (k:wrapKey,state:(afterStartup?)) :
-      LET (out,s) = runState(
+      LET (a,s) = runState(
     		    TPM_LoadKey2(k))
 		    (state) IN
+    IF not(storage?(keyUsage(parentKey(k)))) OR 
+       (identity?(keyUsage(childKey(k))) AND migratable(keyFlags(childKey(k)))=FALSE)
+       OR authChange?(keyUsage(childKey(k)))
+      THEN a = outError(TPM_INVALID_KEYUSAGE) AND
+      	   s = state
+      ELSE a = outNothing AND
 	checkKey(parentKey(k),srk(state),keys(state))
 		      => member(childKey(k),keys(s))
-%       IF checkKey(parentKey(k),srk(state),keys(state))
-% 		AND not(member(childKey(k),keys(state)))
+%       IF checkKey(parentKey(k),srk(state),keys(state)) AND not(member(childKey(k),keys(state)))
 %          THEN member(childKey(k),keys(s))
 % 	 ELSE not(member(childKey(k),keys(s)))
 %       ENDIF
-	%% TODO: Check bad conditions? Necessary for all commands?
-      AND out = outNothing;
+    ENDIF     
+
 
   %% A key is installed if it is wrapped with an installed key
   %% proved - Tue Jun 12 15:38:22 CDT 2012

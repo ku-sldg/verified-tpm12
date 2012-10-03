@@ -27,8 +27,11 @@
    nil))
  (initSaveData_TCC1 0
   (initSaveData_TCC1-1 nil 3556637424 ("" (grind))
-   ((permFlagsInit const-decl "PermFlags" PermanentFlags nil)
-    (HV formal-nonempty-type-decl nil startupData nil)
+   ((HV formal-nonempty-type-decl nil startupData nil)
+    (K formal-nonempty-type-decl nil startupData nil)
+    (B formal-nonempty-type-decl nil startupData nil)
+    (keyFlagsF const-decl "KEY_FLAGS" key nil)
+    (permFlagsInit const-decl "PermFlags" PermanentFlags nil)
     (permDataInit const-decl "PermData" PermanentData nil)
     (wellFormedRestore? const-decl "bool" startupData nil)
     (finite_emptyset name-judgement "finite_set" finite_sets nil))

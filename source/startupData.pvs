@@ -67,8 +67,8 @@ startupData[B,K,HV : TYPE+] : THEORY
   initSaveData : (wellFormedRestore?) =
     (# valid? := FALSE,
        keys := emptyset,
-       ek := asymKey(ekInit),
-       srk := asymKey(srkInit),
+       ek := asymKey(ekInit,legacy,keyFlagsF),
+       srk := asymKey(srkInit,legacy,keyFlagsF),
        pcrs := pcrsPower,
        permFlags := permFlagsInit,
        permData := permDataInit

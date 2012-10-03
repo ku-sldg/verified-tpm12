@@ -26,8 +26,38 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   %% Note that KVAL is completely uninterpretted at this point
   IMPORTING pcr[HVAL];
   
-  AUTHDATA : TYPE = string
-  
+  KEY_USAGE : DATATYPE
+  BEGIN
+    signing : signing?
+    storage : storage?
+    identity : identity?
+    authChange : authChange?
+    bind : bind?
+    legacy : legacy?
+    migrate : migrate?
+  END KEY_USAGE;
+
+  KEY_FLAGS : TYPE = [#
+  	      	     redirection : bool,
+		     migratable : bool,
+		     isVolatile : bool,
+		     pcrIgnoredOnRead : bool,
+		     migrateAuthority : bool
+  	      	     #];
+  keyFlagsF : KEY_FLAGS = (#
+  	     redirection:= false,
+     	     migratable := false,
+	     isVolatile := false,
+	     pcrIgnoredOnRead := false,
+	     migrateAuthority := false #)
+  	     
+
+  migrateScheme : DATATYPE
+  BEGIN 
+    migrate : migrate?
+    rewrap : rewrap?
+  END migrateScheme;
+
   KEY : DATATYPE
   BEGIN
     invalidKey : invalidKey?
@@ -52,13 +82,6 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   %% Basic blob types - data, keys, hashs, encrypted blobs, signed blobs
   %% Blobs in this context are things that can be encrypted or signed
   %% Note that encrypted and signed things can be encrypted and signed
-
-  migrateScheme : DATATYPE
-  BEGIN 
-    migrate : migrate?
-    rewrap : rewrap?
-  END migrateScheme;
-
 
   BLOB : DATATYPE
   BEGIN
@@ -94,7 +117,7 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
     CASES k OF 
       invalidKey : nothing,
       symKey(k0) : decryptSym(b,k),
-      asymKey(k0) : decryptAsym(b,k)
+      asymKey(k0,u,f) : decryptAsym(b,k)
   ENDCASES;
 
   %% Unseal for aysmetric keys
@@ -118,7 +141,7 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
     CASES k OF
       invalidKey : FALSE,
       symKey(k0) : sigCheckSym(b,k),
-      asymKey(k0) : sigCheckAsym(b,k)
+      asymKey(k0,u,f) : sigCheckAsym(b,k)
     ENDCASES;
 
   %% A keyset is simply a set of asymmetric keys
