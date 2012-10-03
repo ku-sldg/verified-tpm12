@@ -208,31 +208,20 @@
                 )
            (pcr-flag-p (nth n flags))))
 
-(defn index-within-range-of-flag (pcrs flags indexes)
-;  (declare (xargs :guard (and (pcr-index-p index)
-;                              (true-listp flags)
-;                              (pcr-flag-list-p flags))))
- 
-  (cond ((atom indexes)
-         nil)
-        (t (let ((index (car pcr-indexes))) ; we should know (pcr-index-p index)
-             (and (nth index flags)
-                  (let ((flag (nth index flags)))
-                    
-(defthm pcrs-reset-lemma
-  (implies (and (pcr-index-p n)
-                (pcr-list-p pcrs)
-                (< n (len pcrs))
-                (pcr-p v))
-           (pcr-list-p (update-nth n v pcrs))))
+;; (defthm pcrs-reset-lemma
+;;   (implies (and (pcr-index-p n)
+;;                 (pcr-list-p pcrs)
+;;                 (< n (len pcrs))
+;;                 (pcr-p v))
+;;            (pcr-list-p (update-nth n v pcrs))))
 
-(defn all-pcr-indexes-are-within-range (indexes pcr-flags-len)
+(defn all-pcr-indexes-are-within-range (indexes lst-len)
   (declare (xargs :guard (and (pcr-index-list-p indexes)
-                              (integerp pcr-flags-len))))
+                              (integerp lst-len))))
   (cond ((atom indexes)
          t)
-        (t (and (< (car indexes) pcr-flags-len)
-                (all-pcr-indexes-are-within-range (cdr indexes) pcr-flags-len)))))
+        (t (and (< (car indexes) lst-len)
+                (all-pcr-indexes-are-within-range (cdr indexes) lst-len)))))
 
 (defthm pcr-flag-p-of-nth-of-pcr-flag-list
   (implies (and (pcr-flag-list-p flags)
@@ -241,75 +230,33 @@
            (equal (pcr-flag-p (nth n flags))
                   t)))
 
-(defthm index-within-range-implies-hack
-  (implies (and (all-pcr-indexes-are-within-range indexes pcr-flags-len)
-                (consp indexes)
-                (consp (cdr indexes)))
-           (< (cadr indexes) pcr-flags-len)))
+;; (defthm ahcak
+;;   (implies (and (all-pcr-indexes-are-within-range indexes (len pcr-flags))
+;;                 (pcr-flag-p pcr-flags)
+;;                 (pcr-index-list-p indexes)
+;;                 )
+;;            (pcr-flag-p (nth (car indexes) pcr-flags))))
 
-(defthm ahcak
-  (implies (and (all-pcr-indexes-are-within-range indexes (len pcr-flags))
-                (pcr-flag-p pcr-flags)
-                (pcr-index-list-p indexes)
-                )
-           (pcr-flag-p (nth (car indexes) pcr-flags))))
+;; (defthm pcrs-reset-hack
+;;   (implies (and (pcr-index-list-p indexes)
+;;                 (consp indexes)
+;;                 (consp (cdr indexes)))
+;;            (pcr-index-p (cadr indexes)))
+;;   :rule-classes :forward-chaining)
 
-(defthm pcrs-reset-hack
-  (implies (and (pcr-index-list-p indexes)
-                (consp indexes)
-                (consp (cdr indexes)))
-           (pcr-index-p (cadr indexes)))
-  :rule-classes :forward-chaining)
-
-(i-am-here)
-
-(defthm pcrs-reset-hack3
-  (implies (and (pcr-index-p index)
-                (pcr-flag-list-p flags)
-                (nth index flags))
-           (pcr-flag-p (nth index flags))))
+;; (defthm pcrs-reset-hack3
+;;   (implies (and (pcr-index-p index)
+;;                 (pcr-flag-list-p flags)
+;;                 (nth index flags))
+;;            (pcr-flag-p (nth index flags))))
                 
-
-(defthm pcrs-reset-hack2
-  (implies (and (pcr-flag-p (nth (car pcr-indexes) flags))
-                (< (car pcr-indexes) (len pcrs))
-                (all-pcr-indexes-are-within-range (cdr pcr-indexes)
-                                                  (len pcrs))
-                (pcr-index-list-p pcr-indexes)
-                (pcr-flag-list-p flags)
-                (pcr-list-p pcrs)
-                (consp pcr-indexes)
-                (extra-info '(:guard (:body pcrs-reset))
-                            '(pcrs-reset (update-nth index (pcr-reset pcr-flag)
-                                                     pcrs)
-                                         flags (cdr pcr-indexes)))
-                (consp (cdr pcr-indexes)))
-           (pcr-flag-p (nth (cadr pcr-indexes) flags))))
-
-(defthm pcrs-reset-hack4
-  (implies (and (pcr-flag-p (nth (car pcr-indexes) flags))
-                (< (car pcr-indexes) (len pcrs))
-                (< (cadr pcr-indexes) (len pcrs))
-                (all-pcr-indexes-are-within-range (cddr pcr-indexes)
-                                                  (len pcrs))
-                (pcr-index-list-p pcr-indexes)
-                (pcr-flag-list-p flags)
-                (pcr-list-p pcrs)
-                (consp pcr-indexes) (nth (cadr pcr-indexes) flags)
-                (extra-info '(:guard (:body pcrs-reset))
-                            '(pcrs-reset (update-nth index (pcr-reset pcr-flag)
-                                                     pcrs)
-                                         flags (cdr pcr-indexes)))
-                (consp (cdr pcr-indexes)))
-           (pcr-flag-p (nth (cadr pcr-indexes) flags))))
-
 (defun induction-hint (n val lst)
   (declare (ignorable val))
   (cond ((zp n)
          lst)
         (t (induction-hint (1- n) val (cdr lst)))))
 
-(defthm update-nth-lemmmma
+(defthm pcr-list-p-of-update-nth
   (implies (and (pcr-list-p pcrs)
                 (pcr-p pcr)
                 (< n (len pcrs)))
@@ -375,6 +322,7 @@
                                      pcrs)
                          flags
                          (cdr indexes))))))
+(i-am-here)
 
 #|
 (defun pcr-reset-ones-p (pcr)
