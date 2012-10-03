@@ -2,6 +2,7 @@
 
 (include-book "misc/defun-plus" :dir :system)
 (include-book "cutil/defaggregate" :dir :system)
+(include-book "cutil/deflist" :dir :system)
 
 (defconst *pcr-count* 24)
 
@@ -36,6 +37,16 @@
       (<= 0 index)
       (< index *pcr-count*)))
 
+(defthm nat-p-of-pcr-index-p
+  (implies (pcr-index-p x)
+           (natp x))
+  :rule-classes :compound-recognizer)
+
+(cutil::deflist pcr-index-list-p (x)
+  (pcr-index-p x)
+  :elementp-of-nil nil
+  :true-listp t)
+
 (cutil::defaggregate pcr-flag
 ; resettable is called pcrReset in pcr.pvs, but the concept is really
 ; "resettable", so I name it as such here.
@@ -46,85 +57,116 @@
              (booleanp resettable)))
   :tag :pcr-flag)
 
-(defn pcr-flags-p (flags)
-; in the PVS model, pcv.pvs, PCRFLAGS is a type, where it is an array from an
-; pcr-index to a pcr-flag.  Here, we make it a list, where the location in the
-; list is the index.
-  (cond ((atom flags)
-         (null flags))
-        (t (and (pcr-flag-p (car flags))
-                (pcr-flags-p (cdr flags))))))
+(cutil::deflist pcr-flag-list-p (x)
+  (pcr-flag-p x)
+  :elementp-of-nil nil
+  :true-listp t)
 
-(defthm pcr-flags-p-implies-true-listp
-  (implies (pcr-flags-p lst)
-           (true-listp lst))
-  :rule-classes :compound-recognizer)
-
-(defthm pcr-flags-p-of-cons
-  (implies (and (pcr-flags-p lst)
-                (pcr-flag-p x))
-           (pcr-flags-p (cons x lst))))
-
-(defthm pcr-flags-p-recursive
-  (implies (pcr-flags-p (cons x lst))
-           (pcr-flags-p lst)))
-
-(defthm pcr-flag-p-car-case
-  (implies (pcr-flags-p (cons x lst))
-           (pcr-flag-p x)))
-
-(defthm pcr-flags-p-and-member-p-imply-pcr-flag-p
-  (implies (and (member x lst)
-                (pcr-flags-p lst))
-           (pcr-flag-p x)))
-
-(in-theory (disable pcr-flags-p))
-
-(defn pcrs-p (pcrs)
-
-; in the PVS model, pcv.pvs, PCRS is a type, where it is an array from a
-; pcr-index to a pcr.  Here, we make it a list, where the location in the list
-; is the index.
-
-  (cond ((atom pcrs)
-         (null pcrs))
-        (t (and (pcr-p (car pcrs))
-                (pcrs-p (cdr pcrs))))))
-
-(defthm pcrs-p-implies-true-listp
-  (implies (pcrs-p lst)
-           (true-listp lst))
-  :rule-classes :compound-recognizer)
-
-(defthm pcrs-p-of-cons
-  (implies (and (pcrs-p lst)
-                (pcr-p x))
-           (pcrs-p (cons x lst))))
-
-(defthm pcr-p-of-car-pcrs
-  (implies (and (consp lst)
-                (pcrs-p lst))
-           (pcr-p (car lst))))
-
-(defthm pcr-p-and-member-p-imply-pcr-p
-  (implies (and (member x lst)
-                (pcrs-p lst))
-           (pcr-p x)))
-
-#|
-(defthm pcrs-p-implies-true-listp
-  (implies (pcrs-p x) (true-listp x))
-  :rule-classes :forward-chaining)
+;; (defthm pcr-flag-list-p-implies-true-listp
+;;   (implies (pcr-flag-list-p lst)
+;;            (true-listp lst))
+;;   :rule-classes :compound-recognizer
+;;   :hints (("Goal" :in-theory (enable pcr-flag-list-p))))
 
 
-(defthm pcr-p-of-member-pcrs
-  (implies (and (member x lst)
-                (pcrs-p lst))
-           (pcr-p (car (member x lst))))
-  :rule-classes (:rewrite :type-prescription)) ; type-presc is kind of silly
-|#
+;; (defn pcr-flags-p (flags)
+;; ; in the PVS model, pcv.pvs, PCRFLAGS is a type, where it is an array from an
+;; ; pcr-index to a pcr-flag.  Here, we make it a list, where the location in the
+;; ; list is the index.
+;;   (cond ((atom flags)
+;;          (null flags))
+;;         (t (and (pcr-flag-p (car flags))
+;;                 (pcr-flags-p (cdr flags))))))
 
-(in-theory (disable pcrs-p))
+;; (defthm pcr-flags-p-implies-true-listp
+;;   (implies (pcr-flags-p lst)
+;;            (true-listp lst))
+;;   :rule-classes :compound-recognizer)
+
+;; #|
+;; (defthm pcr-flags-p-of-cons
+;;   (implies (and (pcr-flags-p lst)
+;;                 (pcr-flag-p x))
+;;            (pcr-flags-p (cons x lst))))
+
+;; (defthm pcr-flags-p-recursive
+;;   (implies (pcr-flags-p (cons x lst))
+;;            (pcr-flags-p lst)))
+
+;; (defthm pcr-flag-p-car-case
+;;   (implies (pcr-flags-p (cons x lst))
+;;            (pcr-flag-p x)))
+;; |#
+
+;; (defthm pcr-flag-constructors
+;;   (equal (pcr-flags-p (cons e lst))
+;;          (and (pcr-flag-p e)
+;;               (pcr-flags-p lst))))
+
+;; (defthm pcr-flags-p-and-member-p-imply-pcr-flag-p
+;;   (implies (and (member x lst)
+;;                 (pcr-flags-p lst))
+;;            (pcr-flag-p x)))
+
+
+;(in-theory (disable pcr-flags-p))
+
+(cutil::deflist pcr-list-p (x)
+  (pcr-p x)
+  :elementp-of-nil nil
+  :true-listp t)
+
+;; (defthm pcr-list-p-implies-true-listp
+;;   (implies (pcr-list-p lst)
+;;            (true-listp lst))
+;;   :rule-classes :compound-recognizer)
+
+;; (defn pcrs-p (pcrs)
+
+;; ; in the PVS model, pcv.pvs, PCRS is a type, where it is an array from a
+;; ; pcr-index to a pcr.  Here, we make it a list, where the location in the list
+;; ; is the index.
+
+;;   (cond ((atom pcrs)
+;;          (null pcrs))
+;;         (t (and (pcr-p (car pcrs))
+;;                 (pcrs-p (cdr pcrs))))))
+
+;; (defthm pcrs-p-implies-true-listp
+;;   (implies (pcrs-p lst)
+;;            (true-listp lst))
+;;   :rule-classes :compound-recognizer)
+
+;; #|
+;; (defthm pcrs-p-of-cons
+;;   (implies (and (pcrs-p lst)
+;;                 (pcr-p x))
+;;            (pcrs-p (cons x lst))))
+
+;; (defthm pcr-p-of-car-pcrs
+;;   (implies (and (consp lst)
+;;                 (pcrs-p lst))
+;;            (pcr-p (car lst))))
+
+;; (defthm pcr-p-and-member-p-imply-pcr-p
+;;   (implies (and (member x lst)
+;;                 (pcrs-p lst))
+;;            (pcr-p x)))
+
+
+;; (defthm pcrs-p-implies-true-listp
+;;   (implies (pcrs-p x) (true-listp x))
+;;   :rule-classes :forward-chaining)
+
+
+;; (defthm pcr-p-of-member-pcrs
+;;   (implies (and (member x lst)
+;;                 (pcrs-p lst))
+;;            (pcr-p (car (member x lst))))
+;;   :rule-classes (:rewrite :type-prescription)) ; type-presc is kind of silly
+;; |#
+
+;; (in-theory (disable pcrs-p))
 
 (encapsulate
 
@@ -137,29 +179,202 @@
  (((pcrs-power) => *))
  (local (defun pcrs-power ()
           nil))
- (defthm pcrs-p-of-pcrs-power
-   (pcrs-p (pcrs-power))
+ (defthm pcr-list-p-of-pcrs-power
+   (pcr-list-p (pcrs-power))
    :rule-classes (:rewrite :type-prescription)))
 
-(defun+ pcrs-reset1 (flags)
-  (declare (xargs :guard (pcr-flags-p flags)
-;                  :guard-hints (("Goal" :in-theory (enable pcr-flags-p)))
-                  :output (pcrs-p (pcrs-reset1 flags))
-;                  :output-hints (("Goal" :in-theory (enable pcr-flags-p
-;                                                            pcrs-p)))
-                  ))
-  (cond ((atom flags)
+;; (defun+ pcrs-reset1 (flags)
+;;   (declare (xargs :guard (pcr-flag-list-p flags)
+;;                   :output (pcr-list-p (pcrs-reset1 flags))
+;;                   ))
+;;   (cond ((atom flags)
+;;          nil)
+;;         (t (cons (if (pcr-flag->resettable (car flags))
+;;                      (reset-one)
+;;                    (reset-zero))
+;;                  (pcrs-reset1 (cdr flags))))))
+
+(defun+ pcr-reset (flag)
+  (declare (xargs :guard (pcr-flag-p flag)
+                  :output (pcr-p (pcr-reset flag))))
+  (if (pcr-flag->resettable flag)
+      (reset-one)
+    (reset-zero)))
+
+(defthm pcr-flag-p-of-nth-pcr-flag-list
+  (implies (and (pcr-flag-list-p flags)
+                (natp n)
+                (< n (len flags))
+                )
+           (pcr-flag-p (nth n flags))))
+
+(defn index-within-range-of-flag (pcrs flags indexes)
+;  (declare (xargs :guard (and (pcr-index-p index)
+;                              (true-listp flags)
+;                              (pcr-flag-list-p flags))))
+ 
+  (cond ((atom indexes)
          nil)
-        (t (cons (if (pcr-flag->resettable (car flags))
-                     (reset-one)
-                   (reset-zero))
-                 (pcrs-reset1 (cdr flags))))))
+        (t (let ((index (car pcr-indexes))) ; we should know (pcr-index-p index)
+             (and (nth index flags)
+                  (let ((flag (nth index flags)))
+                    
+(defthm pcrs-reset-lemma
+  (implies (and (pcr-index-p n)
+                (pcr-list-p pcrs)
+                (< n (len pcrs))
+                (pcr-p v))
+           (pcr-list-p (update-nth n v pcrs))))
 
-(defun+ pcrs-reset (flags)
-  (declare (xargs :guard (pcr-flags-p flags)
-                  :output (pcrs-p (pcrs-reset flags))))
-  
+(defn all-pcr-indexes-are-within-range (indexes pcr-flags-len)
+  (declare (xargs :guard (and (pcr-index-list-p indexes)
+                              (integerp pcr-flags-len))))
+  (cond ((atom indexes)
+         t)
+        (t (and (< (car indexes) pcr-flags-len)
+                (all-pcr-indexes-are-within-range (cdr indexes) pcr-flags-len)))))
 
+(defthm pcr-flag-p-of-nth-of-pcr-flag-list
+  (implies (and (pcr-flag-list-p flags)
+                (natp n)
+                (< n (len flags)))
+           (equal (pcr-flag-p (nth n flags))
+                  t)))
+
+(defthm index-within-range-implies-hack
+  (implies (and (all-pcr-indexes-are-within-range indexes pcr-flags-len)
+                (consp indexes)
+                (consp (cdr indexes)))
+           (< (cadr indexes) pcr-flags-len)))
+
+(defthm ahcak
+  (implies (and (all-pcr-indexes-are-within-range indexes (len pcr-flags))
+                (pcr-flag-p pcr-flags)
+                (pcr-index-list-p indexes)
+                )
+           (pcr-flag-p (nth (car indexes) pcr-flags))))
+
+(defthm pcrs-reset-hack
+  (implies (and (pcr-index-list-p indexes)
+                (consp indexes)
+                (consp (cdr indexes)))
+           (pcr-index-p (cadr indexes)))
+  :rule-classes :forward-chaining)
+
+(i-am-here)
+
+(defthm pcrs-reset-hack3
+  (implies (and (pcr-index-p index)
+                (pcr-flag-list-p flags)
+                (nth index flags))
+           (pcr-flag-p (nth index flags))))
+                
+
+(defthm pcrs-reset-hack2
+  (implies (and (pcr-flag-p (nth (car pcr-indexes) flags))
+                (< (car pcr-indexes) (len pcrs))
+                (all-pcr-indexes-are-within-range (cdr pcr-indexes)
+                                                  (len pcrs))
+                (pcr-index-list-p pcr-indexes)
+                (pcr-flag-list-p flags)
+                (pcr-list-p pcrs)
+                (consp pcr-indexes)
+                (extra-info '(:guard (:body pcrs-reset))
+                            '(pcrs-reset (update-nth index (pcr-reset pcr-flag)
+                                                     pcrs)
+                                         flags (cdr pcr-indexes)))
+                (consp (cdr pcr-indexes)))
+           (pcr-flag-p (nth (cadr pcr-indexes) flags))))
+
+(defthm pcrs-reset-hack4
+  (implies (and (pcr-flag-p (nth (car pcr-indexes) flags))
+                (< (car pcr-indexes) (len pcrs))
+                (< (cadr pcr-indexes) (len pcrs))
+                (all-pcr-indexes-are-within-range (cddr pcr-indexes)
+                                                  (len pcrs))
+                (pcr-index-list-p pcr-indexes)
+                (pcr-flag-list-p flags)
+                (pcr-list-p pcrs)
+                (consp pcr-indexes) (nth (cadr pcr-indexes) flags)
+                (extra-info '(:guard (:body pcrs-reset))
+                            '(pcrs-reset (update-nth index (pcr-reset pcr-flag)
+                                                     pcrs)
+                                         flags (cdr pcr-indexes)))
+                (consp (cdr pcr-indexes)))
+           (pcr-flag-p (nth (cadr pcr-indexes) flags))))
+
+(defun induction-hint (n val lst)
+  (declare (ignorable val))
+  (cond ((zp n)
+         lst)
+        (t (induction-hint (1- n) val (cdr lst)))))
+
+(defthm update-nth-lemmmma
+  (implies (and (pcr-list-p pcrs)
+                (pcr-p pcr)
+                (< n (len pcrs)))
+           (pcr-list-p (update-nth n pcr pcrs)))
+  :hints (("Goal" :in-theory (e/d (pcr-list-p) (pcr-p))
+           :induct (induction-hint n pcr pcrs))
+          ("Subgoal *1/2'" :expand (update-nth n pcr pcrs))))
+
+(defun+ pcrs-reset (pcrs flags indexes)
+  (declare (xargs :guard (and (true-listp pcrs)
+                              (true-listp flags)
+                              (true-listp indexes)
+                              (pcr-list-p pcrs)
+                              (pcr-flag-list-p flags)
+                              (pcr-index-list-p indexes)
+                              ;(if (consp indexes)
+                              ;    (index-within-range-of-flag (car indexes)
+                              ;                                (nth (car indexes)
+                              ;                                     flags))
+                              ;  t))
+
+                              (all-pcr-indexes-are-within-range indexes 
+                                                                (len flags))
+                              (all-pcr-indexes-are-within-range indexes 
+                                                                (len pcrs))
+                              
+                              ;; (if (atom indexes)
+                              ;;     t
+                              ;;   (and (pcr-flag-p (nth (car indexes) flags))
+                              ;;        (pcr-flag-p (nth (cadr indexes) flags))
+                              ;;        ))
+;pcr-flag-p-of-nth-of-pcr-flag-list
+                              )
+                  :guard-debug t
+                  :Guard-hints (;; ("Subgoal 2.2'" 
+                                ;;  :in-theory (disable
+                                ;; ;             PCR-INDEX-P-WHEN-MEMBER-EQUAL-OF-PCR-INDEX-LIST-P
+                                ;; ;             PCR-INDEX-LIST-P-OF-CDR-WHEN-PCR-INDEX-LIST-P
+                                ;; ;             pcr-index-p (:type-prescription
+                                ;; ;                          pcr-index-p)
+                                ;;              pcrs-reset-hack)
+                                ;;  :use ((:instance pcrs-reset-hack
+                                ;;                   (indexes indexes))))
+                                ;; ("Subgoal 2.2'''"
+                                ;;  :expand (all-pcr-indexes-are-within-range 
+                                ;;           (cdr indexes)
+                                ;;           (len pcrs)))
+                                ("Subgoal 6"
+                                 :use ((:instance
+                                        pcr-flag-p-of-nth-of-pcr-flag-list
+                                        (n (car indexes))
+                                        (flags flags)))
+                                 :in-theory (disable pcr-flag-p-of-nth-of-pcr-flag-list))
+                                )
+                  :output (pcr-list-p (pcrs-reset pcrs flags indexes))))
+  (cond ((atom indexes)
+         pcrs)
+        (t (let* ((index (car indexes))
+                  (pcr-flag (nth index flags))
+                  (new-pcr (pcr-reset pcr-flag)))
+             (pcrs-reset (update-nth index
+                                     new-pcr
+                                     pcrs)
+                         flags
+                         (cdr indexes))))))
 
 #|
 (defun pcr-reset-ones-p (pcr)
@@ -206,14 +421,11 @@
                   ))
   (mod (+ pcr value) (expt 2 *pcr-bit-length*)))
 
-
-
-
 (defun+ pcrs-extend (pcrs index value)
-  (declare (xargs :guard (and (pcrs-p pcrs)
+  (declare (xargs :guard (and (pcr-list-p pcrs)
                               (pcr-index-p index)
                               (valid-extension-value-p value))
-                  :output (pcrs-p (pcrs-extend pcrs index value))))
+                  :output (pcr-list-p (pcrs-extend pcrs index value))))
   (cond ((atom pcrs)
          pcrs)
         ((equal index 0)
@@ -222,19 +434,20 @@
         (t (cons (car pcrs)
                  (pcrs-extend (cdr pcrs) (1- index) value)))))
 
+(in-theory (disable extend (extend))) ; will eventually disable many more functions
+
 ; TODO: define a predicate that includes integer-listp but also checks that it
 ; is of length <= *pcr-count* (or perhaps =).
 
-(defun nat-listp (lst)
-  (declare (xargs :guard t))
-  (cond ((atom lst)
-         (null lst))
-        (t (and (natp (car lst))
-                (nat-listp (cdr lst))))))
-(defthm lemma
-  (implies (and (pcrs-p pcrs)
+(cutil::deflist nat-list-p (x)
+  (natp x)
+  :elementp-of-nil nil
+  :true-listp)
+
+(defthm pcr-p-of-nth-of-pcr-list-p
+  (implies (and (pcr-list-p pcrs)
                 (natp n)
-                (< n (length pcrs)))
+                (< n (len pcrs)))
            (pcr-p (nth n pcrs))))
 
 (defun valid-pcr-mask-element (index length-pcrs)
@@ -252,9 +465,9 @@
                 (valid-pcr-masks (cdr pcr-masks) length-pcrs)))))
 
 (defun+ get-pcrs (pcrs pcr-masks)
-  (declare (xargs :guard (and (pcrs-p pcrs)
-                              (valid-pcr-masks pcr-masks (length pcrs)))
-                  :output (pcrs-p (get-pcrs pcrs pcr-masks))
+  (declare (xargs :guard (and (pcr-list-p pcrs)
+                              (valid-pcr-masks pcr-masks (len pcrs)))
+                  :output (pcr-list-p (get-pcrs pcrs pcr-masks))
                   ))
   (cond ((atom pcr-masks)
          nil)
@@ -284,6 +497,6 @@
                 (valid-extension-value-p val1)
                 (valid-extension-value-p val2))
            (not (equal (extend pcr val1)
-                       (extend pcr val2)))))
+                       (extend pcr val2))))
+  :hints (("Goal" :in-theory (enable extend))))
 
-(in-theory (disable extend)) ; will eventually disable many more functions
