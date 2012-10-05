@@ -1257,7 +1257,6 @@ tpm [ B:TYPE+ % BLOB
    %% proved Sat Jul 14 11:19:56 CDT 2012
    cert_and_quote_with_prev_key: THEOREM
      FORALL (state:tpmAbsState,
-             k:(symKey?),
 	     n:BLOB,
 	     pm:PCRMASK,
 	     sml:SML,
@@ -1277,7 +1276,7 @@ tpm [ B:TYPE+ % BLOB
 	           >>= CPU_saveOutput(1)
 	           >>= (LAMBDA (a:tpmAbsOutput) :
 		         CASES a OF
-			   outIdentActivation(actc,sk,actek,rc) : TPM_ActivateIdentity(wkey(actc),k)
+			   outIdentActivation(actc,sk,actek,rc) : TPM_ActivateIdentity(wkey(actc),sk)
 			   ELSE TPM_Noop(a)
 			 ENDCASES)
 		   >> CPU_read(0)
