@@ -344,6 +344,7 @@ tpm [ B:TYPE+ % BLOB
       ABS_Init : tpmPostInit,
       ABS_CreateWrapKey(parent,k_auth) : genKeyState(s),
       ABS_MakeIdentity(auth) : genKeyState(s), 
+      ABS_certify(aik,ek) : genKeyState(s),
       ABS_SaveState : saveState(s),
       ABS_OwnerClear(k): ownerClearState(s,k),
       ABS_ForceClear: forceClearState(s),
@@ -566,7 +567,9 @@ tpm [ B:TYPE+ % BLOB
   %% CA Command Definitions
   %% Invoke the certification authority
   CA_certify(cr:(outCertReq?)) : State =
-     output(outNothing,
+     modifyOutput(outNothing,
+            (LAMBDA (s:tpmAbsState) :
+	       executeCom(s,ABS_certify(ocertaik(cr),ocertek(cr)))),
             (LAMBDA (s:tpmAbsState) :
                outputCom(s,ABS_certify(ocertaik(cr),ocertek(cr)))));
 
