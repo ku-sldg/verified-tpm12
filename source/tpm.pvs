@@ -57,8 +57,7 @@ tpm [ B:TYPE+ % BLOB
     outAsymKey(oask:KEY,m:ReturnCode) : outAsymKey?
     outSymKey(osk:KEY,m:ReturnCode) : outSymKey?
     outBlob(obl:BLOB,m:ReturnCode) : outBlob?
-    outCertReq(ocertaik:wrapKey,ocertek:(asymKey?),
-               ofreshk:(symKey?),m:ReturnCode) : outCertReq?
+    outCertReq(ocertaik:wrapKey,ocertek:(asymKey?), m:ReturnCode) : outCertReq?
     outIdentity(oidentaik:wrapKey,oidentc:(outCertReq?),
                 m:ReturnCode) : outIdentity?
     outIdentActivation(oactc:(certBlob?),osessk:(symKey?),oactek:(asymKey?),
@@ -423,12 +422,12 @@ tpm [ B:TYPE+ % BLOB
 
 
   % Output a newly generated AIK.  Note that a simulates the new aik.
-  makeIdentityOut(s:tpmAbsState,k:(symKey?),auth:AUTHDATA) : tpmAbsOutput =
+  makeIdentityOut(s:tpmAbsState,auth:AUTHDATA) : tpmAbsOutput =
     LET waik:wrapKey = (# 
     		       parentKey:=srk(s),
 		       childKey:=asymKey(keyGenCnt(s))
 		       #) 
-    IN outIdentity(waik,outCertReq(waik,ekVal,k,TPM_SUCCESS),TPM_SUCCESS);
+    IN outIdentity(waik,outCertReq(waik,ekVal,TPM_SUCCESS),TPM_SUCCESS);
 
   % Retrieve a key if a can be installed
   %% TODO: Activiate identity needs more work
@@ -467,8 +466,8 @@ tpm [ B:TYPE+ % BLOB
 
   % Generate a certified AIK from an AIK.  Certification assumes that the
   % EK really does belong to the TPM.  We're abstracting away that check.
-  certOut(s:tpmAbsState,aik:wrapKey,ek:(asymKey?),freshk:(symKey?)) : tpmAbsOutput =
-    outIdentActivation(certBlob(private(caVal),aik),freshk,ek,TPM_SUCCESS);
+  certOut(s:tpmAbsState,aik:wrapKey,ek:(asymKey?)) : tpmAbsOutput =
+    outIdentActivation(certBlob(private(caVal),aik),symKey(keyGenCnt(s)),ek,TPM_SUCCESS);
 
   % Read a value and output
   readOut(s:tpmAbsState,i:nat) : tpmAbsOutput =
@@ -497,7 +496,7 @@ tpm [ B:TYPE+ % BLOB
       ABS_TakeOwnership : takeOwnershipOut,
       ABS_OwnerClear(k) : ownerClearOut(s,k),
       ABS_ForceClear : forceClearOut(s),
-      ABS_certify(aik,ek,freshk) : certOut(s,aik,ek,freshk),
+      ABS_certify(aik,ek) : certOut(s,aik,ek),
       ABS_read(i) : readOut(s,i),
       ABS_Data_Bind(k,d) : dataBindOut(s,k,d)
     ELSE outNothing
@@ -569,14 +568,14 @@ tpm [ B:TYPE+ % BLOB
   CA_certify(cr:(outCertReq?)) : State =
      output(outNothing,
             (LAMBDA (s:tpmAbsState) :
-               outputCom(s,ABS_certify(ocertaik(cr),ocertek(cr),ofreshk(cr)))));
+               outputCom(s,ABS_certify(ocertaik(cr),ocertek(cr)))));
 
   %% Assure the CA generates an appropriate cert from the AIK and Ek
   %% proved - Wed Jul 11 13:14:11 EDT 2012
   gen_cert: THEOREM 
-    FORALL (aik:wrapKey,ek:(asymKey?),k:(symKey?),state:(afterStartup?)) :
+    FORALL (aik:wrapKey,ek:(asymKey?),state:(afterStartup?),k:(symKey?)) :
       LET (a,s) = runState(
-      	  	  CA_certify(outCertReq(aik,ek,k,TPM_SUCCESS)))
+      	  	  CA_certify(outCertReq(aik,ek,TPM_SUCCESS)))
 		  (state) IN
         a = outIdentActivation(
                  certBlob(private(asymKey(caKeyVal)),aik),
@@ -903,19 +902,19 @@ tpm [ B:TYPE+ % BLOB
 
 
   %% Make a new identity and output it
-  TPM_MakeIdentity(k:(symKey?),a:AUTHDATA) : State =
+  TPM_MakeIdentity(a:AUTHDATA) : State =
      modifyOutput(outNothing,
 	    (LAMBDA (s:tpmAbsState) : executeCom(s,ABS_MakeIdentity(a))),
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_MakeIdentity(a)))
 	    );
 
   make_identity_post: THEOREM 
-    FORALL (k:(symKey?),auth:AUTHDATA,state:(afterStartup?)) :
+    FORALL (auth:AUTHDATA,state:(afterStartup?)) :
       LET (a,s) = runState(
-     	 	   TPM_MakeIdentity(k,auth))
+     	 	   TPM_MakeIdentity(auth))
 		 (state) IN
         LET waik:wrapKey = (# parentKey:=srk(s),childKey:=asymKey(keyGenCnt(state)) #) IN
-            a = outIdentity(waik,outCertReq(waik,ekVal,k,TPM_SUCCESS),TPM_SUCCESS)
+            a = outIdentity(waik,outCertReq(waik,ekVal,TPM_SUCCESS),TPM_SUCCESS)
 	AND
 	s = state WITH [`keyGenCnt := keyGenCnt(state)+1];
    
@@ -940,9 +939,9 @@ tpm [ B:TYPE+ % BLOB
       AND checkKeyRoot(aik,srk(s)) => member(childKey(aik),keys(s));
 
   activate_prev_post: THEOREM 
-    FORALL (aik:(asymKey?),k:(symKey?),auth:AUTHDATA,state:(afterStartup?)) :
+    FORALL (aik:(asymKey?),auth:AUTHDATA,state:(afterStartup?),k:(symKey?)) :
       LET  (out,s) = runState(
- 		     TPM_MakeIdentity(k,auth) % identity is output
+ 		     TPM_MakeIdentity(auth) % identity is output
 		     >>= (LAMBDA (a:tpmAbsOutput) : 
 		       	  CASES a OF
 		            outIdentity(oidentaik,oidentc,m) : TPM_ActivateIdentity(oidentaik,k)
@@ -1045,13 +1044,13 @@ tpm [ B:TYPE+ % BLOB
       
   quote_with_prev_key: THEOREM
     FORALL (k:(asymKey?),state:tpmAbsState,n:BLOB,
-            pm:PCRMASK,sessk:(symKey?),auth:AUTHDATA) :
+            pm:PCRMASK,auth:AUTHDATA) :
       LET (a,s) = runState(
       	  	  TPM_Init
 		  >> TPM_Startup(TPM_ST_CLEAR)
 		  >> CPU_senter
 		  >> CPU_sinit
-		  >> TPM_MakeIdentity(sessk,auth)
+		  >> TPM_MakeIdentity(auth)
 		  >>= (LAMBDA (a:tpmAbsOutput) : 
 		       CASES a OF 
 		         outIdentity(oidentaik,oidentc,m) : TPM_Quote(oidentaik,n,pm) 
@@ -1255,9 +1254,9 @@ tpm [ B:TYPE+ % BLOB
    %% proved Sat Jul 14 11:19:56 CDT 2012
    cert_and_quote_with_prev_key: THEOREM
      FORALL (state:tpmAbsState,
+             k:(symKey?),
 	     n:BLOB,
 	     pm:PCRMASK,
-	     k:(symKey?),
 	     sml:SML,
 	     auth:AUTHDATA) :
        LET (out,s) = runState(
@@ -1265,7 +1264,7 @@ tpm [ B:TYPE+ % BLOB
  		   >> TPM_Startup(TPM_ST_CLEAR)
  		   >> CPU_senter
  		   >> CPU_sinit
- 		   >> TPM_MakeIdentity(k,auth) % identity is output
+ 		   >> TPM_MakeIdentity(auth) % identity is output
 		   >>= CPU_saveOutput(0)
 		   >>= (LAMBDA (a:tpmAbsOutput) :
 		         CASES a OF
