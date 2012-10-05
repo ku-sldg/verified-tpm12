@@ -92,7 +92,7 @@ tpm [ B:TYPE+ % BLOB
     ABS_PcrRead(ind:PCRINDEX) : ABS_PcrRead?
     ABS_Quote(aik:wrapKey,nonce:BLOB,pm:PCRMASK) : ABS_Quote?
   %% AIK Commands
-    ABS_MakeIdentity(k:(symKey?),auth:AUTHDATA) : ABS_MakeIdentity?
+    ABS_MakeIdentity(auth:AUTHDATA) : ABS_MakeIdentity?
     ABS_ActivateIdentity(caik:wrapKey,k:(symKey?)) : ABS_ActivateIdentity?
   %% Cryptographic Commands
     ABS_Sign(sk:KEY,saik:wrapKey,sb:BLOB) : ABS_Sign?
@@ -110,7 +110,7 @@ tpm [ B:TYPE+ % BLOB
     ABS_read(i:nat) : ABS_read?
     ABS_Data_Bind(k:KEY,d:BLOB) : ABS_Data_Bind?
   %% CA Commands
-    ABS_certify(aik:wrapKey,ek:(asymKey?),freshk:(symKey?)) : ABS_certify?
+    ABS_certify(aik:wrapKey,ek:(asymKey?)) : ABS_certify?
   %% Invented, imaginary Commands
     noopCom : noopCom?
   END tpmAbsInput;
@@ -344,7 +344,7 @@ tpm [ B:TYPE+ % BLOB
       ABS_ActivateIdentity(a,k) : activateIdentityState(s,a,k),
       ABS_Init : tpmPostInit,
       ABS_CreateWrapKey(parent,k_auth) : genKeyState(s),
-      ABS_MakeIdentity(k,auth) : genKeyState(s), 
+      ABS_MakeIdentity(auth) : genKeyState(s), 
       ABS_SaveState : saveState(s),
       ABS_OwnerClear(k): ownerClearState(s,k),
       ABS_ForceClear: forceClearState(s),
@@ -491,7 +491,7 @@ tpm [ B:TYPE+ % BLOB
       ABS_CreateWrapKey(parent,k_auth) : createWrapKeyOut(s,parent,k_auth),
       ABS_PcrRead(ind) : pcrReadOut(s,ind),
       ABS_Quote(k,n,pm) : quoteOut(s,k,n,pm),
-      ABS_MakeIdentity(k,auth) : makeIdentityOut(s,k,auth), 
+      ABS_MakeIdentity(auth) : makeIdentityOut(s,auth), 
       ABS_ActivateIdentity(a,k) : activateIdentityOut(s,a,k),
       ABS_Sign(sk,aik,sb) : signOut(s,sk,aik,sb),
       ABS_TakeOwnership : takeOwnershipOut,
@@ -905,8 +905,8 @@ tpm [ B:TYPE+ % BLOB
   %% Make a new identity and output it
   TPM_MakeIdentity(k:(symKey?),a:AUTHDATA) : State =
      modifyOutput(outNothing,
-	    (LAMBDA (s:tpmAbsState) : executeCom(s,ABS_MakeIdentity(k,a))),
-            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_MakeIdentity(k,a)))
+	    (LAMBDA (s:tpmAbsState) : executeCom(s,ABS_MakeIdentity(a))),
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_MakeIdentity(a)))
 	    );
 
   make_identity_post: THEOREM 
