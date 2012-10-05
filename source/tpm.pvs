@@ -256,7 +256,7 @@ tpm [ B:TYPE+ % BLOB
     s WITH [`pcrs := pcrsExtend(pcrs(s),n,h)];
 
   % Use an AIK.  This is currently unimplemented.
-  activateIdentityState(s:tpmAbsState,a:wrapKey,k:(symKey?)) : tpmAbsState =
+  activateIdentityState(s:tpmAbsState,a:wrapKey) : tpmAbsState =
     loadKey2State(s,a);
 
   clear(s:tpmAbsState) : tpmAbsState = %not fully implemented
@@ -340,7 +340,7 @@ tpm [ B:TYPE+ % BLOB
     CASES c OF
       ABS_LoadKey2(k): loadKey2State(s,k), 
       ABS_Extend(h,n) : extendState(s,n,h),
-      ABS_ActivateIdentity(a,k) : activateIdentityState(s,a,k),
+      ABS_ActivateIdentity(a,k) : activateIdentityState(s,a),
       ABS_Init : tpmPostInit,
       ABS_CreateWrapKey(parent,k_auth) : genKeyState(s),
       ABS_MakeIdentity(auth) : genKeyState(s), 
@@ -582,10 +582,10 @@ tpm [ B:TYPE+ % BLOB
 		  (state) IN
         a = outIdentActivation(
                  certBlob(private(asymKey(caKeyVal)),aik),
-                 k,
+                 symKey(keyGenCnt(state)),
                  ek,
 		 TPM_SUCCESS)
-    AND s = state;
+    AND s = state WITH [`keyGenCnt := keyGenCnt(state)+1];
 
 
   %% TPM Command Definitions - Note that all commands used by the TPM
