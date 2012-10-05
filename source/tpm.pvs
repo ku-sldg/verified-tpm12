@@ -576,7 +576,7 @@ tpm [ B:TYPE+ % BLOB
   %% Assure the CA generates an appropriate cert from the AIK and Ek
   %% proved - Wed Jul 11 13:14:11 EDT 2012
   gen_cert: THEOREM 
-    FORALL (aik:wrapKey,ek:(asymKey?),state:(afterStartup?),k:(symKey?)) :
+    FORALL (aik:wrapKey,ek:(asymKey?),state:(afterStartup?)) :
       LET (a,s) = runState(
       	  	  CA_certify(outCertReq(aik,ek,TPM_SUCCESS)))
 		  (state) IN
@@ -921,7 +921,7 @@ tpm [ B:TYPE+ % BLOB
 	AND
 	s = state WITH [`keyGenCnt := keyGenCnt(state)+1];
    
-  %% Use an AIK
+  %% Use an AIK and return the symKey if AIK checks out
   TPM_ActivateIdentity(a:wrapKey,k:(symKey?)) : State =
      modifyOutput(outNothing,
             (LAMBDA (s:tpmAbsState) : executeCom(s,ABS_ActivateIdentity(a,k))),
@@ -941,6 +941,10 @@ tpm [ B:TYPE+ % BLOB
 	  ENDIF
       AND checkKeyRoot(aik,srk(s)) => member(childKey(aik),keys(s));
 
+  % This is an odd proof.  Technically, it's fine, but the symmetric key
+  % should come from a CA certification process, not be universally quantifed
+  % Remember that the key is encrypted with the AIK and only the TPM can
+  % decrypt it.
   activate_prev_post: THEOREM 
     FORALL (aik:(asymKey?),auth:AUTHDATA,state:(afterStartup?),k:(symKey?)) :
       LET  (out,s) = runState(
