@@ -12,7 +12,7 @@
 \newcommand{\public}[1]{\ensuremath{#1}}
 \newcommand{\private}[1]{\ensuremath{#1^{-1}}}
 \newcommand{\seal}[2]{\ensuremath{seal(#1,\{#2\})}}
-\newcommand{\wrap}[2]{\ensuremath{wrap(#1,\{#2\})}}
+\newcommand{\wrap}[2]{\ensuremath{(#1,\encrypt{\private{#1}}{#2})}}
 
 \newcommand{\trustworthy}[1]{\ensuremath{W(#1)}}
 \newcommand{\trusts}[2]{\ensuremath{T^{\mathsf{#1}}[\mathsf{#2}]}}
