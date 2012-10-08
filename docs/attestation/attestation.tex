@@ -77,9 +77,9 @@ appraiser and the user software.
 \begin{enumerate}
   \parskip=0pt\itemsep=0pt
 \item An appraiser sends an attestation request indicating what PCRs
-  are needed using a $PCR$ make along with a nonce, $n$.  (This request
-  is not formally documented, but its specifics are not critical for
-  this discussion.)
+  are needed using a $PCR$ mask along with a nonce, $n$.\footnote{This
+  request is not formally documented, but its specifics are not
+  critical for this discussion.}
 
 \item The user software receives the request and requests a fresh AIK
   from the TPM, wrapped with the TPM's SRK using the
@@ -91,8 +91,6 @@ appraiser and the user software.
   generating a new AIK wrapped by SRK, installing the new AIK, and
   returning $\public{AIK}$, signed by the TPM using $\private{AIK}$ --
   $\sign{\public{AIK}}{AIK}$.
-
-  WHAT IS CR???  IS CR THE SIGNED KEYS?
 
   \emph{The new AIK is a key wrapped by SRK.  The only way that
     $\sign{\public{AIK}}{AIK}$ can be created is in the presence of
@@ -118,33 +116,36 @@ appraiser and the user software.
   then turn decrypts the signed AIK ($\encrypt{\sign{AIK}{CA}}{K}$)
   using $K$.  The $\public(AIK)$ signed by the Privacy CA
   ($\sign{\public{AIK}}{CA}$) can only be obtained in the presence of
-  the TPM associated with EK.  \emph{This is exactly the result that
-    we want}.
+  the TPM associated with EK.
 
 \item The user software requests a quote from the TPM using the
   \verb+TPM_Quote+ command and the nonce, $n$, sent by the appraiser.
   The TPM produces the quote, signed using $\private{AIK}$.
   $\sign{\public{AIK}}{CA}$ is also signed with $\private{AIK}$.  The
   user software sends the signed, certified AIK and signed quote back
-  to the appraiser.
+  to the appraiser.\footnote{The details of this communication are not
+    specified.}
 
 \item The appraiser analyzes the signed blobs received from the user
   software as follows: 
   
   \begin{enumerate}
   \item $\public{AIK}$ is used to check the signature of
-    $\sign{\sign{\public{AIK}{CA}}}{AIK}$ --- The certified $AIK$ was
-    signed by the same TPM as the quote.
+    $\sign{\sign{\public{AIK}}{CA}}{AIK}$ --- The $AIK$ was signed by
+    the TPM where the $AIK$ is installed.
     
   \item $\public{CA}$ is used to check the signature of
     $\sign{\public{AIK}}{CA}$ --- The Privacy CA has certified the AIK
-    as coming from a legitimate TPM.
+    is installed in a legitimate TPM.
   
   \item $\public{AIK}$ is used to check the quote signature --- The
-    quote sent was signed by the TPM associated with the AIK.
-    
+    quote sent was signed by the TPM where the AIK is installed and
+    the same TPM that generated the signature on
+    $\sign{\sign{\public{AIK}}{CA}}{AIK}$
+      
   \item $n$ is checked against the nonce sent with the original
-    request --- The TPM quote is fresh.
+    request --- The TPM quote is fresh, avoiding a replay attack using
+    a cached quote.
     
   \item PCRs from the quote are compared with expected values --- The
     remote system is configured as expected.
@@ -160,13 +161,13 @@ appraiser and the user software.
     \newinst[1]{a}{Appraiser}
 
     \begin{call}{a}{Attestation Request with $n$ and $PCR$ mask}{user}{$(\sign{\sign{\public{AIK}}{CA}}{AIK},\sign{n,PCRDigest}{AIK})$}
-      \begin{call}{user}{\textsf{MakeIdentity}}{tpm}{$\sign{\public{AIK}}{AIK}$,CR}
+      \begin{call}{user}{\textsf{MakeIdentity}}{tpm}{$\sign{\public{AIK}}{AIK}$,\sign{\public{EK}}{AIK}}
         \begin{callself}{tpm}{Generate new AIK}{$\wrap{AIK}{SRK}$}
         \end{callself}
         \begin{callself}{tpm}{Install $\wrap{AIK}{SRK}$}{}
         \end{callself}
       \end{call}
-      \begin{call}{user}{$\public{\sign{\public{EK}}{AIK}},\sign{\public{AIK}}{AIK}$}{ca}{$\encrypt{\sign{\public{AIK}}{CA}}{K},\encrypt{K,\public{AIK}}{EK}$}
+      \begin{call}{user}{$(\sign{\public{EK}}{AIK},\sign{\public{AIK}}{AIK})$}{ca}{$(\encrypt{\sign{\public{AIK}}{CA}}{K},\encrypt{K,\public{AIK}}{EK})$}
         \begin{callself}{ca}{Check \public{AIK}}{}
         \end{callself}     
         \begin{callself}{ca}{Check \public{EK}}{}
@@ -187,47 +188,13 @@ appraiser and the user software.
 
 \subsection{TCG Documentation Approach}
 
-The TCG protocol, shown in figure~\ref{fig:tcg-ca}, is documented in
-the TPM technical documentation by way of describing the TPM command
-set provided~\citep{---::TCG-TPM-Specifi}.  At this time, the
-distinction is the \verb+TPM_MakeIdentity+ command returning a signed
-public $\public{EK}$ in addition to the signed $\public{AIK}$.  If we
-can determine that this is the same as the certification request
-($CR$), then the two protocols are basically the same.
-
-\begin{figure}
-  \centering
-  \begin{sequencediagram}
-    \newthread[white]{tpm}{TPM}
-    \newinst[3]{user}{User Software}
-    \newinst[3]{ca}{Certificate Authority}
-    \newinst[1]{a}{Appraiser}
-
-    \begin{call}{a}{Attestation Request with $n$ and $PCR$ mask}{user}{$(\sign{\sign{\public{AIK}}{CA}}{AIK},\sign{n,PCRDigest}{AIK})$}
-      \begin{call}{user}{\textsf{MakeIdentity}}{tpm}{$\sign{\public{AIK}}{AIK}$,$\sign{EK}{AIK}$}
-        \begin{callself}{tpm}{Generate new AIK}{$\wrap{AIK}{SRK}$}
-        \end{callself}
-        \begin{callself}{tpm}{Install $\wrap{AIK}{SRK}$}{}
-        \end{callself}
-      \end{call}
-      \begin{call}{user}{$\public{\sign{\public{EK}}{AIK}},\sign{\public{AIK}}{AIK}$}{ca}{$\encrypt{\sign{\public{AIK}}{CA}}{K},\encrypt{K,\public{AIK}}{EK}$}
-        \begin{callself}{ca}{Check \public{AIK}}{}
-        \end{callself}     
-        \begin{callself}{ca}{Check \public{EK}}{}
-        \end{callself}
-      \end{call}
-      \begin{call}{user}{$\mathsf{ActivateIdentity}(\encrypt{K,AIK}{EK})$}{tpm}{$K$}
-      \end{call}
-      \begin{callself}{user}{Decrypt $\encrypt{\sign{\public{AIK}}{CA}}{K}$}{$\sign{\public{AIK}}{CA}$}
-      \end{callself}     
-      \begin{call}{user}{$\mathsf{Quote}(n,PCRMask)$}{tpm}{$\sign{n,PCRDigest}{AIK}$}
-      \end{call}
-    \end{call}
-  \end{sequencediagram}
-  \caption{Sequence Diagram for the Privacy CA protocol as described
-    by Ryan}
-  \label{fig:tcg-ca}
-\end{figure}
+The TCG protocol is documented in the TPM technical documentation by
+way of describing the TPM command set
+provided~\citep{---::TCG-TPM-Specifi}.  At this time, the distinction
+is the \verb+TPM_MakeIdentity+ command returning a signed public
+$\public{EK}$ in addition to the signed $\public{AIK}$.  If we can
+determine that this is the same as the certification request ($CR$),
+then the two protocols are basically the same.
 
 \section{Direct Anonymous Attestation}
 
