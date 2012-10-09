@@ -26,6 +26,7 @@ startupData[B,K,HV : TYPE+] : THEORY
   		          valid? : bool,
                           srk : (asymKey?),
 		          ek : (asymKey?),
+			  keyGenCnt : K,
 			  keys : KEYSET,
                           pcrs : PCRS,
 			  permFlags : PermFlags,
@@ -42,6 +43,7 @@ startupData[B,K,HV : TYPE+] : THEORY
   saveState(tpmKeys: KEYSET,
             tpmEK : (asymKey?),
 	    tpmSRK : (asymKey?),
+       	    tpmKeyGenCnt : K,
 	    tpmPcrs : PCRS,
 	    tpmPermFlags : PermFlags,
 	    tpmPermData : PermData ) : (wellFormedRestore?) = 
@@ -49,6 +51,7 @@ startupData[B,K,HV : TYPE+] : THEORY
        keys := tpmKeys,
        ek := tpmEK,
        srk := tpmSRK,
+       keyGenCnt := tpmKeyGenCnt,
        pcrs := (LAMBDA (i:PCRINDEX) :
                      IF pcrReset(pcrAttrib(tpmPermData)(i))
 		        THEN resetOne
@@ -63,12 +66,14 @@ startupData[B,K,HV : TYPE+] : THEORY
 
   ekInit : K
   srkInit : K
+  keyGenCntInit : K
 
   initSaveData : (wellFormedRestore?) =
     (# valid? := FALSE,
        keys := emptyset,
        ek := asymKey(ekInit),
        srk := asymKey(srkInit),
+       keyGenCnt := keyGenCntInit,
        pcrs := pcrsPower,
        permFlags := permFlagsInit,
        permData := permDataInit
