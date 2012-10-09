@@ -90,16 +90,11 @@ tpm [ B:TYPE+ % BLOB
   %% Measurement Reporting Commands
     ABS_PcrRead(ind:PCRINDEX) : ABS_PcrRead?
     ABS_Quote(aik:wrapKey,nonce:BLOB,pm:PCRMASK) : ABS_Quote?
-<<<<<<< HEAD
   %% Endorsement Key Handling (14)
     ABS_CreateEndorsementKeyPair(keyInfo:(asymKey?)) : ABS_CreateEndorsementKeyPair?
     ABS_ReadPubEK : ABS_ReadPubEK?
   %% Identity Creation and Activation (15)
-    ABS_MakeIdentity(naik:(asymKey?),k:(symKey?),auth:AUTHDATA) : ABS_MakeIdentity?
-=======
-  %% AIK Commands
     ABS_MakeIdentity(auth:AUTHDATA) : ABS_MakeIdentity?
->>>>>>> e2c3cb3c634551fcdcfd4840db67955dc7030f2a
     ABS_ActivateIdentity(caik:wrapKey,k:(symKey?)) : ABS_ActivateIdentity?
   %% Cryptographic Commands (13)
     ABS_Sign(sk:KEY,saik:wrapKey,sb:BLOB) : ABS_Sign?
@@ -367,12 +362,8 @@ tpm [ B:TYPE+ % BLOB
     CASES c OF
       ABS_LoadKey2(k): loadKey2State(s,k), 
       ABS_Extend(h,n) : extendState(s,n,h),
-<<<<<<< HEAD
       ABS_CreateEndorsementKeyPair(k) : createEndorsementKeyPairState(s,k),
-      ABS_ActivateIdentity(a,k) : activateIdentityState(s,a,k),
-=======
       ABS_ActivateIdentity(a,k) : activateIdentityState(s,a),
->>>>>>> e2c3cb3c634551fcdcfd4840db67955dc7030f2a
       ABS_Init : tpmPostInit,
       ABS_CreateWrapKey(parent,k_auth) : genKeyState(s),
       ABS_MakeIdentity(auth) : genKeyState(s), 
@@ -549,13 +540,9 @@ tpm [ B:TYPE+ % BLOB
       ABS_CreateWrapKey(parent,k_auth) : createWrapKeyOut(s,parent,k_auth),
       ABS_PcrRead(ind) : pcrReadOut(s,ind),
       ABS_Quote(k,n,pm) : quoteOut(s,k,n,pm),
-<<<<<<< HEAD
       ABS_CreateEndorsementKeyPair(k) : createEndorsementKeyPairOut(s,k),
       ABS_ReadPubEK : readPubEKOut(s),
-      ABS_MakeIdentity(a,k,auth) : makeIdentityOut(s,a,k,auth), 
-=======
       ABS_MakeIdentity(auth) : makeIdentityOut(s,auth), 
->>>>>>> e2c3cb3c634551fcdcfd4840db67955dc7030f2a
       ABS_ActivateIdentity(a,k) : activateIdentityOut(s,a,k),
       ABS_Sign(sk,aik,sb) : signOut(s,sk,aik,sb),
       ABS_TakeOwnership(srk) : takeOwnershipOut(s,srk),
@@ -1170,12 +1157,6 @@ tpm [ B:TYPE+ % BLOB
 	AND s = state
       
   quote_with_prev_key: THEOREM
-<<<<<<< HEAD
-    FORALL (k:(asymKey?),state:(afterStartup?),n:BLOB,
-            pm:PCRMASK,sessk:(symKey?),auth:AUTHDATA) :
-      LET (a,s) = runState(
-		  TPM_MakeIdentity(k,sessk,auth)
-=======
     FORALL (k:(asymKey?),state:tpmAbsState,n:BLOB,
             pm:PCRMASK,auth:AUTHDATA) :
       LET (a,s) = runState(
@@ -1184,7 +1165,6 @@ tpm [ B:TYPE+ % BLOB
 		  >> CPU_senter
 		  >> CPU_sinit
 		  >> TPM_MakeIdentity(auth)
->>>>>>> e2c3cb3c634551fcdcfd4840db67955dc7030f2a
 		  >>= (LAMBDA (a:tpmAbsOutput) : 
 		       CASES a OF 
 		         outIdentity(oidentaik,oidentc,m) : TPM_Quote(oidentaik,n,pm) 
