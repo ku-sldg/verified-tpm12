@@ -62,7 +62,7 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   BEGIN
     invalidKey : invalidKey?
     symKey(skey:KVAL) : symKey?
-    asymKey(askey:KVAL) : asymKey?
+    asymKey(askey:KVAL,keyUsage:KEY_USAGE,keyFlags:KEY_FLAGS) : asymKey?
   END KEY;		
 
   private(k:(asymKey?)):(asymKey?)
