@@ -91,8 +91,8 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
     encryptBlob(key:KEY,blob:BLOB) : encryptBlob?
     signBlob(key:KEY,blob:BLOB) : signBlob?
     sealBlob(key:KEY,pcrs:PCRS,blob:BLOB) : sealBlob?
-    certBlob(key:KEY,wkey:wrapKey) : certBlob?
-    %certBlob(key:KEY,blob:BLOB) : certBlob?
+    certBlob(encrKey:KEY,digest:(asymKey?),symK:(symKey?)) : certBlob?
+%     certBlob(key:KEY,wkey:wrapKey) : certBlob?
     pairBlob(left,right : BLOB) : pairBlob?
     authorizationBlob(migKey:KEY,migrationScheme:migrateScheme) : authorizationBlob?
   END BLOB;
