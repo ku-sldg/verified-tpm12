@@ -1,0 +1,212 @@
+\documentclass[10pt]{article}
+
+%\usepackage{hyperref}
+\usepackage{fullpage}
+\usepackage{alltt}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage{fancyhdr}
+\usepackage{tikz}
+\usetikzlibrary{arrows,shadows}
+\usepackage[underline=false]{pgf-umlsd}
+\usepackage{trust}
+\pagestyle{fancy}
+
+\lhead{}
+\rhead{}
+\lfoot{\copyright The University of Kansas, 2012}
+\cfoot{\thepage}
+
+
+\newtheorem{conjecture}{Conjecture}
+\newtheorem{obligation}{Obligation}
+\newtheorem{definition}{Definition}
+
+
+\usepackage{ifthen}
+\newboolean{submission}  %%set to true for the submission version
+\setboolean{submission}{false}
+%\setboolean{submission}{true}
+\ifthenelse
+{\boolean{submission}}
+{ \newcommand{\todo}[1]{ } } % hide todo
+{ \newcommand{\todo}[1]{ % show todo
+   \marginpar{\raggedright\footnotesize{#1}}
+               }}
+
+\parskip=\medskipamount
+\parindent=0pt
+
+\bibliographystyle{abbrvnat}
+
+\title{Attestation Protocols: A Tutorial Introduction}
+\author{Perry Alexander and Brigid Halling \\ Information and
+  Telecommunication Technology Center \\
+  The University of Kansas \\
+  \url{{palexand,bhalling}@ku.edu}}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\listoffigures
+\listoftables
+
+\begin{abstract}
+  This document is intended to provide a tutorial overview of the
+  basic attestation protocols used by a TPM.
+\end{abstract}
+
+\section{Introduction}
+
+\section{Privacy Certificate Authority Based Attestation}
+
+There are two versions of the Privacy CA attestation process, one
+documented by~\citet{Ryan:09:Introduction-to} and the other documented
+in the TCG specification \citep{---::TCG-TPM-Specifi}.  They are not
+dramatically different, but should be reconciled.
+
+\subsection{The Ryan Approach}
+
+The Ryan protocol, shown in figure~\ref{fig:ryan-ca}, is documented in
+his invaluable technical report~\cite{Ryan:09:Introduction-to}.  We
+have enhanced it here to include more explicit interaction between the
+appraiser and the user software.  
+
+\begin{enumerate}
+  \parskip=0pt\itemsep=0pt
+\item An appraiser sends an attestation request indicating what PCRs
+  are needed using a $PCR$ mask along with a nonce, $n$.\footnote{This
+  request is not formally documented, but its specifics are not
+  critical for this discussion.}
+
+\item The user software receives the request and requests a fresh AIK
+  from the TPM, wrapped with the TPM's SRK using the
+  \verb+TPM_MakeIdentity+ command.  Parameters to the
+  \verb+TPM_MakeIdentity+ command describe properties of the desired
+  AIK pair.
+
+\item The TPM responds to the \verb+TPM_MakeIdentity+ command by
+  generating a new AIK wrapped by SRK, installing the new AIK, and
+  returning $\public{AIK}$, signed by the TPM using $\private{AIK}$ --
+  $\sign{\public{AIK}}{AIK}$.
+
+  \emph{The new AIK is a key wrapped by SRK.  The only way that
+    $\sign{\public{AIK}}{AIK}$ can be created is in the presence of
+    the TPM that generated AIK.}
+
+\item The user software sends the certified public EK
+  ($\sign{EK}{AIK}$) and the signed public \public{AIK}
+  ($\sign{AIK}{AIK}$) obtained from the TPM to the Privacy CA and
+  requests that it certify $\public{AIK}$.
+
+\item The Privacy CA uses $\public{AIK}$ to check the signature on EK
+  and then determines if it has been revoked.  It then uses
+  $\public{AIK}$ to check the signature on itself.  If AIK signature
+  check and EK signature check succeed, the Privacy CA knows the AIK
+  and EK came from the same TPM.  If both checks are successful, the
+  Privacy CA signs the public AIK and encrypts the certificate with a
+  fresh session key.  It they encrypts both the new session key and
+  the AIK with EK and returns both to the user software.
+
+\item The user software uses the \verb+TPM_ActivateIdentity+ command
+  to decyrpt the session key ($\encrypt{K}{EK}$).  Only the TPM
+  associated with EK can decrypt the session key.  The user software
+  then turn decrypts the signed AIK ($\encrypt{\sign{AIK}{CA}}{K}$)
+  using $K$.  The $\public(AIK)$ signed by the Privacy CA
+  ($\sign{\public{AIK}}{CA}$) can only be obtained in the presence of
+  the TPM associated with EK.
+
+\item The user software requests a quote from the TPM using the
+  \verb+TPM_Quote+ command and the nonce, $n$, sent by the appraiser.
+  The TPM produces the quote, signed using $\private{AIK}$.
+  $\sign{\public{AIK}}{CA}$ is also signed with $\private{AIK}$.  The
+  user software sends the signed, certified AIK and signed quote back
+  to the appraiser.\footnote{The details of this communication are not
+    specified.}
+
+\item The appraiser analyzes the signed blobs received from the user
+  software as follows: 
+  
+  \begin{enumerate}
+  \item $\public{AIK}$ is used to check the signature of
+    $\sign{\sign{\public{AIK}}{CA}}{AIK}$ --- The $AIK$ was signed by
+    the TPM where the $AIK$ is installed.
+    
+  \item $\public{CA}$ is used to check the signature of
+    $\sign{\public{AIK}}{CA}$ --- The Privacy CA has certified the AIK
+    is installed in a legitimate TPM.
+  
+  \item $\public{AIK}$ is used to check the quote signature --- The
+    quote sent was signed by the TPM where the AIK is installed and
+    the same TPM that generated the signature on
+    $\sign{\sign{\public{AIK}}{CA}}{AIK}$
+      
+  \item $n$ is checked against the nonce sent with the original
+    request --- The TPM quote is fresh, avoiding a replay attack using
+    a cached quote.
+    
+  \item PCRs from the quote are compared with expected values --- The
+    remote system is configured as expected.
+  \end{enumerate}
+\end{enumerate}
+
+\begin{figure}
+  \centering
+  \begin{sequencediagram}
+    \newthread[white]{tpm}{TPM}
+    \newinst[3]{user}{User Software}
+    \newinst[3]{ca}{Certificate Authority}
+    \newinst[1]{a}{Appraiser}
+
+    \begin{call}{a}{Attestation Request with $n$ and $PCR$ mask}{user}{$(\sign{\sign{\public{AIK}}{CA}}{AIK},\sign{n,PCRDigest}{AIK})$}
+      \begin{call}{user}{\textsf{MakeIdentity}}{tpm}{$\sign{\public{AIK}}{AIK}$,\sign{\public{EK}}{AIK}}
+        \begin{callself}{tpm}{Generate new AIK}{$\wrap{AIK}{SRK}$}
+        \end{callself}
+        \begin{callself}{tpm}{Install $\wrap{AIK}{SRK}$}{}
+        \end{callself}
+      \end{call}
+      \begin{call}{user}{$(\sign{\public{EK}}{AIK},\sign{\public{AIK}}{AIK})$}{ca}{$(\encrypt{\sign{\public{AIK}}{CA}}{K},\encrypt{K,\public{AIK}}{EK})$}
+        \begin{callself}{ca}{Check \public{AIK}}{}
+        \end{callself}     
+        \begin{callself}{ca}{Check \public{EK}}{}
+        \end{callself}
+      \end{call}
+      \begin{call}{user}{$\mathsf{ActivateIdentity}(\encrypt{K,AIK}{EK})$}{tpm}{$K$}
+      \end{call}
+      \begin{callself}{user}{Decrypt $\encrypt{\sign{\public{AIK}}{CA}}{K}$}{$\sign{\public{AIK}}{CA}$}
+      \end{callself}     
+      \begin{call}{user}{$\mathsf{Quote}(n,PCRMask)$}{tpm}{$\sign{n,PCRDigest}{AIK}$}
+      \end{call}
+    \end{call}
+  \end{sequencediagram}
+  \caption{Sequence Diagram for the Privacy CA protocol as described
+    by Ryan}
+  \label{fig:ryan-ca}
+\end{figure}
+
+\subsection{TCG Documentation Approach}
+
+The TCG protocol is documented in the TPM technical documentation by
+way of describing the TPM command set
+provided~\citep{---::TCG-TPM-Specifi}.  At this time, the distinction
+is the \verb+TPM_MakeIdentity+ command returning a signed public
+$\public{EK}$ in addition to the signed $\public{AIK}$.  If we can
+determine that this is the same as the certification request ($CR$),
+then the two protocols are basically the same.
+
+\section{Direct Anonymous Attestation}
+
+\nocite{---::TCG-TPM-Specifi,Ryan:09:Introduction-to}
+
+\section{Glossary}
+
+\begin{description}
+\item[$\sign{M}{K}$] --- M signed with private K.
+\item[$\encrypt{M}{K}$]  --- M encrypted with public K.
+\end{description}
+
+\bibliography{attestation}
+
+\end{document}
