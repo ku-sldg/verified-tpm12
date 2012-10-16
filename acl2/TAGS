@@ -1,0 +1,81 @@
+
+tpm.lisp,1410
+(defmacro why 27,1369
+(defrec tpm-state44,1845
+(defn srk-p 61,2555
+(defthm srk-p-implies-asymmetric-key-p64,2600
+(defn ek-p 68,2699
+(defthm ek-p-implies-asymmetric-key-p71,2741
+(defun key-p 78,2875
+(defun keys-p 82,2943
+(defthm keys-p-implies-true-listp89,3112
+(cutil::defaggregate restore-state-data95,3258
+(defconst *pcrs-reset* 122,4412
+(cutil::defaggregate tpm-state124,4441
+(defthm tpm-state->locality-nat-p170,6108
+(defconst *default-srk* 193,6892
+(defconst *default-ek* 194,6919
+(defconst *default-keys* 195,6945
+(defconst *default-pcrs* 196,6975
+(defconst *default-perm-data* 197,7005
+(defconst *default-perm-flags* 198,7053
+(defconst *default-restore-state-data*200,7104
+(defconst *tpm-post-init* 210,7367
+(defconst *tpm-startup*236,8006
+(defun after-init-p 251,8338
+(defthm after-init-p-boolean-p255,8446
+(defun after-startup-p 260,8589
+(defun+ pcrs-reset-senter-state 271,9003
+(defun+ change-locality-state 325,11012
+(defun+ revoke-key-state 344,11828
+(defthm revoke-key-state-preserves-tpm-state-p352,12168
+(defun+ load-key-to-state 357,12352
+(defun+ extend-state 366,12766
+(defun+ activate-identity-state 377,13259
+(defun+ clear 391,13924
+(defun+ owner-clear-state 398,14112
+(defun+ force-clear-state 410,14586
+(defun+ disable-owner-clear-state 418,14835
+(defun+ disable-force-clear-state 426,15210
+(defun+ save-state1 433,15450
+(defun+ save-state 456,16338
+
+pcr.lisp,1240
+(defconst *pcr-count* 7,161
+(defconst *pcr-bit-length* 9,188
+(defconst *max-pcr-value* 11,234
+(defnd locality-p 13,293
+(defthm locality-p-implies-natp18,398
+(defn pcr-p 26,623
+(defn reset-one 31,717
+(defn reset-zero 33,741
+(defn pcr-index-p 38,835
+(defthm nat-p-of-pcr-index-p43,934
+(cutil::deflist pcr-index-list-p 48,1050
+(cutil::defaggregate pcr-flag53,1146
+(cutil::deflist pcr-flag-list-p 63,1498
+(cutil::deflist pcr-list-p 117,3026
+(defun+ pcr-reset 200,5481
+(defun+ pcr-senter 207,5674
+(defn all-pcr-indexes-are-within-range 229,6351
+(defun induction-hint 273,7821
+(defthm pcr-list-p-of-update-nth279,7966
+(defun+ pcrs-reset 288,8311
+(defun+ pcrs-senter 311,9414
+(defun pcr-reset-ones-p 337,10652
+(defun pcr-reset-zeros-p 342,10783
+(defun+ pcrs-reset-ones-p 347,10903
+(defun+ pcrs-reset-zeros-p 356,11189
+(defun all-reset-access 366,11482
+(defun valid-extension-value-p 376,11830
+(defun+ extend 384,12036
+(defun+ pcrs-extend 391,12292
+(cutil::deflist nat-list-p 410,12998
+(defthm pcr-p-of-nth-of-pcr-list-p417,13147
+(defun valid-pcr-mask-element 423,13310
+(defun valid-pcr-masks 429,13538
+(defun+ get-pcrs 437,13873
+(defthm get-pcrs-correctness447,14249
+(defthm extension-is-antisymmetric464,14754
+
+top.lisp,0
