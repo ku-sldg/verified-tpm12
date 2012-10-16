@@ -248,34 +248,21 @@
 
 (in-theory (disable extend (extend))) ; will eventually disable many more functions
 
+(defn pcr-mask-p (index)
+; the current element/index in the pcr-mask is less than the length of the pcrs
+  (and (natp index)
+       (< index *pcr-count*)))
 
-; TODO: define a predicate that includes integer-listp but also checks that it
-; is of length <= *pcr-count* (or perhaps =).
-
-(cutil::deflist nat-list-p (x)
-  (natp x)
+(cutil::deflist pcr-mask-list-p (x)
+  (pcr-mask-p x)
   :elementp-of-nil nil
   :true-listp t)
 
-(defun valid-pcr-mask-element (index length-pcrs)
-; the current element/index in the pcr-mask is less than the length of the pcrs
-  (declare (xargs :guard (natp length-pcrs)))
-  (and (natp index)
-       (< index length-pcrs)))
-
-(defun valid-pcr-masks (pcr-masks length-pcrs)
-; every element in the pcr-mask is less than the length of the pcrs
-  (declare (xargs :guard (natp length-pcrs)))
-  (cond ((atom pcr-masks)
-         t)
-        (t (and (valid-pcr-mask-element (car pcr-masks) length-pcrs)
-                (valid-pcr-masks (cdr pcr-masks) length-pcrs)))))
-
 (defun+ get-pcrs (pcrs pcr-masks)
   (declare (xargs :guard (and (pcr-list-p pcrs)
-                              (valid-pcr-masks pcr-masks (len pcrs)))
-                  :output (pcr-list-p (get-pcrs pcrs pcr-masks))
-                  ))
+                              (pcr-mask-list-p pcr-masks))
+                  :output (implies (equal (len pcrs) *pcr-count*) ; this extra condition is messy
+                                   (pcr-list-p (get-pcrs pcrs pcr-masks)))))
   (cond ((atom pcr-masks)
          nil)
         (t (cons (nth (car pcr-masks) pcrs)
