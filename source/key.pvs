@@ -19,28 +19,151 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
   BEGIN
 
-  %%ASSUMING
-  %%ENDASSUMING
-
-  %% Basic key types - symmetric, assymetric, wrapped - built with key values
-  %% Note that KVAL is completely uninterpretted at this point
   IMPORTING pcr[HVAL];
+  IMPORTING ReturnCodes;
   
-  AUTHDATA : TYPE = string
+  AUTHDATA : TYPE = string;
+  KEYDATA : TYPE;
   
   KEY : DATATYPE
   BEGIN
     symKey(skey:KVAL) : symKey?
-    asymKey(askey:KVAL) : asymKey?
-%    wrapKey(parentKey:(asymKey?),childKey:(asymKey?),a:AUTHDATA) : wrapKey?
+    asymKey(askey:KVAL,asData:KEYDATA) : asymKey?
   END KEY;		
 
+  % This is odd, but it seems to work out okay.
   private(k:(asymKey?)):(asymKey?)
+  public(k:(asymKey?)):(asymKey?)
 
-  wrapKey : TYPE = [#
-  	    	   parentKey:(asymKey?),
-		   childKey:(asymKey?)
-  		   #]; 
+  CRYPTOSTATUS : DATATYPE
+  BEGIN
+    clear : clear?
+    encrypted(key:(asymKey?),crstat:CRYPTOSTATUS) : encrypted?
+    signed(key:(asymKey?),crstat:CRYPTOSTATUS) : signed?
+    wrapped(key:(asymKey?),crstat:CRYPTOSTATUS,pcrs:PCRS) : wrapped?
+    sealed(key:(asymKey?),crstat:CRYPTOSTATUS,pcrs:PCRS) : sealed?
+  END CRYPTOSTATUS;
+
+  tpmData : DATATYPE
+  BEGIN
+    tpmQuote(nonce:nat,pcrs:list[PCR],crs:CRYPTOSTATUS,m:ReturnCode) : tpmQuote?
+    %% tpmBlob - Is gone
+    %% tpmKey subsumes all key outputs
+    tpmKey(key:(asymKey?),crs:CRYPTOSTATUS,m:ReturnCode) : tpmKey?
+    %  wrapped key: tpmKey(child,wrapped(public(parent),clear,pcrs))
+    %  clear child wrapped by parent bound to PCRs
+    %  unwrapped key: tpmKey(k,clear)
+    %  clear key
+    %  encrypted key: tpmKey(k,encrypted(public(j),clear))
+    %  clear key encrypted with public j
+    %  signed key: tpmKey(k,signed(private(j),clear))
+    %  clear key signed by private j
+    tpmCertKey(aik:(tpmKey?),crs:CRYPTOSTATUS,m:ReturnCode):tpmCertKey?
+    tpmIdentity(aik:(tpmKey?),cr:(tpmCertKey?),crs:CRYPTOSTATUS,m:ReturnCode):tpmIdentity?
+    %  cr is a cert req and should be checked with certKey?
+    tpmFullQuote(cert:(tpmCertKey?),sml:list[HVAL],quote:(tpmQuote?)):tpmFullQuote?
+    %  cert is a certified key and should be checked with certKey?
+  END tpmData;
+
+  certKey?(r:tpmData):bool =
+  CASES r OF
+    tpmKey(k0,crs0,m0) : CASES crs0 OF
+                           signed(k1,csr1) : clear?(csr1)
+			   ELSE FALSE
+			 ENDCASES
+    ELSE FALSE
+  ENDCASES;
+
+  % Predicate subtype to replace wrapKey below
+  wrapKey?(k:tpmData):bool =
+  CASES k OF
+    tpmKey(k0,crs0,m0) : CASES crs0 OF 
+                           wrapped(k1,csr1,p1) : clear?(csr1)
+			   ELSE FALSE
+			 ENDCASES
+    ELSE FALSE
+  ENDCASES;
+
+  %% Simulated accessors for wrapped key elements
+  childKey(k:(wrapKey?)):(asymKey?) = key(k)
+
+  parentKey(k:(wrapKey?)):(asymKey?) = key(crs(k))
+
+  %% Basic crypto functions.  xStatus functions operate on status
+  %% indicators while x functions operate on tpmData.  Need to account
+  %% for private and public keys in this, but the basic process seems to be
+  %% there.
+  encryptStatus(k:(asymKey?),c:CRYPTOSTATUS) : (encrypted?) =
+    encrypted(k,c);
+
+  encrypt(k:(asymKey?),d:tpmData) : tpmData =
+    CASES d OF 
+      tpmQuote(n0,p0,crs0,m0) : tpmQuote(n0,p0,encryptStatus(k,crs0),m0),
+      tpmKey(k0,crs0,m0) : tpmKey(k0,encryptStatus(k,crs0),m0)
+      ELSE d
+    ENDCASES;
+
+  decryptStatus(k:(asymKey?),c:(encrypted?)) : CRYPTOSTATUS =
+    IF key(c) = k THEN crstat(c) ELSE c ENDIF;
+
+  decrypt(k:(asymKey?),d:tpmData) : tpmData =
+    CASES d OF
+      tpmQuote(n0,p0,crs0,m0) : IF encrypted?(crs0)
+      			        THEN tpmQuote(n0,p0,decryptStatus(k,crs0),m0)
+				ELSE d
+				ENDIF,
+      tpmKey(k0,crs0,m0) : IF encrypted?(crs0)
+                           THEN tpmKey(k0,decryptStatus(k,crs0),m0)
+			   ELSE d
+			   ENDIF
+      ELSE d
+    ENDCASES;
+
+  decrypt_encrypt : THEOREM FORALL (k:(asymKey?),c:CRYPTOSTATUS) : 
+    decryptStatus(k,encryptStatus(k,c)) = c;
+
+  signStatus(k:(asymKey?),c:CRYPTOSTATUS) : (signed?) =
+    signed(k,c);
+
+  sign(k:(asymKey?),d:tpmData) : tpmData =
+    CASES d OF 
+      tpmQuote(n0,p0,crs0,m0) : tpmQuote(n0,p0,signStatus(k,crs0),m0),
+      tpmKey(k0,crs0,m0) : tpmKey(k0,signStatus(k,crs0),m0)
+      ELSE d
+    ENDCASES;
+
+  checkSigStatus(k:(asymKey?),c:CRYPTOSTATUS) : bool =
+    CASES c OF
+      signed(kq,cq) : k = kq
+      ELSE FALSE
+    ENDCASES;
+
+  checkSig(k:(asymKey?),d:tpmData) : bool =
+    CASES d OF
+      tpmQuote(n0,p0,crs0,m0) : IF signed?(crs0)
+      			        THEN checkSigStatus(k,crs0)
+				ELSE FALSE
+				ENDIF,
+      tpmKey(k0,crs0,m0) : IF signed?(crs0)
+                           THEN checkSigStatus(k,crs0)
+			   ELSE FALSE
+			   ENDIF
+      ELSE FALSE
+    ENDCASES;
+
+  check_sign : THEOREM FORALL (k:(asymKey?),c:CRYPTOSTATUS) : 
+    checkSigStatus(k,signStatus(k,c));
+
+  %% Check a quote
+  checkQuote(q:(tpmQuote?),k:(asymKey?),p:list[PCR],n:nat):bool =
+    checkSig(k,q) AND nonce(q)=n AND pcrs(q)=p;
+
+  %% Removed the wrapKey type in favor of the (wrapKey?) subtype that can
+  %% be applied to tpmKey.
+  % wrapKey : TYPE = [#
+  % 	    	   parentKey:(asymKey?),
+  % 		   childKey:(asymKey?)
+  % 		   #]; 
 
 
   %% This theorem does NOT say that the private key of a private key is
@@ -61,7 +184,7 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
     encryptBlob(key:KEY,blob:BLOB) : encryptBlob?
     signBlob(key:KEY,blob:BLOB) : signBlob?
     sealBlob(key:KEY,pcrs:PCRS,blob:BLOB) : sealBlob?
-    certBlob(key:KEY,wkey:wrapKey) : certBlob?
+    certBlob(key:KEY,wkey:(wrapKey?)) : certBlob?
     %certBlob(key:KEY,blob:BLOB) : certBlob?
     pairBlob(left,right : BLOB) : pairBlob?
   END BLOB;
@@ -85,7 +208,7 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   decrypt(b:(encryptBlob?),k:KEY):BLOB = 
     CASES k OF 
       symKey(k0) : decryptSym(b,k),
-      asymKey(k0) : decryptAsym(b,k)
+      asymKey(k0,kd) : decryptAsym(b,k)
   ENDCASES;
 
   %% Unseal for aysmetric keys
@@ -109,15 +232,14 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   sigCheck(b:(signBlob?),k:KEY):boolean =
     CASES k OF
       symKey(k0) : sigCheckSym(b,k),
-      asymKey(k0) : sigCheckAsym(b,k)
-%      wrapKey(k0,k1,a) : FALSE
+      asymKey(k0,kd) : sigCheckAsym(b,k)
     ENDCASES;
 
   %% A keyset is simply a set of asymetric keys
   KEYSET : TYPE = set[(asymKey?)];
 
   %% Check against the root key passed in as rk
-  checkKeyRoot(k:wrapKey,rk:(asymKey?)):bool =
+  checkKeyRoot(k:(wrapKey?),rk:(asymKey?)):bool =
     parentKey(k)=rk;
 
   %% Check against the set of installed keys and the root key
@@ -125,14 +247,14 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
     member(k,ks) OR k=rk;
 
   %% Add a key to a set of it checks out
-  addKey(k:wrapKey,rk:(asymKey?),ks:KEYSET):KEYSET =
+  addKey(k:(wrapKey?),rk:(asymKey?),ks:KEYSET):KEYSET =
     IF checkKey(parentKey(k),rk,ks)
     THEN add(childKey(k),ks)
     ELSE ks
     ENDIF;
 
   %% Remove a key - this is not currently used
-  removeKey(k:wrapKey,ks:KEYSET):KEYSET =
+  removeKey(k:(wrapKey?),ks:KEYSET):KEYSET =
     remove(childKey(k),ks);
 
   %% Lemmas
@@ -163,13 +285,13 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
   %% Key installation
 
-  test6: THEOREM FORALL (k:wrapKey,rk:(asymKey?),ks:KEYSET) : 
+  test6: THEOREM FORALL (k:(wrapKey?),rk:(asymKey?),ks:KEYSET) : 
     IF member(parentKey(k),ks) OR parentKey(k)=rk
        THEN member(childKey(k),addKey(k,rk,ks))
        ELSE ks=addKey(k,rk,ks)
     ENDIF;
 
-  test7: THEOREM FORALL (k:wrapKey,rk:(asymKey?),ks:KEYSET) :
+  test7: THEOREM FORALL (k:(wrapKey?),rk:(asymKey?),ks:KEYSET) :
     NOT(member(childKey(k),removeKey(k,ks)));
 
 END key

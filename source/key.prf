@@ -1,4 +1,35 @@
 (key
+ (private_TCC1 0
+  (private_TCC1-1 nil 3559320796
+   ("" (existence-tcc)
+    (("" (inst 1 "(LAMBDA (x:(asymKey?)) : x)") nil nil)) nil)
+   ((asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
+    (boolean nonempty-type-decl nil booleans nil)
+    (KEY type-decl nil key nil))
+   nil))
+ (childKey_TCC1 0
+  (childKey_TCC1-1 nil 3559356911 ("" (subtype-tcc) nil nil)
+   ((wrapKey? const-decl "bool" key nil)
+    (tpmData type-decl nil key nil)
+    (NOT const-decl "[bool -> bool]" booleans nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (boolean nonempty-type-decl nil booleans nil))
+   nil))
+ (parentKey_TCC1 0
+  (parentKey_TCC1-1 nil 3559356911
+   ("" (subtype-tcc) (("" (grind) nil nil)) nil)
+   ((wrapKey? const-decl "bool" key nil)
+    (tpmData type-decl nil key nil)
+    (NOT const-decl "[bool -> bool]" booleans nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (boolean nonempty-type-decl nil booleans nil))
+   nil))
+ (decrypt_encrypt 0
+  (decrypt_encrypt-1 nil 3559184330 ("" (grind) nil nil)
+   ((encrypt const-decl "tpmData" key nil) nil) shostak))
+ (check_sign 0
+  (check_sign-1 nil 3559184457 ("" (grind) nil nil)
+   ((sign const-decl "(signed?)" key nil)) shostak))
  (decrypt_TCC1 0
   (decrypt_TCC1-1 nil 3535745793 ("" (grind) nil nil) nil nil))
  (decrypt_TCC2 0
