@@ -35,6 +35,7 @@
 (include-book "crypto")
 (include-book "key")
 (include-book "perm-flags")
+(include-book "perm-data")
 
 ; potentially useful for proof debugging
 ;(include-book "misc/untranslate-patterns" :dir :system)
@@ -92,7 +93,7 @@
 |#
 
 (cutil::defaggregate restore-state-data
-  (valid srk ek keys pcrs perm-flags perm-data)
+  (valid srk ek key-gen-count keys pcrs perm-flags perm-data)
   :require  ((booleanp-of-restore-state-data->valid
               (booleanp valid)
               :rule-classes :forward-chaining)
@@ -102,18 +103,26 @@
              (ek-p-of-restore-state-data->ek
               (ek-p ek)
               :rule-classes :forward-chaining)
-             (pcrs-p-of-restore-state-data->pcrs
-              (pcrs-p pcrs)
+             (keyset-p-of-restore-state-data->keys
+              (keyset-p keys)
+              :rule-classes :forward-chaining)
+             ;; TODO: add predicate about key-gen-count, but just saying K-p
+             ;; seems weak
+             (pcr-list-p-of-restore-state-data->pcrs
+              (pcr-list-p pcrs)
               :rule-classes :forward-chaining)
              (perm-flags-p-of-restore-state-data->perm-flags
               (perm-flags-p perm-flags)
+              :rule-classes :forward-chaining)
+             (perm-data-p-of-restore-state-data->perm-data
+              (perm-data-p perm-data)
               :rule-classes :forward-chaining))
   :tag :restore-state-data)
 
 (defconst *pcrs-reset* nil)
 
 (cutil::defaggregate tpm-state
-  (restore memory post-init srk ek keys pcrs locality perm-flags perm-data disable-force-clear)
+  (restore memory post-init srk ek key-gen-count keys pcrs locality perm-flags perm-data disable-force-clear)
   :require ((restore-state-data-p-of-tpm-state->restore
              (restore-state-data-p restore)
              :rule-classes :forward-chaining)
@@ -133,18 +142,23 @@
              (ek-p ek)
              :rule-classes :forward-chaining
              )
+            ;; TODO: make some statement about key-gen-count
             (keyset-p-of-tpm-state->keyset
              (keyset-p keys)
              :rule-classes :forward-chaining
              )
-            (pcrs-p-of-tpm-state->pcrs
-             (pcrs-p pcrs)
+            (pcr-list-p-of-tpm-state->pcrs
+             (pcr-list-p pcrs)
              :rule-classes :forward-chaining
              )
             (locality-p-of-tpm-state->locality
              (locality-p locality)
              :rule-classes :forward-chaining
              )
+            (perm-data-p-of-tpm-state->perm-data
+             (perm-data-p perm-data)
+             :rule-classes :forward-chaining)
+
             (perm-flags-p-of-tpm-state->perm-flags
              (perm-flags-p perm-flags))
 
@@ -173,14 +187,14 @@
 ;;        (srk-p (access tpm-state tpm-s :srk))
 ;;        (ek-p (access tpm-state tpm-s :ek))
 ;;        (keyset-p (access tpm-state tpm-s :keys))
-;;        (pcrs-p (access tpm-state tpm-s :pcrs))
+;;        (pcr-list-p (access tpm-state tpm-s :pcrs))
 ;;        (locality-p (access tpm-state tpm-s :locality))))
 
 (defconst *default-srk* 1)
 (defconst *default-ek* 1)
 (defconst *default-keys* nil)
 (defconst *default-pcrs* nil)
-(defconst *default-perm-data* nil)
+(defconst *default-perm-data* *perm-data-init*)
 (defconst *default-perm-flags* *perm-flags-init*)
 
 (defconst *default-restore-state-data*
@@ -203,6 +217,7 @@
         :keys nil
         :pcrs nil
         :locality 4
+        :perm-data *perm-data-init*
         :perm-flags *perm-flags-init*))
 
 (assert! (tpm-state-p *tpm-post-init*))
@@ -228,6 +243,7 @@
         :keys nil
         :pcrs nil
         :locality 4
+        :perm-data *perm-data-init*
         :perm-flags *perm-flags-init*))
 
 (assert! (tpm-state-p *tpm-startup*))
@@ -412,30 +428,30 @@
                   :output (tpm-state-p (disable-force-clear-state tpm-s))))
   (change-tpm-state tpm-s :disable-force-clear t))
 
-(defun check-attribute
+;(defun check-attribute
 
-(defun+ save-state1 (keys ek srk pcrs perm-flags perm-data)
+(defun+ save-state1 (keys ek srk key-gen-count pcrs perm-flags perm-data)
 
 ; Defined as saveState in startupData.pvs.
 
   (declare (xargs :guard (and (keyset-p keys)
                               (ek-p ek)
                               (srk-p srk)
-                              (pcrs-p pcrs)
+                              (pcr-list-p pcrs)
                               (perm-flags-p perm-flags)
                               (perm-data-p perm-data))
-                  :output (restore-state-p (save-state1 keys ek srk pcrs
-                                                        perm-flags perm-data))))
+                  :output (restore-state-data-p (save-state1 keys ek srk
+                                                             key-gen-count pcrs 
+                                                             perm-flags perm-data))))
   (make-restore-state-data
    :keys keys
    :ek ek
    :srk srk
+   :key-gen-count key-gen-count
    :perm-flags perm-flags
    :perm-data perm-data
-   :pcrs nil ; TODO
-   :perm-flags perm-flags
-   :perm-data perm-data))
-
+   :pcrs pcrs ; this used to be nil with a TODO, but I don't know why, so I'm changing it
+   ))
 
 (defun+ save-state (tpm-s)
   (declare (xargs :guard (tpm-state-p tpm-s)
@@ -444,6 +460,7 @@
                     (save-state1 (tpm-state->keys tpm-s)
                                  (tpm-state->ek tpm-s)
                                  (tpm-state->srk tpm-s)
+                                 (tpm-state->key-gen-count tpm-s)
                                  (tpm-state->pcrs tpm-s)
                                  (tpm-state->perm-flags tpm-s)
                                  (tpm-state->perm-data tpm-s))))

@@ -1,8 +1,11 @@
-# This makefile will only work on the UT filesystem
+# This makefile will only work on the UT filesystem.  I thought about
+# including the Makefile-generic file as part of this repo, but I
+# didn't want to think about GPL2 issues associated with
+# Makefile-generic yet.
 
 ACL2=/u/ragerdl/r/acl2-devel/ccl-saved_acl2hp
 
-all: tpm.cert
+all: top.cert startup-data.cert
 
 # pcr.cert: pcr.lisp
 
@@ -10,6 +13,8 @@ all: tpm.cert
 crypto.cert: pcr.cert
 
 key.cert: crypto.cert
+
+perm-data.cert: pcr.cert
 
 tpm.cert: pcr.cert
 tpm.cert: crypto.cert

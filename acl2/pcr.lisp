@@ -32,6 +32,9 @@
 
 (defn reset-zero () 0)
 
+;(IMPLIES (AND X Y (BOOLEANP X) (BOOLEANP Y))
+;         (EQUAL X Y))
+
 (defn pcr-index-p (index)
  (and (integerp index)
       (<= 0 index)
@@ -209,12 +212,12 @@
       (reset-zero)
     pcr))
 
-(defthm pcr-flag-p-of-nth-pcr-flag-list
-  (implies (and (pcr-flag-list-p flags)
-                (natp n)
-                (< n (len flags))
-                )
-           (pcr-flag-p (nth n flags))))
+;; (defthm pcr-flag-p-of-nth-pcr-flag-list
+;;   (implies (and (pcr-flag-list-p flags)
+;;                 (natp n)
+;;                 (< n (len flags))
+;;                 )
+;;            (pcr-flag-p (nth n flags))))
 
 ;; (defthm pcrs-reset-lemma
 ;;   (implies (and (pcr-index-p n)
@@ -231,19 +234,19 @@
         (t (and (< (car indexes) lst-len)
                 (all-pcr-indexes-are-within-range (cdr indexes) lst-len)))))
 
-(defthm pcr-flag-p-of-nth-of-pcr-flag-list
-  (implies (and (pcr-flag-list-p flags)
-                (natp n)
-                (< n (len flags)))
-           (equal (pcr-flag-p (nth n flags))
-                  t)))
+;; (defthm pcr-flag-p-of-nth-of-pcr-flag-list
+;;   (implies (and (pcr-flag-list-p flags)
+;;                 (natp n)
+;;                 (< n (len flags)))
+;;            (equal (pcr-flag-p (nth n flags))
+;;                   t)))
 
-(defthm pcr-p-of-nth-of-pcr-list
-  (implies (and (pcr-list-p pcrs)
-                (natp n)
-                (< n (len pcrs)))
-           (equal (pcr-p (nth n pcrs))
-                  t)))
+;; (defthm pcr-p-of-nth-of-pcr-list
+;;   (implies (and (pcr-list-p pcrs)
+;;                 (natp n)
+;;                 (< n (len pcrs)))
+;;            (equal (pcr-p (nth n pcrs))
+;;                   t)))
 
 
 
@@ -360,6 +363,16 @@
                 (pcrs-reset-zeros-p (cdr pcrs))))))
 |#
 
+(defun all-reset-access (count)
+; Return a list of pcr-flags where each flag has pcr-reset set to true and a
+; locality of 0.
+  (declare (xargs :guard (natp count)))
+  (cond  ((zp count)
+          nil)
+         (t (cons (make-pcr-flag :resettable t
+                                 :locality 0)
+                  (all-reset-access (1- count))))))
+
 (defun valid-extension-value-p (val)
   (declare (xargs :guard t))
   (and (integerp val)
@@ -390,13 +403,16 @@
 
 (in-theory (disable extend (extend))) ; will eventually disable many more functions
 
+
 ; TODO: define a predicate that includes integer-listp but also checks that it
 ; is of length <= *pcr-count* (or perhaps =).
 
 (cutil::deflist nat-list-p (x)
   (natp x)
   :elementp-of-nil nil
-  :true-listp)
+  :true-listp t)
+
+; TODO: remove this lemma since it should be part of deflist now
 
 (defthm pcr-p-of-nth-of-pcr-list-p
   (implies (and (pcr-list-p pcrs)
@@ -453,4 +469,3 @@
            (not (equal (extend pcr val1)
                        (extend pcr val2))))
   :hints (("Goal" :in-theory (enable extend))))
-
