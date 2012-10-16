@@ -19,14 +19,12 @@
 ; space, then one could write |pcrs reset senter state|, however, the vertical
 ; bars are annoying and typically avoided.
 
-; (include-book "tools/defconsts" :dir :system)
 (include-book "misc/assert" :dir :system)
 (include-book "misc/defun-plus" :dir :system)
 (include-book "cutil/defaggregate" :dir :system)
 
 (defmacro why (rule)
-  ;; BOZO eventually improve this to handle other rule-classes and
-  ;; such automatically.  That is, look up the name of the rule, etc.
+  ;; Proof debugging tool.
   `(ACL2::er-progn
     (ACL2::brr t)
     (ACL2::monitor '(:rewrite ,rule) ''(:eval :go t))))
@@ -36,27 +34,6 @@
 (include-book "key")
 (include-book "perm-flags")
 (include-book "perm-data")
-
-; potentially useful for proof debugging
-;(include-book "misc/untranslate-patterns" :dir :system)
-
-#|
-(defrec tpm-state
-  (mem post-init srk ek keys pcrs locality)
-  t)
-
-; Have ACL2 untranslate the following terms when it does printing, so that
-; it's easier to read.
-(add-untranslate-pattern (car tpm-s) (mem tpm-s))
-(add-untranslate-pattern (car (cdr tpm-s)) (post-init tpm-s))
-(add-untranslate-pattern (car (cdr (cdr tpm-s))) (srk tpm-s))
-(add-untranslate-pattern (car (cdr (cdr (cdr tpm-s)))) (ek tpm-s))
-(add-untranslate-pattern (car (cdr (cdr (cdr (cdr tpm-s))))) (keys tpm-s))
-(add-untranslate-pattern (car (cdr (cdr (cdr (cdr (cdr tpm-s)))))) 
-                         (pcrs tpm-s))
-(add-untranslate-pattern (car (cdr (cdr (cdr (cdr (cdr (cdr tpm-s))))))) 
-                         (locality tpm-s))
-|#
 
 (defn srk-p (srk)
   (asymmetric-key-p srk))
@@ -173,22 +150,6 @@
   :rule-classes :type-prescription)
 
 ; locality < 5 as a linear rule
-
-
-
-; (why locality-p-of-tpm-state->locality)
-
-;; (defun tpm-state-p (tpm-s)
-;;   (declare (xargs :guard t)) ; "type" predicate functions typically have a guard of t
-;;   (and (true-listp tpm-s)
-;;        (equal (length tpm-s) 7)
-;;        (true-listp (access tpm-state tpm-s :memory))
-;;        (booleanp (access tpm-state tpm-s :post-init))
-;;        (srk-p (access tpm-state tpm-s :srk))
-;;        (ek-p (access tpm-state tpm-s :ek))
-;;        (keyset-p (access tpm-state tpm-s :keys))
-;;        (pcr-list-p (access tpm-state tpm-s :pcrs))
-;;        (locality-p (access tpm-state tpm-s :locality))))
 
 (defconst *default-srk* 1)
 (defconst *default-ek* 1)
@@ -393,8 +354,6 @@
                   :output (tpm-state-p (clear tpm-s))))
   (change-tpm-state tpm-s :keys nil))
 
-
-
 (defun+ owner-clear-state (auth tpm-s)
   (declare (xargs :guard (and (tpm-state-p tpm-s)
                               (asymmetric-key-p auth))
@@ -405,7 +364,6 @@
          (clear tpm-s))
         (t 
          tpm-s)))
-
 
 (defun+ force-clear-state (tpm-s)
   (declare (xargs :guard (tpm-state-p tpm-s)
@@ -427,8 +385,6 @@
   (declare (xargs :guard (tpm-state-p tpm-s)
                   :output (tpm-state-p (disable-force-clear-state tpm-s))))
   (change-tpm-state tpm-s :disable-force-clear t))
-
-;(defun check-attribute
 
 (defun+ save-state1 (keys ek srk key-gen-count pcrs perm-flags perm-data)
 

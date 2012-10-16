@@ -61,115 +61,20 @@
   :tag :pcr-flag)
 
 (cutil::deflist pcr-flag-list-p (x)
+  ;; In the PVS model, pcv.pvs, PCRFLAGS is a type, where it is an array from
+  ;; an pcr-index to a pcr-flag.  Here, we make it a list, where the location
+  ;; in the list is the index.
   (pcr-flag-p x)
   :elementp-of-nil nil
   :true-listp t)
 
-;; (defthm pcr-flag-list-p-implies-true-listp
-;;   (implies (pcr-flag-list-p lst)
-;;            (true-listp lst))
-;;   :rule-classes :compound-recognizer
-;;   :hints (("Goal" :in-theory (enable pcr-flag-list-p))))
-
-
-;; (defn pcr-flags-p (flags)
-;; ; in the PVS model, pcv.pvs, PCRFLAGS is a type, where it is an array from an
-;; ; pcr-index to a pcr-flag.  Here, we make it a list, where the location in the
-;; ; list is the index.
-;;   (cond ((atom flags)
-;;          (null flags))
-;;         (t (and (pcr-flag-p (car flags))
-;;                 (pcr-flags-p (cdr flags))))))
-
-;; (defthm pcr-flags-p-implies-true-listp
-;;   (implies (pcr-flags-p lst)
-;;            (true-listp lst))
-;;   :rule-classes :compound-recognizer)
-
-;; #|
-;; (defthm pcr-flags-p-of-cons
-;;   (implies (and (pcr-flags-p lst)
-;;                 (pcr-flag-p x))
-;;            (pcr-flags-p (cons x lst))))
-
-;; (defthm pcr-flags-p-recursive
-;;   (implies (pcr-flags-p (cons x lst))
-;;            (pcr-flags-p lst)))
-
-;; (defthm pcr-flag-p-car-case
-;;   (implies (pcr-flags-p (cons x lst))
-;;            (pcr-flag-p x)))
-;; |#
-
-;; (defthm pcr-flag-constructors
-;;   (equal (pcr-flags-p (cons e lst))
-;;          (and (pcr-flag-p e)
-;;               (pcr-flags-p lst))))
-
-;; (defthm pcr-flags-p-and-member-p-imply-pcr-flag-p
-;;   (implies (and (member x lst)
-;;                 (pcr-flags-p lst))
-;;            (pcr-flag-p x)))
-
-
-;(in-theory (disable pcr-flags-p))
-
 (cutil::deflist pcr-list-p (x)
+  ;; In the PVS model, pcv.pvs, PCRS is a type, where it is an array from a
+  ;; pcr-index to a pcr.  Here, we make it a list, where the location in the
+  ;; list is the index.
   (pcr-p x)
   :elementp-of-nil nil
   :true-listp t)
-
-;; (defthm pcr-list-p-implies-true-listp
-;;   (implies (pcr-list-p lst)
-;;            (true-listp lst))
-;;   :rule-classes :compound-recognizer)
-
-;; (defn pcrs-p (pcrs)
-
-;; ; in the PVS model, pcv.pvs, PCRS is a type, where it is an array from a
-;; ; pcr-index to a pcr.  Here, we make it a list, where the location in the list
-;; ; is the index.
-
-;;   (cond ((atom pcrs)
-;;          (null pcrs))
-;;         (t (and (pcr-p (car pcrs))
-;;                 (pcrs-p (cdr pcrs))))))
-
-;; (defthm pcrs-p-implies-true-listp
-;;   (implies (pcrs-p lst)
-;;            (true-listp lst))
-;;   :rule-classes :compound-recognizer)
-
-;; #|
-;; (defthm pcrs-p-of-cons
-;;   (implies (and (pcrs-p lst)
-;;                 (pcr-p x))
-;;            (pcrs-p (cons x lst))))
-
-;; (defthm pcr-p-of-car-pcrs
-;;   (implies (and (consp lst)
-;;                 (pcrs-p lst))
-;;            (pcr-p (car lst))))
-
-;; (defthm pcr-p-and-member-p-imply-pcr-p
-;;   (implies (and (member x lst)
-;;                 (pcrs-p lst))
-;;            (pcr-p x)))
-
-
-;; (defthm pcrs-p-implies-true-listp
-;;   (implies (pcrs-p x) (true-listp x))
-;;   :rule-classes :forward-chaining)
-
-
-;; (defthm pcr-p-of-member-pcrs
-;;   (implies (and (member x lst)
-;;                 (pcrs-p lst))
-;;            (pcr-p (car (member x lst))))
-;;   :rule-classes (:rewrite :type-prescription)) ; type-presc is kind of silly
-;; |#
-
-;; (in-theory (disable pcrs-p))
 
 (encapsulate
 
@@ -186,17 +91,6 @@
    (pcr-list-p (pcrs-power))
    :rule-classes (:rewrite :type-prescription)))
 
-;; (defun+ pcrs-reset1 (flags)
-;;   (declare (xargs :guard (pcr-flag-list-p flags)
-;;                   :output (pcr-list-p (pcrs-reset1 flags))
-;;                   ))
-;;   (cond ((atom flags)
-;;          nil)
-;;         (t (cons (if (pcr-flag->resettable (car flags))
-;;                      (reset-one)
-;;                    (reset-zero))
-;;                  (pcrs-reset1 (cdr flags))))))
-
 (defun+ pcr-reset (flag)
   (declare (xargs :guard (pcr-flag-p flag)
                   :output (pcr-p (pcr-reset flag))))
@@ -212,20 +106,6 @@
       (reset-zero)
     pcr))
 
-;; (defthm pcr-flag-p-of-nth-pcr-flag-list
-;;   (implies (and (pcr-flag-list-p flags)
-;;                 (natp n)
-;;                 (< n (len flags))
-;;                 )
-;;            (pcr-flag-p (nth n flags))))
-
-;; (defthm pcrs-reset-lemma
-;;   (implies (and (pcr-index-p n)
-;;                 (pcr-list-p pcrs)
-;;                 (< n (len pcrs))
-;;                 (pcr-p v))
-;;            (pcr-list-p (update-nth n v pcrs))))
-
 (defn all-pcr-indexes-are-within-range (indexes lst-len)
   (declare (xargs :guard (and (pcr-index-list-p indexes)
                               (integerp lst-len))))
@@ -233,48 +113,13 @@
          t)
         (t (and (< (car indexes) lst-len)
                 (all-pcr-indexes-are-within-range (cdr indexes) lst-len)))))
-
-;; (defthm pcr-flag-p-of-nth-of-pcr-flag-list
-;;   (implies (and (pcr-flag-list-p flags)
-;;                 (natp n)
-;;                 (< n (len flags)))
-;;            (equal (pcr-flag-p (nth n flags))
-;;                   t)))
-
-;; (defthm pcr-p-of-nth-of-pcr-list
-;;   (implies (and (pcr-list-p pcrs)
-;;                 (natp n)
-;;                 (< n (len pcrs)))
-;;            (equal (pcr-p (nth n pcrs))
-;;                   t)))
-
-
-
-;; (defthm ahcak
-;;   (implies (and (all-pcr-indexes-are-within-range indexes (len pcr-flags))
-;;                 (pcr-flag-p pcr-flags)
-;;                 (pcr-index-list-p indexes)
-;;                 )
-;;            (pcr-flag-p (nth (car indexes) pcr-flags))))
-
-;; (defthm pcrs-reset-hack
-;;   (implies (and (pcr-index-list-p indexes)
-;;                 (consp indexes)
-;;                 (consp (cdr indexes)))
-;;            (pcr-index-p (cadr indexes)))
-;;   :rule-classes :forward-chaining)
-
-;; (defthm pcrs-reset-hack3
-;;   (implies (and (pcr-index-p index)
-;;                 (pcr-flag-list-p flags)
-;;                 (nth index flags))
-;;            (pcr-flag-p (nth index flags))))
                 
-(defun induction-hint (n val lst)
-  (declare (ignorable val))
-  (cond ((zp n)
-         lst)
-        (t (induction-hint (1- n) val (cdr lst)))))
+(local 
+ (defun induction-hint (n val lst)
+   (declare (ignorable val))
+   (cond ((zp n)
+          lst)
+         (t (induction-hint (1- n) val (cdr lst))))))
 
 (defthm pcr-list-p-of-update-nth
   (implies (and (pcr-list-p pcrs)
@@ -411,14 +256,6 @@
   (natp x)
   :elementp-of-nil nil
   :true-listp t)
-
-; TODO: remove this lemma since it should be part of deflist now
-
-(defthm pcr-p-of-nth-of-pcr-list-p
-  (implies (and (pcr-list-p pcrs)
-                (natp n)
-                (< n (len pcrs)))
-           (pcr-p (nth n pcrs))))
 
 (defun valid-pcr-mask-element (index length-pcrs)
 ; the current element/index in the pcr-mask is less than the length of the pcrs
