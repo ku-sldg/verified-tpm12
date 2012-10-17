@@ -1,6 +1,9 @@
 (tpm
  (unique_hash 0
   (unique_hash-1 nil 3559055101 ("" (postpone) nil nil) nil shostak))
+ (IMP_StateMonad_TCC1 0
+  (IMP_StateMonad_TCC1-1 nil 3559357982 ("" (existence-tcc) nil nil)
+   nil nil))
  (tpmPostInit_TCC1 0
   (tpmPostInit_TCC1-1 nil 3558896333 ("" (subtype-tcc) nil nil)
    ((ekKeyVal const-decl "K" tpm nil)
@@ -138,9 +141,6 @@
    ((afterInit? const-decl "bool" tpm nil)
     (afterStartup? const-decl "bool" tpm nil))
    nil))
- (createMigrationBlobOut_TCC1 0
-  (createMigrationBlobOut_TCC1-1 nil 3558896333
-   ("" (subtype-tcc) nil nil) nil nil))
  (outputComStartup_TCC1 0
   (outputComStartup_TCC1-1 nil 3559054279 ("" (subtype-tcc) nil nil)
    nil nil))
@@ -852,6 +852,46 @@
     (modify const-decl "State" StateMonad nil)
     (TPM_DisableForceClear const-decl "State" tpm nil))
    shostak))
+ (authorize_migration_key_post 0
+  (authorize_migration_key_post-1 nil 3559357982 ("" (grind) nil nil)
+   ((afterStartup? const-decl "bool" tpm nil)
+    (NOT const-decl "[bool -> bool]" booleans nil)
+    (afterInit? const-decl "bool" tpm nil)
+    (outputComPostInit const-decl "tpmAbsOutput" tpm nil)
+    (authorizeMigrationKeyOut const-decl "tpmAbsOutput" tpm nil)
+    (outputComStartup const-decl "tpmAbsOutput" tpm nil)
+    (outputCom const-decl "tpmAbsOutput" tpm nil)
+    (tpmAbsState type-eq-decl nil tpm nil)
+    (restoreStateData type-eq-decl nil startupData nil)
+    (PermFlags type-eq-decl nil PermanentFlags nil)
+    (PermData type-eq-decl nil PermanentData nil)
+    (PCRS type-eq-decl nil pcr nil) (mem type-eq-decl nil memory nil)
+    (outNothing adt-constructor-decl "(outNothing?)" tpm nil)
+    (outNothing? adt-recognizer-decl "[tpmAbsOutput -> boolean]" tpm
+     nil)
+    (LOCALITY type-eq-decl nil pcr nil)
+    (KEYSET type-eq-decl nil key nil)
+    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
+    (KEY type-decl nil key nil)
+    (HV formal-nonempty-type-decl nil tpm nil)
+    (K type-eq-decl nil tpm nil) (>= const-decl "bool" reals nil)
+    (int nonempty-type-eq-decl nil integers nil)
+    (integer_pred const-decl "[rational -> boolean]" integers nil)
+    (rational nonempty-type-from-decl nil rationals nil)
+    (rational_pred const-decl "[real -> boolean]" rationals nil)
+    (real nonempty-type-from-decl nil reals nil)
+    (real_pred const-decl "[number_field -> boolean]" reals nil)
+    (number_field nonempty-type-from-decl nil number_fields nil)
+    (number_field_pred const-decl "[number -> boolean]" number_fields
+     nil)
+    (boolean nonempty-type-decl nil booleans nil)
+    (number nonempty-type-decl nil numbers nil)
+    (B formal-nonempty-type-decl nil tpm nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (tpmAbsOutput type-decl nil tpm nil)
+    (output const-decl "State" StateMonad nil)
+    (TPM_AuthorizeMigrationKey const-decl "State" tpm nil))
+   shostak))
  (create_wrap_key_post 0
   (create_wrap_key_post-1 nil 3559054451 ("" (grind))
    ((afterStartup? const-decl "bool" tpm nil)
@@ -1088,6 +1128,9 @@
     (loadKey? const-decl "bool" tpm nil)
     (member const-decl "bool" sets nil))
    shostak))
+ (load_key_prev_post_TCC1 0
+  (load_key_prev_post_TCC1-1 nil 3559357982 ("" (subtype-tcc) nil nil)
+   nil nil))
  (load_key_prev_post 0
   (load_key_prev_post-1 nil 3559055016 ("" (grind)) nil shostak))
  (create_endorsement_key_pair_post 0
@@ -1369,8 +1412,7 @@
     (private const-decl "(asymKey?)" key nil)
     (wrapKey type-eq-decl nil key nil)
     (nat nonempty-type-eq-decl nil naturalnumbers nil)
-    (PCRINDEX type-eq-decl nil pcr nil)
-    (map adt-def-decl "list[T1]" list_adt_map nil)
+    (PCRINDEX type-eq-decl nil pcr nil) nil
     (TPM_SUCCESS? adt-recognizer-decl "[ReturnCode -> boolean]"
      ReturnCodes nil)
     (TPM_SUCCESS adt-constructor-decl "(TPM_SUCCESS?)" ReturnCodes nil)
@@ -1398,11 +1440,10 @@
               outError?(x) OR outQuote?(x) OR outWrapKey?(x)
            OR outAsymKey?(x) OR outSymKey?(x) OR outBlob?(x)
            OR outCertReq?(x) OR outIdentity?(x) OR outIdentActivation?(x)
-           OR outFullQuote?(x) OR outPCR?(x)} ->
+           OR outFullQuote?(x) OR outPCR?(x) OR outMigKeyAuth?(x)} ->
    ReturnCode]" tpm nil)
     (PCRMASK type-eq-decl nil pcr nil) (<= const-decl "bool" reals nil)
-    (AND const-decl "[bool, bool -> bool]" booleans nil)
-    (every adt-def-decl "boolean" list_adt nil)
+    (AND const-decl "[bool, bool -> bool]" booleans nil) nil
     (list type-decl nil list_adt nil)
     (PRED type-eq-decl nil defined_types nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
@@ -1459,8 +1500,7 @@
     (private const-decl "(asymKey?)" key nil)
     (wrapKey type-eq-decl nil key nil)
     (nat nonempty-type-eq-decl nil naturalnumbers nil)
-    (PCRINDEX type-eq-decl nil pcr nil)
-    (map adt-def-decl "list[T1]" list_adt_map nil)
+    (PCRINDEX type-eq-decl nil pcr nil) nil
     (TPM_SUCCESS? adt-recognizer-decl "[ReturnCode -> boolean]"
      ReturnCodes nil)
     (TPM_SUCCESS adt-constructor-decl "(TPM_SUCCESS?)" ReturnCodes nil)
@@ -1488,11 +1528,10 @@
               outError?(x) OR outQuote?(x) OR outWrapKey?(x)
            OR outAsymKey?(x) OR outSymKey?(x) OR outBlob?(x)
            OR outCertReq?(x) OR outIdentity?(x) OR outIdentActivation?(x)
-           OR outFullQuote?(x) OR outPCR?(x)} ->
+           OR outFullQuote?(x) OR outPCR?(x) OR outMigKeyAuth?(x)} ->
    ReturnCode]" tpm nil)
     (PCRMASK type-eq-decl nil pcr nil) (<= const-decl "bool" reals nil)
-    (AND const-decl "[bool, bool -> bool]" booleans nil)
-    (every adt-def-decl "boolean" list_adt nil)
+    (AND const-decl "[bool, bool -> bool]" booleans nil) nil
     (list type-decl nil list_adt nil)
     (PRED type-eq-decl nil defined_types nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
@@ -1539,8 +1578,7 @@
   (check_PCRS-1 nil 3559055017 ("" (grind))
    ((afterStartup? const-decl "bool" tpm nil)
     (PCRMASK type-eq-decl nil pcr nil) (<= const-decl "bool" reals nil)
-    (AND const-decl "[bool, bool -> bool]" booleans nil)
-    (every adt-def-decl "boolean" list_adt nil)
+    (AND const-decl "[bool, bool -> bool]" booleans nil) nil
     (list type-decl nil list_adt nil)
     (PRED type-eq-decl nil defined_types nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
@@ -1616,8 +1654,7 @@
     (boolean nonempty-type-decl nil booleans nil)
     (number nonempty-type-decl nil numbers nil)
     (B formal-nonempty-type-decl nil tpm nil)
-    (checkKeyRoot const-decl "bool" key nil)
-    (map adt-def-decl "list[T1]" list_adt_map nil)
+    (checkKeyRoot const-decl "bool" key nil) nil
     (getPCRs const-decl "list[PCR]" pcr nil)
     (quoteOut const-decl "tpmAbsOutput" tpm nil)
     (outputComStartup const-decl "tpmAbsOutput" tpm nil)
@@ -2518,8 +2555,7 @@
  (aik_binding 0
   (aik_binding-1 nil 3559055022 ("" (grind))
    ((PCRMASK type-eq-decl nil pcr nil) (<= const-decl "bool" reals nil)
-    (AND const-decl "[bool, bool -> bool]" booleans nil)
-    (every adt-def-decl "boolean" list_adt nil)
+    (AND const-decl "[bool, bool -> bool]" booleans nil) nil
     (list type-decl nil list_adt nil)
     (PRED type-eq-decl nil defined_types nil)
     (NOT const-decl "[bool -> bool]" booleans nil)

@@ -94,7 +94,7 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
     certBlob(encrKey:KEY,digest:(asymKey?),symK:(symKey?)) : certBlob?
 %     certBlob(key:KEY,wkey:wrapKey) : certBlob?
     pairBlob(left,right : BLOB) : pairBlob?
-    authorizationBlob(migKey:KEY,migrationScheme:migrateScheme) : authorizationBlob?
+    migrationBlob(rand:int,outData:(encryptBlob?)):migrationBlob?%%TODO: types may not be correct
   END BLOB;
 
   %% Decryption for specific key types.  Key types not matching automatically

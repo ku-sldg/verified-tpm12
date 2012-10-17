@@ -3,11 +3,17 @@ PermanentData[HV:TYPE+] : THEORY
 
   IMPORTING pcr[HV];
   
+  tpmAuthData:DATATYPE
+  BEGIN
+    tpmSecret(i:nat):tpmSecret?
+    tpmEncAuth:tpmEncAuth?
+  END tpmAuthData
+
   PermData : TYPE = [#
 %     tag : TPM_STRUCTURE_TAG,
 %     revMajor : BYTE,
 %     revMinor : BYTE,
-%     tpmProof : TPM_SECRET,
+    tpmProof : (tpmSecret?),
 %     ekReset : TPM_NONCE,
 %     ownerAuth : TPM_SECRET,
 %     operatorAuth : TPM_SECRET,
@@ -32,6 +38,7 @@ PermanentData[HV:TYPE+] : THEORY
 %     daaBlobKey : TPM_KEY
   #];
 
-  permDataInit : PermData = (# pcrAttrib := allResetAccess #)
+  permDataInit : PermData = (# tpmProof:=tpmSecret(0),
+  	       	 	       pcrAttrib := allResetAccess #)
 
   END PermanentData

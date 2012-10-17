@@ -65,6 +65,8 @@ tpm [ B:TYPE+ % BLOB
     outFullQuote(ofullqc:(certBlob?),ofullqsml:SML,ofullqq:(outQuote?),
                  m:ReturnCode) : outFullQuote?
     outPCR(pcr:PCR,m:ReturnCode) : outPCR?
+    outMigKeyAuth(migKey:(asymKey?),migScheme:migrateScheme,digest:HV,
+		  m:ReturnCode):outMigKeyAuth?
   END tpmAbsOutput;
 
   IMPORTING memory[tpmAbsOutput,outNothing];
@@ -104,10 +106,11 @@ tpm [ B:TYPE+ % BLOB
     ABS_DisableOwnerClear : ABS_DisableOwnerClear? 
     ABS_DisableForceClear : ABS_DisableForceClear? 
   %% Migration Commands (11)
-    ABS_CreateMigrationBlob(pk:(asymKey?),m:migrateScheme,encData:BLOB) : ABS_CreateMigrationBlob?
+    ABS_CreateMigrationBlob(pk:(asymKey?),m:migrateScheme,migKeyAuth:(outMigKeyAuth?),
+			    encData:(encryptBlob?)) : ABS_CreateMigrationBlob?
     ABS_ConvertMigrationBlob : ABS_ConvertMigrationBlob?
-    ABS_AuthorizeMigrationKey(migKey:KEY,migScheme:migrateScheme) : ABS_AuthorizeMigrationKey?
-    ABS_MigrateKey : ABS_MigrateKey?
+    ABS_AuthorizeMigrationKey(migKey:(asymKey?),migScheme:migrateScheme) : ABS_AuthorizeMigrationKey?
+    ABS_MigrateKey(migKey,pubKey:(asymKey?),data:BLOB) : ABS_MigrateKey?
   %% Changing AuthData (17)
     ABS_ChangeAuth : ABS_ChangeAuth?
   %% Software Commands
@@ -579,27 +582,48 @@ tpm [ B:TYPE+ % BLOB
       ELSE outNothing
     ENDIF
 
-  createMigrationBlobOut(s:tpmAbsState,k:(asymKey?),migType:migrateScheme,
-			 migKeyAuth:(authorizationBlob?),encData:BLOB) : tpmAbsOutput =
-    CASES migType OF
-      migrate : outError(TPM_INSTALL_DISABLED),
-      rewrap  : LET wk:wrapKey = (#
-     	 	      	       	 parentKey:=(migKey(migKeyAuth)), 
-		      	       	 childKey:=k
-				 #)
-     		IN outWrapKey(wk,TPM_SUCCESS)
+  checkMigKeyAuth?(s:tpmAbsState,a:(outMigKeyAuth?)):bool =
+    true
+%     digest(a)=hash(migKey(a)++migType(a)++tpmProof(permData(s)))
+  
+  createMigBlobOut(s:tpmAbsState,parent:(asymKey?),migType:migrateScheme,
+			 migKeyAuth:(outMigKeyAuth?),encData:(encryptBlob?)) : tpmAbsOutput =
+    IF storage?(keyUsage(parent))
+    THEN IF parent=key(encData) 
+      	 THEN IF checkMigKeyAuth?(s,migKeyAuth)
+	      THEN CASES migType OF
+      	   	   migrate : outError(TPM_INSTALL_DISABLED),%TODO: not correct in any sense.
+      		   rewrap  : outBlob(encryptBlob(migKey(migKeyAuth),
+				     blob(encData)),TPM_SUCCESS)
+		   %ELSE outError(TPM_BAD_PARAMETER)
+		   ENDCASES	
+	      ELSE outError(TPM_INSTALL_DISABLED)%TODO: not at all correct.
+	      ENDIF
+	 ELSE outError(TPM_DECRYPT_ERROR)
+	 ENDIF
+    ELSE outError(TPM_INVALID_KEYUSAGE)
+    ENDIF
 
-%      ELSE outError(TPM_BAD_PARAMETER)
-    ENDCASES	
 
   convertMigrationBlobOut(s:tpmAbsState,k:(asymKey?),inData:BLOB) : tpmAbsOutput
     %%outData = encrypted private key that can be loaded with tpm_loadkey 
     %%inData:BLOB may be wrong
 
-  authorizeMigrationKeyOut(s:tpmAbsState,migKey:KEY,migrationScheme:migrateScheme) : tpmAbsOutput = 
-    outBlob(authorizationBlob(migKey,migrationScheme),TPM_SUCCESS);
+  authorizeMigrationKeyOut(s:tpmAbsState,migKey:(asymKey?),migScheme:migrateScheme) : tpmAbsOutput = 
+    outMigKeyAuth(migKey,migScheme,
+			hash(%migKey++migScheme++tpmProof(permData(s))
+				sinit), %% TODO: totally wrong... just placeholder
+			TPM_SUCCESS);
 
-  migrateKeyOut(s:tpmAbsState) : tpmAbsOutput
+  %% Decrypts the input packet (coming from TPM_CreateMigrationBlob) and then 
+  %% re-encrypts it with the input public key. The output would then be sent to 
+  %% TPM_ConvertMigrationBlob on the target TPM.
+  migrateKeyOut(s:tpmAbsState,maKey,pubKey:(asymKey?),inData:(encryptBlob?)) : tpmAbsOutput =
+    IF migrate?(keyUsage(maKey))
+      THEN outBlob(encryptBlob(pubKey,blob(inData)),TPM_SUCCESS)%The TPM decripts inData and re-encrypts it using pubKey
+      ELSE outError(TPM_INVALID_KEYUSAGE)
+    ENDIF
+
   changeAuthOut(s:tpmAbsState) : tpmAbsOutput
 
 
@@ -640,10 +664,10 @@ tpm [ B:TYPE+ % BLOB
       ABS_TakeOwnership(srk) : takeOwnershipOut(s,srk),
       ABS_OwnerClear(k) : ownerClearOut(s,k),
       ABS_ForceClear : forceClearOut(s),
-%       ABS_CreateMigrationBlob(pk,m,encData) : createMigrationBlobOut(s,pk,m,encData),
+      ABS_CreateMigrationBlob(pk,m,migKAuth,encData) : createMigBlobOut(s,pk,m,migKAuth,encData),
 %       ABS_ConvertMigrationBlob : convertMigrationBlobOut(s),
       ABS_AuthorizeMigrationKey(mk,ms) : authorizeMigrationKeyOut(s,mk,ms),
-      ABS_MigrateKey : migrateKeyOut(s),
+      ABS_MigrateKey(mk,pubKey,data) : migrateKeyOut(s,mk,pubKey,data),
       ABS_ChangeAuth : changeAuthOut(s),
       ABS_certify(aik,cr) : certOut(s,aik,cr),
       ABS_read(i) : readOut(s,i),
@@ -965,10 +989,18 @@ tpm [ B:TYPE+ % BLOB
       disableForceClear(s) = TRUE
       AND a = outNothing;
 
-  TPM_AuthorizeMigrationKey(migKey:KEY,migScheme:migrateScheme) : State = 
+  TPM_AuthorizeMigrationKey(migKey:(asymKey?),migScheme:migrateScheme) : State = 
      output(outNothing,
             (LAMBDA (s:tpmAbsState) :
 	      outputCom(s,ABS_AuthorizeMigrationKey(migKey,migScheme))));
+
+  authorize_migration_key_post: THEOREM FORALL (state:(afterStartup?),k:(asymKey?),scheme:migrateScheme) : 
+    LET(a,s) = runState(
+    	       TPM_AuthorizeMigrationKey(k,scheme))
+	       (state) IN
+      a=outMigKeyAuth(k,scheme,hash(sinit),TPM_SUCCESS)
+      AND s=state
+
   
   %% Wrap new key k with parent key
   TPM_CreateWrapKey(parent,keyInfo:(asymKey?)) : State = 
