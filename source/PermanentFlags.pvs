@@ -25,18 +25,17 @@ PermanentFlags : THEORY
   #];
 
   permFlagsInit : PermFlags = (#
-%     disable:=FALSE
-    ownership:=FALSE
-%     , deactivated:=FALSE
-    , readPubek:=FALSE
+%     disable:=TRUE
+    ownership:=TRUE
+%     , deactivated:=TRUE
+    , readPubek:=TRUE
     , disableOwnerClear:=FALSE
 %     , allowMaintenance:=FALSE
 %     , physicalPresenceLifetimeLock:=FALSE
 %     , physicalPresenceHWEnable:=FALSE
 %     , physicalPresenceCMDEnable:=FALSE
-    , CEKPUsed:=TRUE
+    , CEKPUsed:=FALSE
 %     , TPMpost:=FALSE
-%     , TPMpostLock:=FALSE
 %     , FIPS:=FALSE
     , operator:=FALSE
     , enableRevokeEK:=FALSE
