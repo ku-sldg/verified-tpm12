@@ -11,9 +11,7 @@
 %%  None
 %%
 %% Todo: (key - => pending, + => done)
-%%  + Add key sets
-%%  + Add key installation and revocation from sets
-%%  - Add regression tests for key installation and revocation functions
+%%
 %% ----
 key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
@@ -50,42 +48,45 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
     clear : clear?
     encrypted(key:(asymKey?),crstat:CRYPTOSTATUS) : encrypted?
     signed(key:(asymKey?),crstat:CRYPTOSTATUS) : signed?
-    wrapped(key:(asymKey?),crstat:CRYPTOSTATUS,pcrs:PCRS) : wrapped?
-    sealed(key:(asymKey?),crstat:CRYPTOSTATUS,pcrs:PCRS) : sealed?
+    wrapped(key:(asymKey?),crstat:CRYPTOSTATUS,digest:PCRS) : wrapped?
+    sealed(key:(asymKey?),crstat:CRYPTOSTATUS,digest:PCRS) : sealed?
   END CRYPTOSTATUS;
 
   tpmData : DATATYPE
   BEGIN
     %% Identifyier for naming things
-    tpmID(id:string,crs:CRYPTOSTATUS,m:ReturnCode) : tpmID?
+    tpmID(id:string,crs:CRYPTOSTATUS) : tpmID?
 
     %% Authdata - don't know what it is yet
-    tpmAuthData(authdata:AUTHDATA,crs:CRYPTOSTATUS,m:ReturnCode) : tpmAuthData?
+    tpmAuthData(authdata:AUTHDATA,crs:CRYPTOSTATUS) : tpmAuthData?
+
+    %% Session keys are simply symetric keys
+    tpmSessKey(skey:(symKey?),crs:CRYPTOSTATUS) : tpmSessKey?
 
     %% Assymetric keys used by the TPM - wrapped, signed, encrypted
-    tpmKey(key:(asymKey?),crs:CRYPTOSTATUS,m:ReturnCode) : tpmKey?
-    %  tpmKey subsumes all assymetric keys used by the TPM
+    tpmKey(key:(asymKey?),crs:CRYPTOSTATUS) : tpmKey?
+    %  tpmKey subsumes all asymmetric keys used by the TPM
     %  wrapped key: tpmKey(child,wrapped(public(parent),clear,pcrs))
     %  clear child wrapped by parent bound to PCRs
-    %  unwrapped key: tpmKey(k,clear)
+    %  unwrapped asymmetric key: tpmKey(k,clear)
     %  clear key
     %  encrypted key: tpmKey(k,encrypted(public(j),clear))
     %  clear key encrypted with public j
-    %  signed key: tpmKey(k,signed(private(j),clear))
+    %  signed/certified key: tpmKey(k,signed(private(j),clear))
     %  clear key signed by private j
 
     %% Abitrarily long digest of arbitrary TPM data
-    tpmDigest(digest:list[tpmData],crs:CRYPTOSTATUS,m:ReturnCode) : tpmDigest?
+    tpmDigest(digest:list[tpmData],crs:CRYPTOSTATUS) : tpmDigest?
     %  tpmDigest is the list of things concatenated and hashed to create the
     %  digest value - #(d0++d1++...++dn).  Note that this digest does not
     %  contain PCRs
 
-    %%  Quote with a PCR digest and nonce.
-    tpmQuote(digest:list[PCR],nonce:nat,crs:CRYPTOSTATUS,m:ReturnCode) : tpmQuote?
+    %%  Quote including a PCR digest and nonce.
+    tpmQuote(digest:list[PCR],nonce:nat,crs:CRYPTOSTATUS) : tpmQuote?
     %  PCRs are not current TPM data, so the digest is over PCR values.
 
     %% Certification request sent to Privacy CA
-    tpmCertReq(digest:(tpmDigest?),aik:(tpmKey?),crs:CRYPTOSTATUS,m:ReturnCode) : tpmCertReq?
+    tpmCertReq(digest:(tpmDigest?),aik:(tpmKey?),crs:CRYPTOSTATUS) : tpmCertReq?
     %  digest should contain CA public key, name, and AIK
 
     %% tpmIdentity(certEK:tpmKey,certAIK:tpmKey,crs:CRYPTOSTATUS,m:ReturnCode):tpmIdentity?
@@ -108,8 +109,18 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
   encrypt(k:(asymKey?),d:tpmData) : tpmData =
     CASES d OF 
-      tpmQuote(n0,p0,crs0,m0) : tpmQuote(n0,p0,encryptStatus(k,crs0),m0),
-      tpmKey(k0,crs0,m0) : tpmKey(k0,encryptStatus(k,crs0),m0)
+      tpmID(id0,crs0) : tpmID(id0,encryptStatus(k,crs0)),
+      tpmAuthData(authdata0,crs0) :
+        tpmAuthData(authdata0,encryptStatus(k,crs0)),
+      tpmSessKey(k0,crs0) :
+        tpmSessKey(k0,encryptStatus(k,crs0)),
+      tpmKey(k0,crs0) :
+        tpmKey(k0,encryptStatus(k,crs0)),
+      tpmDigest(digest0,crs0) :
+        tpmDigest(digest0,encryptStatus(k,crs0)),
+      tpmQuote(n0,p0,crs0) : tpmQuote(n0,p0,encryptStatus(k,crs0)),
+      tpmCertReq(digest0,aik0,crs0) :
+        tpmCertReq(digest0,aik0,encryptStatus(k,crs0)) 
     ENDCASES;
 
   decryptStatus(k:(asymKey?),c:(encrypted?)) : CRYPTOSTATUS =
@@ -117,14 +128,38 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
   decrypt(k:(asymKey?),d:tpmData) : tpmData =
     CASES d OF
-      tpmQuote(n0,p0,crs0,m0) : IF encrypted?(crs0)
-      			        THEN tpmQuote(n0,p0,decryptStatus(k,crs0),m0)
-				ELSE d
-				ENDIF,
-      tpmKey(k0,crs0,m0) : IF encrypted?(crs0)
-                           THEN tpmKey(k0,decryptStatus(k,crs0),m0)
+      tpmID(id0,crs0) : IF encrypted?(crs0)
+                           THEN tpmID(id0,decryptStatus(k,crs0))
+			   ELSE d	
+			   ENDIF,
+      tpmAuthData(authdata0,crs0) :
+        IF encrypted?(crs0)
+        THEN tpmAuthData(authdata0,decryptStatus(k,crs0))
+	ELSE d
+	ENDIF,
+      tpmSessKey(k0,crs0) : IF encrypted?(crs0)
+                           THEN tpmSessKey(k0,decryptStatus(k,crs0))
 			   ELSE d
-			   ENDIF
+			   ENDIF,
+      tpmKey(k0,crs0) : IF encrypted?(crs0)
+                           THEN tpmKey(k0,decryptStatus(k,crs0))
+			   ELSE d
+			   ENDIF,
+      tpmDigest(digest0,crs0) :
+        IF encrypted?(crs0)
+        THEN tpmDigest(digest0,decryptStatus(k,crs0))
+	ELSE d
+	ENDIF,
+      tpmQuote(n0,p0,crs0) :
+        IF encrypted?(crs0)
+        THEN tpmQuote(n0,p0,decryptStatus(k,crs0))
+	ELSE d
+	ENDIF,
+      tpmCertReq(digest0,aik0,crs0) :
+        IF encrypted?(crs0)
+        THEN tpmCertReq(digest0,aik0,decryptStatus(k,crs0)) 
+	ELSE d
+	ENDIF
     ENDCASES;
 
   decrypt_encrypt : THEOREM FORALL (k:(asymKey?),c:CRYPTOSTATUS) : 
@@ -141,8 +176,18 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
   sign(k:(asymKey?),d:tpmData) : tpmData =
     CASES d OF 
-      tpmQuote(n0,p0,crs0,m0) : tpmQuote(n0,p0,signStatus(k,crs0),m0),
-      tpmKey(k0,crs0,m0) : tpmKey(k0,signStatus(k,crs0),m0)
+      tpmID(id0,crs0) : tpmID(id0,signStatus(k,crs0)),
+      tpmAuthData(authdata0,crs0) :
+        tpmAuthData(authdata0,signStatus(k,crs0)),
+      tpmSessKey(k0,crs0) :
+        tpmSessKey(k0,signStatus(k,crs0)),
+      tpmKey(k0,crs0) :
+        tpmKey(k0,signStatus(k,crs0)),
+      tpmDigest(digest0,crs0) :
+        tpmDigest(digest0,signStatus(k,crs0)),
+      tpmQuote(n0,p0,crs0) : tpmQuote(n0,p0,signStatus(k,crs0)),
+      tpmCertReq(digest0,aik0,crs0) :
+        tpmCertReq(digest0,aik0,signStatus(k,crs0)) 
     ENDCASES;
 
   checkSigStatus(k:(asymKey?),c:CRYPTOSTATUS) : bool =
@@ -153,14 +198,34 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
   checkSig(k:(asymKey?),d:tpmData) : bool =
     CASES d OF
-      tpmQuote(n0,p0,crs0,m0) : IF signed?(crs0)
+      tpmID(id0,crs0) : IF signed?(crs0) 
+                           THEN checkSigStatus(k,crs0)
+			   ELSE FALSE
+			   ENDIF,
+      tpmAuthData(authdata0,crs0) : IF signed?(crs0) 
+                           THEN checkSigStatus(k,crs0)
+			   ELSE FALSE
+			   ENDIF,
+      tpmSessKey(k0,crs0) : IF signed?(crs0)
+                           THEN checkSigStatus(k,crs0)
+			   ELSE FALSE
+			   ENDIF,
+      tpmKey(k0,crs0) : IF signed?(crs0)
+                           THEN checkSigStatus(k,crs0)
+			   ELSE FALSE
+			   ENDIF,
+      tpmDigest(digest0,crs0) : IF signed?(crs0)
+      			           THEN checkSigStatus(k,crs0)
+				   ELSE FALSE
+				   ENDIF,
+      tpmQuote(n0,p0,crs0) : IF signed?(crs0)
       			        THEN checkSigStatus(k,crs0)
 				ELSE FALSE
 				ENDIF,
-      tpmKey(k0,crs0,m0) : IF signed?(crs0)
-                           THEN checkSigStatus(k,crs0)
-			   ELSE FALSE
-			   ENDIF
+      tpmCertReq(digest0,aik0,crs0) : IF signed?(crs0)
+      			                 THEN checkSigStatus(k,crs0)
+					 ELSE FALSE
+					 ENDIF
     ENDCASES;
 
   check_sign : THEOREM FORALL (k:(asymKey?),c:CRYPTOSTATUS) : 
@@ -172,17 +237,19 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   % Predicate subtype for a certified key.  Key may be clear or wrapped.
   certKey?(r:tpmData):bool =
   CASES r OF
-    tpmKey(k0,crs0,m0) : CASES crs0 OF
+    tpmKey(k0,crs0) : CASES crs0 OF
                            signed(k1,csr1) : clear?(csr1) OR wrapped?(csr1)
 			   ELSE FALSE
 			 ENDCASES
     ELSE FALSE
   ENDCASES;
 
-  % Predicate subtype for a wrapped key.  Wrapped key must be clear
+  %%%% Wrapped Keys
+
+  %% Predicate subtype for a wrapped key.  Wrapped key must be clear.
   wrapKey?(k:tpmData):bool =
   CASES k OF
-    tpmKey(k0,crs0,m0) : CASES crs0 OF 
+    tpmKey(k0,crs0) : CASES crs0 OF 
                            wrapped(k1,csr1,p1) : clear?(csr1)
 			   ELSE FALSE
 			 ENDCASES
@@ -217,15 +284,36 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
     LET (aik,tpmq) = q IN
       checkSig(ca,aik) AND checkQuote(tpmq,key(aik),p,n);
 
-  %% Key installation
+  %%%% Key sets and installation
 
-%  test6: THEOREM FORALL (k:(wrapKey?),rk:(asymKey?),ks:KEYSET) : 
-%    IF member(parentKey(k),ks) OR parentKey(k)=rk
-%       THEN member(childKey(k),addKey(k,rk,ks))
-%       ELSE ks=addKey(k,rk,ks)
-%    ENDIF;
+  %% A keyset is simply a set of asymetric keys
+  KEYSET : TYPE = set[(asymKey?)];
+ 
+  %% Check against the root key passed in as rk
+  checkKeyRoot(k:(wrapKey?),rk:(asymKey?)):bool = parentKey(k)=rk;
+ 
+  %% Check against the set of installed keys and the root key
+  checkKey(k:(asymKey?),srk:(asymKey?),ks:KEYSET):bool =
+    member(k,ks) OR k=srk;
+ 
+  %% Add a key to a set of it checks out
+  addKey(k:(wrapKey?),srk:(asymKey?),ks:KEYSET,d:PCRS):KEYSET =
+    IF checkKey(parentKey(k),srk,ks) AND d=digest(crs(k))
+    THEN add(childKey(k),ks)
+    ELSE ks
+    ENDIF;
+ 
+  %% Remove a key - this is not currently used
+  revokeKey(k:(wrapKey?),ks:KEYSET):KEYSET =
+    remove(childKey(k),ks);
 
-%  test7: THEOREM FORALL (k:(wrapKey?),rk:(asymKey?),ks:KEYSET) :
-%    NOT(member(childKey(k),removeKey(k,ks)));
+  child_if_parent: THEOREM FORALL (k:(wrapKey?),rk:(asymKey?),ks:KEYSET,d:PCRS) : 
+    IF d=digest(crs(k)) AND (member(parentKey(k),ks) OR parentKey(k)=rk)
+       THEN member(childKey(k),addKey(k,rk,ks,d))
+       ELSE ks=addKey(k,rk,ks,d)
+    ENDIF;
+
+  no_child_if_no_parent: THEOREM FORALL (k:(wrapKey?),rk:(asymKey?),ks:KEYSET) :
+    NOT(member(childKey(k),revokeKey(k,ks)));
 
 END key
