@@ -108,8 +108,16 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
   encrypt(k:(asymKey?),d:tpmData) : tpmData =
     CASES d OF 
+      tpmID(id0,crs0,m0) : tpmID(id0,encryptStatus(k,crs0),m0),
+      tpmAuthData(authdata0,crs0,m0) :
+        tpmAuthData(authdata0,encryptStatus(k,crs0),m0),
+      tpmKey(k0,crs0,m0) :
+        tpmKey(k0,encryptStatus(k,crs0),m0),
+      tpmDigest(digest0,crs0,m0) :
+        tpmDigest(digest0,encryptStatus(k,crs0),m0),
       tpmQuote(n0,p0,crs0,m0) : tpmQuote(n0,p0,encryptStatus(k,crs0),m0),
-      tpmKey(k0,crs0,m0) : tpmKey(k0,encryptStatus(k,crs0),m0)
+      tpmCertReq(digest0,aik0,crs0,m0) :
+        tpmCertReq(digest0,aik0,encryptStatus(k,crs0),m0) 
     ENDCASES;
 
   decryptStatus(k:(asymKey?),c:(encrypted?)) : CRYPTOSTATUS =
@@ -117,14 +125,34 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
   decrypt(k:(asymKey?),d:tpmData) : tpmData =
     CASES d OF
-      tpmQuote(n0,p0,crs0,m0) : IF encrypted?(crs0)
-      			        THEN tpmQuote(n0,p0,decryptStatus(k,crs0),m0)
-				ELSE d
-				ENDIF,
+      tpmID(id0,crs0,m0) : IF encrypted?(crs0)
+                           THEN tpmID(id0,decryptStatus(k,crs0),m0)
+			   ELSE d	
+			   ENDIF,
+      tpmAuthData(authdata0,crs0,m0) :
+        IF encrypted?(crs0)
+        THEN tpmAuthData(authdata0,decryptStatus(k,crs0),m0)
+	ELSE d
+	ENDIF,
       tpmKey(k0,crs0,m0) : IF encrypted?(crs0)
                            THEN tpmKey(k0,decryptStatus(k,crs0),m0)
 			   ELSE d
-			   ENDIF
+			   ENDIF,
+      tpmDigest(digest0,crs0,m0) :
+        IF encrypted?(crs0)
+        THEN tpmDigest(digest0,decryptStatus(k,crs0),m0)
+	ELSE d
+	ENDIF,
+      tpmQuote(n0,p0,crs0,m0) :
+        IF encrypted?(crs0)
+        THEN tpmQuote(n0,p0,decryptStatus(k,crs0),m0)
+	ELSE d
+	ENDIF,
+      tpmCertReq(digest0,aik0,crs0,m0) :
+        IF encrypted?(crs0)
+        THEN tpmCertReq(digest0,aik0,decryptStatus(k,crs0),m0) 
+	ELSE d
+	ENDIF
     ENDCASES;
 
   decrypt_encrypt : THEOREM FORALL (k:(asymKey?),c:CRYPTOSTATUS) : 
@@ -141,8 +169,16 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
   sign(k:(asymKey?),d:tpmData) : tpmData =
     CASES d OF 
+      tpmID(id0,crs0,m0) : tpmID(id0,signStatus(k,crs0),m0),
+      tpmAuthData(authdata0,crs0,m0) :
+        tpmAuthData(authdata0,signStatus(k,crs0),m0),
+      tpmKey(k0,crs0,m0) :
+        tpmKey(k0,signStatus(k,crs0),m0),
+      tpmDigest(digest0,crs0,m0) :
+        tpmDigest(digest0,signStatus(k,crs0),m0),
       tpmQuote(n0,p0,crs0,m0) : tpmQuote(n0,p0,signStatus(k,crs0),m0),
-      tpmKey(k0,crs0,m0) : tpmKey(k0,signStatus(k,crs0),m0)
+      tpmCertReq(digest0,aik0,crs0,m0) :
+        tpmCertReq(digest0,aik0,signStatus(k,crs0),m0) 
     ENDCASES;
 
   checkSigStatus(k:(asymKey?),c:CRYPTOSTATUS) : bool =
@@ -153,14 +189,30 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
   checkSig(k:(asymKey?),d:tpmData) : bool =
     CASES d OF
+      tpmID(id0,crs0,m0) : IF signed?(crs0) 
+                           THEN checkSigStatus(k,crs0)
+			   ELSE FALSE
+			   ENDIF,
+      tpmAuthData(authdata0,crs0,m0) : IF signed?(crs0) 
+                           THEN checkSigStatus(k,crs0)
+			   ELSE FALSE
+			   ENDIF,
+      tpmKey(k0,crs0,m0) : IF signed?(crs0)
+                           THEN checkSigStatus(k,crs0)
+			   ELSE FALSE
+			   ENDIF,
+      tpmDigest(digest0,crs0,m0) : IF signed?(crs0)
+      			           THEN checkSigStatus(k,crs0)
+				   ELSE FALSE
+				   ENDIF,
       tpmQuote(n0,p0,crs0,m0) : IF signed?(crs0)
       			        THEN checkSigStatus(k,crs0)
 				ELSE FALSE
 				ENDIF,
-      tpmKey(k0,crs0,m0) : IF signed?(crs0)
-                           THEN checkSigStatus(k,crs0)
-			   ELSE FALSE
-			   ENDIF
+      tpmCertReq(digest0,aik0,crs0,m0) : IF signed?(crs0)
+      			                 THEN checkSigStatus(k,crs0)
+					 ELSE FALSE
+					 ENDIF
     ENDCASES;
 
   check_sign : THEOREM FORALL (k:(asymKey?),c:CRYPTOSTATUS) : 
@@ -219,13 +271,35 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
   %% Key installation
 
-%  test6: THEOREM FORALL (k:(wrapKey?),rk:(asymKey?),ks:KEYSET) : 
-%    IF member(parentKey(k),ks) OR parentKey(k)=rk
-%       THEN member(childKey(k),addKey(k,rk,ks))
-%       ELSE ks=addKey(k,rk,ks)
-%    ENDIF;
+%% A keyset is simply a set of asymetric keys
+  KEYSET : TYPE = set[(asymKey?)];
+ 
+  %% Check against the root key passed in as rk
+  checkKeyRoot(k:(wrapKey?),rk:(asymKey?)):bool =
+    parentKey(k)=rk;
+ 
+  %% Check against the set of installed keys and the root key
+  checkKey(k:(asymKey?),rk:(asymKey?),ks:KEYSET):bool =
+    member(k,ks) OR k=rk;
+ 
+  %% Add a key to a set of it checks out
+  addKey(k:(wrapKey?),rk:(asymKey?),ks:KEYSET):KEYSET =
+    IF checkKey(parentKey(k),rk,ks)
+    THEN add(childKey(k),ks)
+    ELSE ks
+    ENDIF;
+ 
+  %% Remove a key - this is not currently used
+  removeKey(k:(wrapKey?),ks:KEYSET):KEYSET =
+    remove(childKey(k),ks);
 
-%  test7: THEOREM FORALL (k:(wrapKey?),rk:(asymKey?),ks:KEYSET) :
-%    NOT(member(childKey(k),removeKey(k,ks)));
+  child_if_parent: THEOREM FORALL (k:(wrapKey?),rk:(asymKey?),ks:KEYSET) : 
+    IF member(parentKey(k),ks) OR parentKey(k)=rk
+       THEN member(childKey(k),addKey(k,rk,ks))
+       ELSE ks=addKey(k,rk,ks)
+    ENDIF;
+
+  no_child_if_no_parent: THEOREM FORALL (k:(wrapKey?),rk:(asymKey?),ks:KEYSET) :
+    NOT(member(childKey(k),removeKey(k,ks)));
 
 END key
