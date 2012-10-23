@@ -1,76 +1,14 @@
 (key
- (encrypt_TCC1 0
-  (encrypt_TCC1-1 nil 3559662499 ("" (cases-tcc) nil nil) nil nil))
- (decryptStatus_TCC1 0
-  (decryptStatus_TCC1-1 nil 3559662617 ("" (subtype-tcc) nil nil) nil
-   nil))
-<<<<<<< HEAD
- (decrypt_TCC1 0
-  (decrypt_TCC1-1 nil 3535745793 ("" (grind) nil nil) nil nil))
-=======
->>>>>>> bcf3ec68a116d0665097570b9aa249923a486a3d
+ (double_private 0
+  (double_private-1 nil 3560017522 ("" (postpone) nil nil) nil
+   shostak))
  (decrypt_encrypt 0
-  (decrypt_encrypt-1 nil 3559184330 ("" (grind) nil nil)
+  (decrypt_encrypt-1 nil 3560017507 ("" (grind))
    ((encryptStatus const-decl "(encrypted?)" key nil)
     (decryptStatus const-decl "CRYPTOSTATUS" key nil))
-<<<<<<< HEAD
-   shostak))
- (sign_TCC1 0
-  (sign_TCC1-1 nil 3559662762 ("" (cases-tcc) nil nil) nil nil))
- (checkSig_TCC1 0
-  (checkSig_TCC1-1 nil 3559662762 ("" (cases-tcc) nil nil) nil nil))
- (check_sign 0
-  (check_sign-1 nil 3559184457 ("" (grind) nil nil)
-   ((signStatus const-decl "(signed?)" key nil)
-    (checkSigStatus const-decl "bool" key nil))
-   shostak))
- (childKey_TCC1 0
-  (childKey_TCC1-1 nil 3559356911 ("" (subtype-tcc) nil nil)
-   ((boolean nonempty-type-decl nil booleans nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (NOT const-decl "[bool -> bool]" booleans nil)
-    (tpmData type-decl nil key nil)
-    (wrapKey? const-decl "bool" key nil))
-   nil))
- (childKey_TCC2 0
-  (childKey_TCC2-1 nil 3559662499 ("" (subtype-tcc) nil nil) nil nil))
- (parentKey_TCC1 0
-  (parentKey_TCC1-1 nil 3559356911
-   ("" (subtype-tcc) (("" (grind) nil nil)) nil)
-   ((boolean nonempty-type-decl nil booleans nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (NOT const-decl "[bool -> bool]" booleans nil)
-    (tpmData type-decl nil key nil)
-    (wrapKey? const-decl "bool" key nil))
-   nil))
- (checkFullQuote_TCC1 0
-  (checkFullQuote_TCC1-1 nil 3559662499 ("" (subtype-tcc) nil nil)
-   ((boolean nonempty-type-decl nil booleans nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (NOT const-decl "[bool -> bool]" booleans nil)
-    (tpmData type-decl nil key nil)
-    (certKey? const-decl "bool" key nil)
-    (tpmQuote? adt-recognizer-decl "[tpmData -> boolean]" key nil)
-    (fullQuote? const-decl "bool" key nil) (KEY type-decl nil key nil)
-    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
-    (checkSig const-decl "bool" key nil))
-   nil))
- (checkFullQuote_TCC2 0
-  (checkFullQuote_TCC2-1 nil 3559662499 ("" (subtype-tcc) nil nil) nil
-   nil))
- (decrypt_TCC2 0
-  (decrypt_TCC2-1 nil 3535745793 ("" (grind) nil nil) nil nil))
- (decrypt_TCC3 0
-  (decrypt_TCC3-1 nil 3559662762 ("" (subtype-tcc) nil nil) nil nil))
- (test0 0
-  (test0-1 nil 3535745994 ("" (grind) nil nil)
-   ((sigCheckSym const-decl "boolean" key nil)
-    (sigCheck const-decl "boolean" key nil))
-=======
->>>>>>> bcf3ec68a116d0665097570b9aa249923a486a3d
    shostak))
  (decrypt_equal_keys 0
-  (decrypt_equal_keys-1 nil 3559930840 ("" (grind) nil nil)
+  (decrypt_equal_keys-1 nil 3560017507 ("" (grind))
    ((boolean nonempty-type-decl nil booleans nil)
     (bool nonempty-type-eq-decl nil booleans nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
@@ -80,7 +18,7 @@
     (decryptStatus const-decl "CRYPTOSTATUS" key nil))
    shostak))
  (no_decrypt_unequal_keys 0
-  (no_decrypt_unequal_keys-1 nil 3559930998
+  (no_decrypt_unequal_keys-1 nil 3560017507
    ("" (grind) (("" (rewrite "equal_private_equal_key") nil nil)) nil)
    ((equal_private_equal_key formula-decl nil key nil)
     (boolean nonempty-type-decl nil booleans nil)
@@ -93,109 +31,72 @@
     (/= const-decl "boolean" notequal nil))
    shostak))
  (check_sign 0
-  (check_sign-1 nil 3559184457 ("" (grind) nil nil)
+  (check_sign-1 nil 3560017507 ("" (grind))
    ((signStatus const-decl "(signed?)" key nil)
     (checkSigStatus const-decl "bool" key nil))
    shostak))
  (check_sign_keys 0
-  (check_sign_keys-2 "" 3559928477
-   ("" (grind)
-    (("" (grind) (("" (rewrite "equal_private_equal_key") nil nil))
-      nil))
-    nil)
+  (check_sign_keys-1 nil 3560017508
+   ("" (grind) (("" (rewrite "equal_private_equal_key") nil nil)) nil)
    ((equal_private_equal_key formula-decl nil key nil)
     (boolean nonempty-type-decl nil booleans nil)
     (bool nonempty-type-eq-decl nil booleans nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
     (KEY type-decl nil key nil)
     (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
-<<<<<<< HEAD
-    (decrypt const-decl "BLOB" key nil))
-   shostak))
- (test4 0
-  (test4-1 nil 3535747330 ("" (grind) nil nil)
-   ((boolean nonempty-type-decl nil booleans nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (NOT const-decl "[bool -> bool]" booleans nil)
-    (KEY type-decl nil key nil)
-    (symKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
-    (/= const-decl "boolean" notequal nil)
-    (decryptSym const-decl "BLOB" key nil)
-    (decrypt const-decl "BLOB" key nil))
-   shostak))
- (test5 0
-  (test5-1 nil 3535747336
-   ("" (grind)
-    (("" (grind)
-      (("" (apply-extensionality)
-        (("1" (grind)
-          (("1" (lemma "double_private") (("1" (grind) nil nil)) nil))
-          nil)
-         ("2" (rewrite double_private) nil nil)
-         ("3" (rewrite double_private) nil nil))
-        nil))
-      nil))
-    nil)
-   ((double_private formula-decl nil key nil)
-    (private const-decl "(asymKey?)" key nil)
-    (KEY_asymKey_extensionality formula-decl nil key nil)
-    (decryptSym const-decl "BLOB" key nil)
-    (decryptAsym const-decl "BLOB" key nil)
-    (boolean nonempty-type-decl nil booleans nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (NOT const-decl "[bool -> bool]" booleans nil)
-    (KEY type-decl nil key nil)
-    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
-    (decrypt const-decl "BLOB" key nil)
-    (/= const-decl "boolean" notequal nil))
-   shostak))
- (test6 0
-  (test6-1 nil 3535891242 ("" (grind) nil nil)
-=======
     (checkSigStatus const-decl "bool" key nil)
     (signStatus const-decl "(signed?)" key nil))
-   shostak)
-  (check_sign_keys-1 nil 3559928395 ("" (grind) nil nil)
+   shostak))
+ (childKey_TCC1 0
+  (childKey_TCC1-1 nil 3560017462 ("" (subtype-tcc) nil nil)
    ((boolean nonempty-type-decl nil booleans nil)
     (bool nonempty-type-eq-decl nil booleans nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
-    (KEY type-decl nil key nil)
-    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
-    (signStatus const-decl "(signed?)" key nil)
-    (checkSigStatus const-decl "bool" key nil))
-   shostak))
- (childKey_TCC1 0
-  (childKey_TCC1-1 nil 3559356911 ("" (subtype-tcc) nil nil)
-   ((wrapKey? const-decl "bool" key nil)
     (tpmData type-decl nil key nil)
-    (NOT const-decl "[bool -> bool]" booleans nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (boolean nonempty-type-decl nil booleans nil))
+    (wrapKey? const-decl "bool" key nil))
    nil))
  (parentKey_TCC1 0
-  (parentKey_TCC1-1 nil 3559356911
-   ("" (subtype-tcc) (("" (grind) nil nil)) nil)
-   ((wrapKey? const-decl "bool" key nil)
-    (tpmData type-decl nil key nil)
-    (NOT const-decl "[bool -> bool]" booleans nil)
+  (parentKey_TCC1-1 nil 3560017462 ("" (tcc))
+   ((boolean nonempty-type-decl nil booleans nil)
     (bool nonempty-type-eq-decl nil booleans nil)
-    (boolean nonempty-type-decl nil booleans nil))
+    (NOT const-decl "[bool -> bool]" booleans nil)
+    (tpmData type-decl nil key nil)
+    (wrapKey? const-decl "bool" key nil))
    nil))
  (checkFullQuote_TCC1 0
-  (checkFullQuote_TCC1-1 nil 3559928393 ("" (subtype-tcc) nil nil)
-   ((checkSig const-decl "bool" key nil)
-    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
-    (KEY type-decl nil key nil) (fullQuote? const-decl "bool" key nil)
-    (tpmQuote? adt-recognizer-decl "[tpmData -> boolean]" key nil)
-    (certKey? const-decl "bool" key nil)
-    (tpmData type-decl nil key nil)
-    (NOT const-decl "[bool -> bool]" booleans nil)
+  (checkFullQuote_TCC1-1 nil 3560017462 ("" (subtype-tcc) nil nil)
+   ((boolean nonempty-type-decl nil booleans nil)
     (bool nonempty-type-eq-decl nil booleans nil)
-    (boolean nonempty-type-decl nil booleans nil))
+    (NOT const-decl "[bool -> bool]" booleans nil)
+    (tpmData type-decl nil key nil)
+    (certKey? const-decl "bool" key nil)
+    (tpmQuote? adt-recognizer-decl "[tpmData -> boolean]" key nil)
+    (fullQuote? const-decl "bool" key nil) (KEY type-decl nil key nil)
+    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
+    (checkSig const-decl "bool" key nil))
+   nil))
+ (addKey_TCC1 0
+  (addKey_TCC1-1 nil 3560017462 ("" (tcc))
+   ((boolean nonempty-type-decl nil booleans nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (NOT const-decl "[bool -> bool]" booleans nil)
+    (tpmData type-decl nil key nil)
+    (wrapKey? const-decl "bool" key nil) (KEY type-decl nil key nil)
+    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
+    (parentKey const-decl "(asymKey?)" key nil)
+    (member const-decl "bool" sets nil)
+    (checkKey const-decl "bool" key nil))
+   nil))
+ (child_if_parent_TCC1 0
+  (child_if_parent_TCC1-1 nil 3560017462 ("" (tcc))
+   ((boolean nonempty-type-decl nil booleans nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (NOT const-decl "[bool -> bool]" booleans nil)
+    (tpmData type-decl nil key nil)
+    (wrapKey? const-decl "bool" key nil))
    nil))
  (child_if_parent 0
-  (child_if_parent-1 nil 3559931332 ("" (grind) nil nil)
->>>>>>> bcf3ec68a116d0665097570b9aa249923a486a3d
+  (child_if_parent-1 nil 3560017508 ("" (grind))
    ((boolean nonempty-type-decl nil booleans nil)
     (bool nonempty-type-eq-decl nil booleans nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
@@ -209,15 +110,10 @@
     (addKey const-decl "KEYSET" key nil)
     (add const-decl "(nonempty?)" sets nil))
    shostak))
-<<<<<<< HEAD
- (test7 0
-  (test7-1 nil 3535891455 ("" (grind) nil nil)
-=======
  (no_child_if_no_parent 0
-  (no_child_if_no_parent-1 nil 3559931350 ("" (grind) nil nil)
->>>>>>> bcf3ec68a116d0665097570b9aa249923a486a3d
+  (no_child_if_no_parent-1 nil 3560017508 ("" (grind))
    ((childKey const-decl "(asymKey?)" key nil)
-    (removeKey const-decl "KEYSET" key nil)
+    (revokeKey const-decl "KEYSET" key nil)
     (member const-decl "bool" sets nil)
     (remove const-decl "set" sets nil))
    shostak)))
