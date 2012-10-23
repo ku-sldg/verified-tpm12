@@ -22,6 +22,8 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   IMPORTING pcr[HVAL];
   IMPORTING ReturnCodes;
   
+  AUTHDATA : TYPE = string;
+
   KEY_USAGE : DATATYPE
   BEGIN
     signing : signing?
@@ -34,12 +36,13 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   END KEY_USAGE;
 
   KEY_FLAGS : TYPE = [#
-  	      	     redirection : bool,
+  	      	     redirection : bool, 
 		     migratable : bool,
 		     isVolatile : bool,
 		     pcrIgnoredOnRead : bool,
 		     migrateAuthority : bool
   	      	     #];
+
   keyFlagsF : KEY_FLAGS = (#
   	     redirection:= false,
      	     migratable := false,
@@ -86,7 +89,7 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
   tpmData : DATATYPE
   BEGIN
-    outNothing(m:ReturnCode) : outNothing?
+    tpmNoData : tpmNoData?
     %% tpmBlob - Is gone
     tpmSymKey(key:(symKey?),crs:CRYPTOSTATUS,m:ReturnCode) : tpmSymKey?
     %% Identifyier for naming things
@@ -97,7 +100,7 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
     %% Assymetric keys used by the TPM - wrapped, signed, encrypted
     %% tpmKey subsumes all key outputs
-    tpmKey(key:(asymKey?),crs:CRYPTOSTATUS,m:ReturnCode) : tpmKey?
+    tpmKey(key:(asymKey?),crs:CRYPTOSTATUS) : tpmKey?
     %  tpmKey subsumes all assymetric keys used by the TPM
     %  wrapped key: tpmKey(child,wrapped(public(parent),clear,pcrs))
     %  clear child wrapped by parent bound to PCRs
@@ -115,7 +118,7 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
     %  contain PCRs
 
     %%  Quote with a PCR digest and nonce.
-    tpmQuote(digest:list[PCR],nonce:nat,crs:CRYPTOSTATUS,m:ReturnCode) : tpmQuote?
+    tpmQuote(digest:list[PCR],nonce:nat,crs:CRYPTOSTATUS) : tpmQuote?
     %  PCRs are not current TPM data, so the digest is over PCR values.
 
     %% Certification request sent to Privacy CA
@@ -145,18 +148,14 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
       tpmID(id0,crs0,m0) : tpmID(id0,encryptStatus(k,crs0),m0),
       tpmAuthData(authdata0,crs0,m0) :
         tpmAuthData(authdata0,encryptStatus(k,crs0),m0),
-      tpmKey(k0,crs0,m0) :
-        tpmKey(k0,encryptStatus(k,crs0),m0),
+      tpmKey(k0,crs0) :
+        tpmKey(k0,encryptStatus(k,crs0)),
       tpmDigest(digest0,crs0,m0) :
         tpmDigest(digest0,encryptStatus(k,crs0),m0),
-      tpmQuote(n0,p0,crs0,m0) : tpmQuote(n0,p0,encryptStatus(k,crs0),m0),
-<<<<<<< HEAD
-      tpmKey(k0,crs0,m0) : tpmKey(k0,encryptStatus(k,crs0),m0),
-      tpmSymKey(k0,crs0,m0) : tpmSymKey(k0,encryptStatus(k,crs0),m0)
-=======
+      tpmQuote(n0,p0,crs0) : tpmQuote(n0,p0,encryptStatus(k,crs0)),
+      tpmSymKey(k0,crs0,m0) : tpmSymKey(k0,encryptStatus(k,crs0),m0),
       tpmCertReq(digest0,aik0,crs0,m0) :
         tpmCertReq(digest0,aik0,encryptStatus(k,crs0),m0) 
->>>>>>> bcf3ec68a116d0665097570b9aa249923a486a3d
     ENDCASES;
 
   decryptStatus(k:(asymKey?),c:(encrypted?)) : CRYPTOSTATUS =
@@ -173,24 +172,24 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
         THEN tpmAuthData(authdata0,decryptStatus(k,crs0),m0)
 	ELSE d
 	ENDIF,
-      tpmKey(k0,crs0,m0) : IF encrypted?(crs0)
-                           THEN tpmKey(k0,decryptStatus(k,crs0),m0)
-			   ELSE d
-			   ENDIF,
-<<<<<<< HEAD
-      tpmSymKey(k0,crs0,m0) : IF encrypted?(crs0)
-      			      THEN tpmSymKey(k0,decryptStatus(k,crs0),m0)
-			      ELSE d
-			      ENDIF
-=======
+      tpmKey(k0,crs0) : 
+      	IF encrypted?(crs0)
+        THEN tpmKey(k0,decryptStatus(k,crs0))
+	ELSE d
+	ENDIF,
+      tpmSymKey(k0,crs0,m0) : 
+        IF encrypted?(crs0)
+      	THEN tpmSymKey(k0,decryptStatus(k,crs0),m0)
+	ELSE d
+	ENDIF,
       tpmDigest(digest0,crs0,m0) :
         IF encrypted?(crs0)
         THEN tpmDigest(digest0,decryptStatus(k,crs0),m0)
 	ELSE d
 	ENDIF,
-      tpmQuote(n0,p0,crs0,m0) :
+      tpmQuote(n0,p0,crs0) :
         IF encrypted?(crs0)
-        THEN tpmQuote(n0,p0,decryptStatus(k,crs0),m0)
+        THEN tpmQuote(n0,p0,decryptStatus(k,crs0))
 	ELSE d
 	ENDIF,
       tpmCertReq(digest0,aik0,crs0,m0) :
@@ -198,7 +197,6 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
         THEN tpmCertReq(digest0,aik0,decryptStatus(k,crs0),m0) 
 	ELSE d
 	ENDIF
->>>>>>> bcf3ec68a116d0665097570b9aa249923a486a3d
     ENDCASES;
 
   decrypt_encrypt : THEOREM FORALL (k:(asymKey?),c:CRYPTOSTATUS) : 
@@ -218,18 +216,14 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
       tpmID(id0,crs0,m0) : tpmID(id0,signStatus(k,crs0),m0),
       tpmAuthData(authdata0,crs0,m0) :
         tpmAuthData(authdata0,signStatus(k,crs0),m0),
-      tpmKey(k0,crs0,m0) :
-        tpmKey(k0,signStatus(k,crs0),m0),
+      tpmKey(k0,crs0) :
+        tpmKey(k0,signStatus(k,crs0)),
       tpmDigest(digest0,crs0,m0) :
         tpmDigest(digest0,signStatus(k,crs0),m0),
-      tpmQuote(n0,p0,crs0,m0) : tpmQuote(n0,p0,signStatus(k,crs0),m0),
-<<<<<<< HEAD
-      tpmKey(k0,crs0,m0) : tpmKey(k0,signStatus(k,crs0),m0),
-      tpmSymKey(k0,crs0,m0) : tpmSymKey(k0,signStatus(k,crs0),m0)
-=======
+      tpmQuote(n0,p0,crs0) : tpmQuote(n0,p0,signStatus(k,crs0)),
+      tpmSymKey(k0,crs0,m0) : tpmSymKey(k0,signStatus(k,crs0),m0),
       tpmCertReq(digest0,aik0,crs0,m0) :
         tpmCertReq(digest0,aik0,signStatus(k,crs0),m0) 
->>>>>>> bcf3ec68a116d0665097570b9aa249923a486a3d
     ENDCASES;
 
 
@@ -249,34 +243,27 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
                            THEN checkSigStatus(k,crs0)
 			   ELSE FALSE
 			   ENDIF,
-      tpmKey(k0,crs0,m0) : IF signed?(crs0)
-                           THEN checkSigStatus(k,crs0)
-			   ELSE FALSE
-			   ENDIF,
+      tpmKey(k0,crs0) : IF signed?(crs0)
+                        THEN checkSigStatus(k,crs0)
+			ELSE FALSE
+			ENDIF,
       tpmDigest(digest0,crs0,m0) : IF signed?(crs0)
       			           THEN checkSigStatus(k,crs0)
 				   ELSE FALSE
 				   ENDIF,
-      tpmQuote(n0,p0,crs0,m0) : IF signed?(crs0)
+      tpmQuote(n0,p0,crs0) : IF signed?(crs0)
       			        THEN checkSigStatus(k,crs0)
 				ELSE FALSE
 				ENDIF,
-<<<<<<< HEAD
-      tpmKey(k0,crs0,m0) : IF signed?(crs0)
-                           THEN checkSigStatus(k,crs0)
-			   ELSE FALSE
-			   ENDIF,
       tpmSymKey(k0,crs0,m0) : IF signed?(crs0)
                               THEN checkSigStatus(k,crs0)
 			      ELSE FALSE
-			      ENDIF
-=======
+			      ENDIF,
       tpmCertReq(digest0,aik0,crs0,m0) : IF signed?(crs0)
       			                 THEN checkSigStatus(k,crs0)
 					 ELSE FALSE
-					 ENDIF
->>>>>>> bcf3ec68a116d0665097570b9aa249923a486a3d
-    ENDCASES;
+					 ENDIF 
+   ENDCASES;
 
   check_sign : THEOREM FORALL (k:(asymKey?),c:CRYPTOSTATUS) : 
     checkSigStatus(k,signStatus(private(k),c));
@@ -287,20 +274,20 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   % Predicate subtype for a certified key.  Key may be clear or wrapped.
   certKey?(r:tpmData):bool =
   CASES r OF
-    tpmKey(k0,crs0,m0) : CASES crs0 OF
-                           signed(k1,csr1) : clear?(csr1) OR wrapped?(csr1)
-			   ELSE FALSE
-			 ENDCASES
+    tpmKey(k0,crs0) : CASES crs0 OF
+                        signed(k1,csr1) : clear?(csr1) OR wrapped?(csr1)
+			ELSE FALSE
+    		      ENDCASES			 
     ELSE FALSE
   ENDCASES;
 
   % Predicate subtype for a wrapped key.  Wrapped key must be clear
   wrapKey?(k:tpmData):bool =
   CASES k OF
-    tpmKey(k0,crs0,m0) : CASES crs0 OF 
-                           wrapped(k1,csr1,p1) : clear?(csr1)
-			   ELSE FALSE
-			 ENDCASES
+    tpmKey(k0,crs0) : CASES crs0 OF 
+                        wrapped(k1,csr1,p1) : clear?(csr1)
+			ELSE FALSE
+    		      ENDCASES
     ELSE FALSE
   ENDCASES;
 
@@ -332,92 +319,9 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
     LET (aik,tpmq) = q IN
       checkSig(ca,aik) AND checkQuote(tpmq,key(aik),p,n);
 
-<<<<<<< HEAD
-  %% Removed the wrapKey type in favor of the (wrapKey?) subtype that can
-  %% be applied to tpmKey.
-  % wrapKey : TYPE = [#
-  % 	    	   parentKey:(asymKey?),
-  % 		   childKey:(asymKey?)
-  % 		   #]; 
-
-
-  %% This theorem does NOT say that the private key of a private key is
-  %% a key.  It says that everything - signing and encrypting - can be done
-  %% in reverse if you swap the keys around.
-
-  double_private: AXIOM FORALL (k:(asymKey?)) : private(private(k))=k;
-
-  %% Basic blob types - data, keys, hashs, encrypted blobs, signed blobs
-  %% Blobs in this context are things that can be encrypted or signed
-  %% Note that encrypted and signed things can be encrypted and signed
-
-  BLOB : DATATYPE
-  BEGIN
-    nothing : nothing?
-    keyBlob(key:KEY) : keyBlob?
-    hashBlob(h:HVAL) : hashBlob?
-    encryptBlob(key:KEY,blob:BLOB) : encryptBlob?
-    signBlob(key:KEY,blob:BLOB) : signBlob?
-    sealBlob(key:KEY,pcrs:PCRS,blob:BLOB) : sealBlob?
-    certBlob(encrKey:KEY,digest:(asymKey?),symK:(symKey?)) : certBlob?
-%     certBlob(key:KEY,wkey:wrapKey) : certBlob?
-    pairBlob(left,right : BLOB) : pairBlob?
-    migrationBlob(rand:int,outData:(encryptBlob?)):migrationBlob?%%TODO: types may not be correct
-  END BLOB;
-
-  %% Decryption for specific key types.  Key types not matching automatically
-  %% is a failure
-  decryptSym(b:(encryptBlob?),k:(symKey?)):BLOB =
-    IF symKey?(key(b)) AND symKey?(k) AND key(b) = k
-       THEN blob(b)
-       ELSE nothing
-    ENDIF;
-
-  decryptAsym(b:(encryptBlob?),k:(asymKey?)):BLOB =
-    IF asymKey?(key(b)) AND asymKey?(k) AND key(b) = private(k)
-       THEN blob(b)
-       ELSE nothing
-    ENDIF;
-
-  
-  %% Decryption for all key types
-  decrypt(b:(encryptBlob?),k:KEY):BLOB = 
-    CASES k OF 
-      invalidKey : nothing,
-      symKey(k0) : decryptSym(b,k),
-      asymKey(k0,u,f) : decryptAsym(b,k)
-  ENDCASES;
-
-  %% Unseal for aysmetric keys
-  unseal(b:(sealBlob?),pcrs:PCRS,k:(asymKey?)):BLOB =
-    IF pcrs(b) = pcrs AND key(b)=private(k)
-       THEN blob(b)
-       ELSE nothing
-    ENDIF;
-
-  %% Signature check for specific key types
-  %% This could (and should) be implemented with decryption function
-  sigCheckSym(b:(signBlob?),k:(symKey?)):boolean =
-    symKey?(key(b)) AND symKey?(k) AND key(b) = k;
-
-  sigCheckAsym(b:(signBlob?),k:(asymKey?)):boolean =
-    asymKey?(key(b)) AND asymKey?(k) AND key(b) = private(k);
-
-
-  %% Signature checking for all keys
-  sigCheck(b:(signBlob?),k:KEY):boolean =
-    CASES k OF
-      invalidKey : FALSE,
-      symKey(k0) : sigCheckSym(b,k),
-      asymKey(k0,u,f) : sigCheckAsym(b,k)
-    ENDCASES;
-
-  %% A keyset is simply a set of asymmetric keys
-=======
   %% Key installation
 
-%% A keyset is simply a set of asymetric keys
->>>>>>> bcf3ec68a116d0665097570b9aa249923a486a3d
+  %% A keyset is simply a set of asymetric keys
   KEYSET : TYPE = set[(asymKey?)];
  
   %% Check against the root key passed in as rk
