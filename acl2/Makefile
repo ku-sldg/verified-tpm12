@@ -3,7 +3,7 @@
 # didn't want to think about GPL2 issues associated with
 # Makefile-generic yet.
 
-ACL2=/u/ragerdl/r/acl2-devel/ccl-saved_acl2hp
+ACL2=~ragerd/r/acl2-devel/ccl-saved_acl2
 
 all: top.cert startup-data.cert
 
@@ -24,4 +24,4 @@ tpm.cert: perm-data.cert
 
 top.cert: tpm.cert 
 
-include /u/ragerdl/r/acl2-devel/books/Makefile-generic
+include ~ragerd/r/acl2-devel/books/Makefile-generic
