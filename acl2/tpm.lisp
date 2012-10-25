@@ -420,7 +420,6 @@
                                           (tpm-state->pcrs tpm-s)
                                           (tpm-state->perm-flags tpm-s)
                                           (tpm-state->perm-data tpm-s))))
-(i-am-here)
 
 (defun+ restore-state (tpm-s)
   (declare (xargs :guard (tpm-state-p tpm-s)
