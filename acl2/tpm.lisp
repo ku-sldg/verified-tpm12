@@ -412,12 +412,32 @@
 (defun+ save-state (tpm-s)
   (declare (xargs :guard (tpm-state-p tpm-s)
                   :output (tpm-state-p (save-state tpm-s))))
-  (change-tpm-state tpm-s :restore
-                    (save-state1 (tpm-state->keys tpm-s)
-                                 (tpm-state->ek tpm-s)
-                                 (tpm-state->srk tpm-s)
-                                 (tpm-state->key-gen-count tpm-s)
-                                 (tpm-state->pcrs tpm-s)
-                                 (tpm-state->perm-flags tpm-s)
-                                 (tpm-state->perm-data tpm-s))))
+  (change-tpm-state tpm-s 
+                    :restore (save-state1 (tpm-state->keys tpm-s)
+                                          (tpm-state->ek tpm-s)
+                                          (tpm-state->srk tpm-s)
+                                          (tpm-state->key-gen-count tpm-s)
+                                          (tpm-state->pcrs tpm-s)
+                                          (tpm-state->perm-flags tpm-s)
+                                          (tpm-state->perm-data tpm-s))))
+(i-am-here)
 
+(defun+ restore-state (tpm-s)
+  (declare (xargs :guard (tpm-state-p tpm-s)
+                  :output (tpm-state-p (restore-state tpm-s))))
+  (let ((rs (tpm-state->restore tpm-s)))
+    (if (restore-state-data->valid rs)
+        (change-tpm-state tpm-s
+                          ;; restore unchanged
+                          ;; memory unchanged
+                          :post-init nil
+                          :ek (restore-state-data->ek rs)
+                          :srk (restore-state-data->srk rs)
+                          :pcrs (restore-state-data->pcrs rs)
+                          :keys (restore-state-data->keys rs)
+                          :key-gen-count (restore-state-data->key-gen-count rs)
+                          :locality 3
+                          :perm-flags (restore-state-data->perm-flags rs)
+                          :perm-data (restore-state-data->perm-data rs)
+                          :disable-force-clear nil)
+      tpm-s)))
