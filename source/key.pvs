@@ -13,7 +13,7 @@
 %% Todo: (key - => pending, + => done)
 %%
 %% ----
-key [DVAL,KVAL,HVAL:TYPE+] : THEORY
+key [DVAL,HVAL:TYPE+] : THEORY
 
   BEGIN
 
@@ -23,33 +23,49 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   AUTHDATA : TYPE = string;
   KEYDATA : TYPE;
   
+  %% Keys are integers.
+  KVAL : TYPE = integer;
+
+  %% The inverse of a key its negation
+  inverse(k:KVAL):KVAL = -k;
+
+  %% The bad key value is 0
+  badkey:KVAL = 0;
+
   KEY : DATATYPE
   BEGIN
     symKey(skey:KVAL) : symKey?
-    asymKey(askey:KVAL,asData:KEYDATA) : asymKey?
+    asymKey(askey:KVAL) : asymKey?
   END KEY;		
 
-  % This is odd, but it seems to work out okay.
-  private(k:(asymKey?)):(asymKey?)
+  % Define private and public key accessors for asymKey?
+  private(k:(asymKey?)):KVAL = inverse(askey(k))
+  public(k:(asymKey?)):KVAL = askey(k)
 
   %% This theorem does NOT say that the private key of a private key is
   %% a key.  It says that everything - signing and encrypting - can be done
   %% in reverse if you swap the keys around.
 
-  double_private: AXIOM FORALL (k:(asymKey?)) : private(private(k))=k;
+  double_inverse: THEOREM FORALL (k:KVAL) : inverse(inverse(k))=k;
 
-  equal_private_equal_key: AXIOM FORALL (k0,k1:(asymKey?)) :
-    private(k0) = private(k1) <=> k0 = k1;
+  inverse_private: THEOREM FORALL (k:(asymKey?)) :
+    inverse(private(k))=public(k);
+
+  equal_private: THEOREM FORALL (k0,k1:(asymKey?)) :
+    private(k0) = private(k1) <=> k0=k1;
+
+  equal_public: THEOREM FORALL (k0,k1:(asymKey?)) :
+    public(k0) = public(k1) <=> k0=k1;
 
   %% Lemmas
 
   CRYPTOSTATUS : DATATYPE
   BEGIN
     clear : clear?
-    encrypted(key:(asymKey?),crstat:CRYPTOSTATUS) : encrypted?
-    signed(key:(asymKey?),crstat:CRYPTOSTATUS) : signed?
-    wrapped(key:(asymKey?),crstat:CRYPTOSTATUS,digest:PCRS) : wrapped?
-    sealed(key:(asymKey?),crstat:CRYPTOSTATUS,digest:PCRS) : sealed?
+    encrypted(key:KVAL,crstat:CRYPTOSTATUS) : encrypted?
+    signed(key:KVAL,crstat:CRYPTOSTATUS) : signed?
+    wrapped(key:KVAL,crstat:CRYPTOSTATUS,digest:PCRS) : wrapped?
+    sealed(key:KVAL,crstat:CRYPTOSTATUS,digest:PCRS) : sealed?
   END CRYPTOSTATUS;
 
   tpmData : DATATYPE
@@ -104,10 +120,10 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   %% indicators while x functions operate on tpmData.  Need to account
   %% for private and public keys in this, but the basic process seems to be
   %% there.
-  encryptStatus(k:(asymKey?),c:CRYPTOSTATUS) : (encrypted?) =
+  encryptStatus(k:KVAL,c:CRYPTOSTATUS) : (encrypted?) =
     encrypted(k,c);
 
-  encrypt(k:(asymKey?),d:tpmData) : tpmData =
+  encrypt(k:KVAL,d:tpmData) : tpmData =
     CASES d OF 
       tpmID(id0,crs0) : tpmID(id0,encryptStatus(k,crs0)),
       tpmAuthData(authdata0,crs0) :
@@ -123,10 +139,10 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
         tpmCertReq(digest0,aik0,encryptStatus(k,crs0)) 
     ENDCASES;
 
-  decryptStatus(k:(asymKey?),c:(encrypted?)) : CRYPTOSTATUS =
-    IF private(key(c)) = k THEN crstat(c) ELSE c ENDIF;
+  decryptStatus(k:KVAL,c:(encrypted?)) : CRYPTOSTATUS =
+    IF k = inverse(key(c)) THEN crstat(c) ELSE c ENDIF;
 
-  decrypt(k:(asymKey?),d:tpmData) : tpmData =
+  decrypt(k:KVAL,d:tpmData) : tpmData =
     CASES d OF
       tpmID(id0,crs0) : IF encrypted?(crs0)
                            THEN tpmID(id0,decryptStatus(k,crs0))
@@ -162,19 +178,19 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 	ENDIF
     ENDCASES;
 
-  decrypt_encrypt : THEOREM FORALL (k:(asymKey?),c:CRYPTOSTATUS) : 
-    decryptStatus(private(k),encryptStatus(k,c)) = c;
+  decrypt_encrypt : THEOREM FORALL (k:KVAL,c:CRYPTOSTATUS) : 
+    decryptStatus(inverse(k),encryptStatus(k,c)) = c;
 
-  decrypt_equal_keys: THEOREM FORALL (k0,k1:(asymKey?),b:CRYPTOSTATUS) :
-    k0=k1 IMPLIES decryptStatus(private(k1),encryptStatus(k0,b)) = b;
+  decrypt_equal_keys: THEOREM FORALL (k0,k1:KVAL,b:CRYPTOSTATUS) :
+    k0=k1 IMPLIES decryptStatus(inverse(k1),encryptStatus(k0,b)) = b;
 
-  no_decrypt_unequal_keys: THEOREM FORALL (k0,k1:(asymKey?),b:CRYPTOSTATUS) :
-    k0/=k1 IMPLIES decryptStatus(private(k1),encryptStatus(k0,b)) = encryptStatus(k0,b)
+  no_decrypt_unequal_keys: THEOREM FORALL (k0,k1:KVAL,b:CRYPTOSTATUS) :
+    k0/=k1 IMPLIES decryptStatus(inverse(k1),encryptStatus(k0,b)) = encryptStatus(k0,b)
 
-  signStatus(k:(asymKey?),c:CRYPTOSTATUS) : (signed?) =
+  signStatus(k:KVAL,c:CRYPTOSTATUS) : (signed?) =
     signed(k,c);
 
-  sign(k:(asymKey?),d:tpmData) : tpmData =
+  sign(k:KVAL,d:tpmData) : tpmData =
     CASES d OF 
       tpmID(id0,crs0) : tpmID(id0,signStatus(k,crs0)),
       tpmAuthData(authdata0,crs0) :
@@ -250,16 +266,16 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   wrapKey?(k:tpmData):bool =
   CASES k OF
     tpmKey(k0,crs0) : CASES crs0 OF 
-                           wrapped(k1,csr1,p1) : clear?(csr1)
-			   ELSE FALSE
-			 ENDCASES
+                        wrapped(k1,csr1,p1) : clear?(csr1)
+			ELSE FALSE
+		      ENDCASES
     ELSE FALSE
   ENDCASES;
 
   %% Accessors for wrapped key elements
   childKey(k:(wrapKey?)):(asymKey?) = key(k)
 
-  parentKey(k:(wrapKey?)):(asymKey?) = key(crs(k))
+  parentKey(k:(wrapKey?)):KVAL = key(crs(k))
 
   %% Data structures used in identity establishment.
   %% An identity is a pair of keys signed by the same k.  First key is
@@ -286,19 +302,19 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
   %%%% Key sets and installation
 
-  %% A keyset is simply a set of asymetric keys
-  KEYSET : TYPE = set[(asymKey?)];
+  %% A keyset is a set of wrapKeys
+  KEYSET : TYPE = set[(wrapKey?)];
  
   %% Check against the root key passed in as rk
-  checkKeyRoot(k:(wrapKey?),rk:(asymKey?)):bool = parentKey(k)=rk;
+  checkKeyRoot(k:(wrapKey?),rk:KVAL):bool = parentKey(k)=rk;
  
   %% Check against the set of installed keys and the root key
-  checkKey(k:(asymKey?),srk:(asymKey?),ks:KEYSET):bool =
-    member(k,ks) OR k=srk;
+  checkKey(k:KVAL,pubsrk:KVAL,ks:KEYSET):bool =
+    some((LAMBDA (k0:(wrapKey?)): askey(key(k0)) = k),ks) OR (k=pubsrk);
  
   %% Add a key to a set of it checks out
   addKey(k:(wrapKey?),srk:(asymKey?),ks:KEYSET,d:PCRS):KEYSET =
-    IF checkKey(parentKey(k),srk,ks) AND d=digest(crs(k))
+    IF checkKey(parentKey(k),public(srk),ks) AND d=digest(crs(k))
     THEN add(childKey(k),ks)
     ELSE ks
     ENDIF;
@@ -307,10 +323,11 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   revokeKey(k:(wrapKey?),ks:KEYSET):KEYSET =
     remove(childKey(k),ks);
 
-  child_if_parent: THEOREM FORALL (k:(wrapKey?),rk:(asymKey?),ks:KEYSET,d:PCRS) : 
-    IF d=digest(crs(k)) AND (member(parentKey(k),ks) OR parentKey(k)=rk)
-       THEN member(childKey(k),addKey(k,rk,ks,d))
-       ELSE ks=addKey(k,rk,ks,d)
+  child_if_parent: THEOREM
+   FORALL (k:(wrapKey?),srk:(asymKey?),ks:KEYSET,d:PCRS) : 
+    IF d=digest(crs(k)) AND checkKey(parentKey(k),public(srk),ks)
+       THEN member(childKey(k),addKey(k,srk,ks,d))
+       ELSE ks=addKey(k,srk,ks,d)
     ENDIF;
 
   no_child_if_no_parent: THEOREM FORALL (k:(wrapKey?),rk:(asymKey?),ks:KEYSET) :
