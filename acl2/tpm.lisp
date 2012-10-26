@@ -29,6 +29,7 @@
     (ACL2::brr t)
     (ACL2::monitor '(:rewrite ,rule) ''(:eval :go t))))
 
+(include-book "memory")
 (include-book "pcr")
 (include-book "crypto")
 (include-book "key")
@@ -103,8 +104,8 @@
   :require ((restore-state-data-p-of-tpm-state->restore
              (restore-state-data-p restore)
              :rule-classes :forward-chaining)
-            (true-listp-of-tpm-state->memory
-             (true-listp memory)
+            (memory-p-of-tpm-state->memory
+             (memory-p memory)
              :rule-classes :forward-chaining
              )
             (booleanp-of-tpm-state->post-init
@@ -440,3 +441,17 @@
                           :perm-data (restore-state-data->perm-data rs)
                           :disable-force-clear nil)
       tpm-s)))
+
+(defun+ deactivate-state (tpm-s)
+  (declare (xargs :guard (tpm-state-p tpm-s)
+                  :output (tpm-state-p (deactivate-state tpm-s))))
+  (change-tpm-state tpm-s
+                    :post-init t))
+
+(defun+ save-mem-to-state (i val tpm-s)
+  (declare (xargs :guard (and (natp i)
+                              (memory-val-p val)
+                              (tpm-state-p tpm-s))
+                  :output (tpm-state-p (save-mem-to-state i val tpm-s))))
+  (change-tpm-state tpm-s
+                    :memory (update-loc i val (tpm-state->memory tpm-s))))

@@ -21,6 +21,7 @@ tpm.cert: crypto.cert
 tpm.cert: key.cert
 tpm.cert: perm-flags.cert
 tpm.cert: perm-data.cert
+tpm.cert: memory.cert
 
 top.cert: tpm.cert 
 
