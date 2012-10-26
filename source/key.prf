@@ -11,6 +11,12 @@
     (public const-decl "KVAL" key nil)
     (minus_int_is_int application-judgement "int" integers nil))
    shostak))
+ (inverse_public 0
+  (inverse_public-1 nil 3560281095 ("" (grind) nil nil)
+   ((public const-decl "KVAL" key nil)
+    (inverse const-decl "KVAL" key nil)
+    (private const-decl "KVAL" key nil))
+   shostak))
  (equal_private 0
   (equal_private-1 nil 3560197310
    ("" (grind) (("" (decompose-equality 1) nil nil)) nil)
@@ -135,22 +141,11 @@
    nil))
  (addKey_TCC1 0
   (addKey_TCC1-1 nil 3560011944 ("" (grind) nil nil)
-   ((checkKey const-decl "bool" key nil)
-    (some const-decl "bool" sets nil)
+   ((checkKey const-decl "bool" key nil) nil
     (public const-decl "KVAL" key nil)
     (parentKey const-decl "KVAL" key nil)
     (KEYSET type-eq-decl nil key nil)
     (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
-    (KEY type-decl nil key nil) (wrapKey? const-decl "bool" key nil)
-    (tpmData type-decl nil key nil)
-    (NOT const-decl "[bool -> bool]" booleans nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (boolean nonempty-type-decl nil booleans nil))
-   nil))
- (child_if_parent_TCC1 0
-  (child_if_parent_TCC1-1 nil 3560203718
-   ("" (subtype-tcc) (("" (grind) nil nil)) nil)
-   ((asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
     (KEY type-decl nil key nil) (wrapKey? const-decl "bool" key nil)
     (tpmData type-decl nil key nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
@@ -166,8 +161,7 @@
     (bool nonempty-type-eq-decl nil booleans nil)
     (boolean nonempty-type-decl nil booleans nil)
     (parentKey const-decl "KVAL" key nil)
-    (public const-decl "KVAL" key nil)
-    (some const-decl "bool" sets nil)
+    (public const-decl "KVAL" key nil) nil
     (checkKey const-decl "bool" key nil)
     (childKey const-decl "(asymKey?)" key nil)
     (addKey const-decl "KEYSET" key nil)
