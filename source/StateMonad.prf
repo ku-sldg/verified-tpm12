@@ -16,7 +16,7 @@
     (A formal-nonempty-type-decl nil StateMonad nil)
     (S formal-nonempty-type-decl nil StateMonad nil)
     (>>= const-decl "State" StateMonad nil)
-    (unit const-decl "State" StateMonad nil))
+    (return const-decl "State" StateMonad nil))
    shostak))
  (right_identity 0
   (right_identity-1 nil 3531064607
@@ -35,7 +35,7 @@
     (A formal-nonempty-type-decl nil StateMonad nil)
     (S formal-nonempty-type-decl nil StateMonad nil)
     (>>= const-decl "State" StateMonad nil)
-    (unit const-decl "State" StateMonad nil))
+    (return const-decl "State" StateMonad nil))
    shostak))
  (assocativity 0
   (assocativity-1 nil 3531064601 ("" (grind) nil nil)
