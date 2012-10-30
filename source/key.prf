@@ -2,6 +2,8 @@
  (double_private 0
   (double_private-1 nil 3560017522 ("" (postpone) nil nil) nil
    shostak))
+ (encrypt_TCC1 0
+  (encrypt_TCC1-1 nil 3560527479 ("" (cases-tcc) nil nil) nil nil))
  (decrypt_encrypt 0
   (decrypt_encrypt-1 nil 3560017507 ("" (grind))
    ((encryptStatus const-decl "(encrypted?)" key nil)
@@ -63,6 +65,8 @@
     (tpmData type-decl nil key nil)
     (wrapKey? const-decl "bool" key nil))
    nil))
+ (parentKey_TCC2 0
+  (parentKey_TCC2-1 nil 3560622928 ("" (subtype-tcc) nil nil) nil nil))
  (checkFullQuote_TCC1 0
   (checkFullQuote_TCC1-1 nil 3560017462 ("" (subtype-tcc) nil nil)
    ((boolean nonempty-type-decl nil booleans nil)
@@ -74,6 +78,26 @@
     (fullQuote? const-decl "bool" key nil) (KEY type-decl nil key nil)
     (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
     (checkSig const-decl "bool" key nil))
+   nil))
+ (addKey_TCC1 0
+  (addKey_TCC1-1 nil 3560622928 ("" (subtype-tcc) nil nil)
+   ((boolean nonempty-type-decl nil booleans nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (NOT const-decl "[bool -> bool]" booleans nil)
+    (tpmData type-decl nil key nil)
+    (wrapKey? const-decl "bool" key nil) (KEY type-decl nil key nil)
+    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
+    (parentKey const-decl "(asymKey?)" key nil)
+    (member const-decl "bool" sets nil)
+    (checkKey const-decl "bool" key nil))
+   nil))
+ (child_if_parent_TCC1 0
+  (child_if_parent_TCC1-1 nil 3560622928 ("" (subtype-tcc) nil nil)
+   ((boolean nonempty-type-decl nil booleans nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (NOT const-decl "[bool -> bool]" booleans nil)
+    (tpmData type-decl nil key nil)
+    (wrapKey? const-decl "bool" key nil))
    nil))
  (child_if_parent 0
   (child_if_parent-1 nil 3560017508 ("" (grind) nil nil)

@@ -5,7 +5,7 @@ startupData[B,K,HV : TYPE+] : THEORY
   IMPORTING pcr[HV];
   IMPORTING key[B,K,HV];
   IMPORTING PermanentFlags;
-  IMPORTING PermanentData[HV];
+  IMPORTING PermanentData[B,K,HV];
 
   %% Flags used by the TPM_Startup command
   TPM_STARTUP_TYPE : DATATYPE
