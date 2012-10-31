@@ -1,26 +1,11 @@
-; Rager would like to have a more records-based approach so that he can get the
-; double-write theorem that records provie.  However, it's non-trivial
-; (perhapss impossible) to prove that if update-loc is given a memory-p, that
-; it will return a memory-p.  This is a property that Rager wants, so he's
-; giving up on this file for now.
-
 (in-package "ACL2")
 
 (include-book "defexec/other-apps/records/records" :dir :system)
-
-(include-book "cutil/defalist" :dir :system)
 (include-book "misc/defun-plus" :dir :system)
 
 (defn memory-val-p (x)
   (declare (ignore x))
   t)
-
-;; (cutil::defalist memory-p1 (x)
-;;   :key (natp x)
-;;   :val (memory-val-p x)
-;;   :keyp-of-nil nil
-;;   :valp-of-nil t
-;;   :true-listp t)
 
 (defn memory-p1 (lst)
   (cond ((atom lst)
@@ -53,56 +38,6 @@
                               (natp i)
                               (memory-val-p val))))      
   (mset i val mem))
-
-;; (defthm subgoal-1-1
-;;   (implies (good-map x)
-;;            (equal (map->acl2 x)
-;;                   x))
-;;   :hints (("Goal" :in-theory (enable map->acl2))))
-
-;; (defthm subgoal-1-1b
-;;   (implies (good-map x)
-;;            (equal (acl2->map x)
-;;                   x))
-;;   :hints (("Goal" :in-theory (enable acl2->map))))
-
-
-;; (defthm subgoal-1
-;;   (implies (and (integerp i) (<= 0 i))
-;;            (memory-p1 (mset i val nil)))
-;;   :hints (("Goal" :in-theory (enable mset))))
-
-;; (defthm subgoal-3
-;;   (implies (and (consp mem)
-;;               (consp (car mem))
-;;               (cdar mem)
-;;               (not (cdr mem))
-;;               (integerp (caar mem))
-;;               (<= 0 (caar mem))
-;;               (integerp i)
-;;               (<= 0 i))
-;;          (memory-p1 (mset i val mem)))
-;;   :hints (("Goal" :in-theory (enable mset))))
-
-
-;; (thm ; subgoal-5
-;;   (implies (and (consp mem)
-;;                 (consp (car mem))
-;;                 (good-map (cdr mem))
-;;                 (cdar mem)
-;;                 (cdr mem)
-;;                 (memory-p1 (mset i val (cdr mem)))
-;;                 (integerp (caar mem))
-;;                 (<= 0 (caar mem))
-;;                 (memory-p1 (cdr mem))
-;;                 (<< (caar mem) (caadr mem))
-;;                 (integerp i)
-;;                 (<= 0 i))
-;;            (memory-p1 (mset i val mem)))
-;;   :hints (("Goal" :in-theory (e/d (extend-records)
-;;                                   ((ill-formed-key)
-;;                                    ill-formed-key
-;;                                    )))))
 
 
 (in-theory (enable extend-records))
