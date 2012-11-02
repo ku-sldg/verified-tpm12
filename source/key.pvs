@@ -69,49 +69,6 @@ key [DVAL,HVAL:TYPE+] : THEORY
     rewrap : rewrap?
   END migrateScheme;
 
-  %% Base key type for symmetric and asymmetric keys
-  KEY : DATATYPE
-  BEGIN
-    symKey(skey:KVAL) : symKey?
-    asymKey(askey:KVAL) : asymKey?
-  END KEY;		
-
-  %% Any key with key value 0 is invalid.
-  invalidKey?(k:KEY):bool =
-    CASES k OF
-      symKey(k0) : k0=0,
-      asymKey(k0) : k0=0
-    ENDCASES;
-
-  %% Define private and public key accessors for asymKey?. The publid
-  %% key is askey while the private key is -askey.  Note that private
-  %% is no longer closed under (asymKey?)
-  private(k:(asymKey?)):KVAL = inverse(askey(k))
-  public(k:(asymKey?)):KVAL = askey(k)
-
-  %% Some theorems about key inverse, private and public.
-
-  %% The inverse key of the inverse key is the original key
-  double_inverse: THEOREM FORALL (k:KVAL) : inverse(inverse(k))=k;
-
-  %% the inverse of a private key is the public key for the same
-  %% asymmetric key.
-  inverse_private: THEOREM FORALL (k:(asymKey?)) :
-    inverse(private(k))=public(k);
-
-  %% visa versa                                                         
-  inverse_public: THEOREM FORALL (k:(asymKey?)) :
-    inverse(public(k))=private(k);
-
-  %% If private keys are equal, asymmetric keys are equal
-  equal_private: THEOREM FORALL (k0,k1:(asymKey?)) :
-    private(k0) = private(k1) <=> k0=k1;
-
-  %% if public keys are equal, asymmetric keys are equal
-  equal_public: THEOREM FORALL (k0,k1:(asymKey?)) :
-    public(k0) = public(k1) <=> k0=k1;
-
-
   %% Type indicating crypographic status - clear, encrypted, signed, wrapped,
   %% sealed.  Type is recursive allowing multiple operations on the same
   %% element.
@@ -120,7 +77,7 @@ key [DVAL,HVAL:TYPE+] : THEORY
     clear : clear?
     encrypted(key:KVAL,crstat:CRYPTOSTATUS) : encrypted?
     signed(key:KVAL,crstat:CRYPTOSTATUS) : signed?
-    wrapped(key:KVAL,crstat:CRYPTOSTATUS,digest:PCRS) : wrapped?
+%%    wrapped(key:KVAL,crstat:CRYPTOSTATUS) : wrapped?
     sealed(key:KVAL,crstat:CRYPTOSTATUS,digest:PCRS) : sealed?
   END CRYPTOSTATUS;
 
@@ -137,13 +94,14 @@ key [DVAL,HVAL:TYPE+] : THEORY
     tpmNonce : tpmNonce?
 
     %% Session keys are simply symetric keys
-    tpmSessKey(skey:(symKey?),crs:CRYPTOSTATUS) : tpmSessKey?
+    tpmSessKey(skey:KVAL,crs:CRYPTOSTATUS) : tpmSessKey?
 
     %% Assymetric keys used by the TPM - wrapped, signed, encrypted
-    tpmKey(key:(asymKey?),
+    tpmKey(key:KVAL,
 	   keyUsage:KEY_USAGE,
 	   keyFlags:KEY_FLAGS,
 	   PCRInfo:PCRS,
+	   wrappingKey:KVAL,
 	   crs:CRYPTOSTATUS) : tpmKey?
     %  tpmKey subsumes all asymmetric keys used by the TPM
     %  wrapped key: tpmKey(child,wrapped(public(parent),clear,pcrs))
@@ -174,9 +132,36 @@ key [DVAL,HVAL:TYPE+] : THEORY
                   crs:CRYPTOSTATUS) : tpmMigKeyAuth?
   END tpmData;
   
-  %% Basic crypto functions.  xStatus functions operate on status
-  %% indicators while x functions operate on tpmData.  Users need only
-  %% call encrypt, decrypt, sign, checkSig and friends
+  %% Any tpmKey? with key value 0 is invalid.
+  invalidKey?(k:(tpmKey?)):bool = key(k)=0;
+
+  %% Define private and public key accessors for tpmKey?. The public
+  %% key is the key value while the private key is -key.
+  private(k:(tpmKey?)):KVAL = inverse(key(k))
+  public(k:(tpmKey?)):KVAL = key(k)
+
+  %% Some theorems about key inverse, private and public.
+
+  %% The inverse key of the inverse key is the original key
+  double_inverse: THEOREM FORALL (k:KVAL) : inverse(inverse(k))=k;
+
+  %% the inverse of a private key is the public key for the same
+  %% asymmetric key.
+  inverse_private: THEOREM FORALL (k:(tpmKey?)) :
+    inverse(private(k))=public(k);
+
+  %% visa versa                                                         
+  inverse_public: THEOREM FORALL (k:(tpmKey?)) :
+    inverse(public(k))=private(k);
+
+  %% If inverse keys are equal, key values are equal
+  equal_inverse: THEOREM FORALL (k0,k1:KVAL) :
+     inverse(k0) = inverse(k1) <=> k0=k1;
+
+  %% Basic crypto functions operating on KVAL xStatus functions
+  %% operate on status indicators while x functions operate on
+  %% tpmData.  Users need only call encrypt, decrypt, sign, checkSig
+  %% and friends.
 
   % Data Encryption
 
@@ -190,8 +175,8 @@ key [DVAL,HVAL:TYPE+] : THEORY
         tpmAuthData(authdata0,encryptStatus(k,crs0)),
       tpmSessKey(k0,crs0) :
         tpmSessKey(k0,encryptStatus(k,crs0)),
-      tpmKey(k0,u0,f0,p0,crs0) :
-        tpmKey(k0,u0,f0,p0,encryptStatus(k,crs0)),
+      tpmKey(k0,u0,f0,p0,wk0,crs0) :
+        tpmKey(k0,u0,f0,p0,wk0,encryptStatus(k,crs0)),
       tpmDigest(digest0,crs0) :
         tpmDigest(digest0,encryptStatus(k,crs0)),
       tpmQuote(n0,p0,crs0) : tpmQuote(n0,p0,encryptStatus(k,crs0)),
@@ -222,9 +207,9 @@ key [DVAL,HVAL:TYPE+] : THEORY
                            THEN tpmSessKey(k0,decryptStatus(k,crs0))
 			   ELSE d
 			   ENDIF,
-      tpmKey(k0,u0,f0,p0,crs0) : 
+      tpmKey(k0,u0,f0,p0,wk0,crs0) : 
       	IF encrypted?(crs0)
-      	THEN tpmKey(k0,u0,f0,p0,decryptStatus(k,crs0))
+      	THEN tpmKey(k0,u0,f0,p0,wk0,decryptStatus(k,crs0))
 	ELSE d
 	ENDIF,
       tpmDigest(digest0,crs0) :
@@ -249,7 +234,7 @@ key [DVAL,HVAL:TYPE+] : THEORY
 	ELSE d
 	ENDIF
     ENDCASES;
-
+ 
   % Lemmas on decryption and encryption
 
   decrypt_encrypt : THEOREM FORALL (k:KVAL,c:CRYPTOSTATUS) : 
@@ -273,8 +258,8 @@ key [DVAL,HVAL:TYPE+] : THEORY
         tpmAuthData(authdata0,signStatus(k,crs0)),
       tpmSessKey(k0,crs0) :
         tpmSessKey(k0,signStatus(k,crs0)),
-      tpmKey(k0,u0,f0,p0,crs0) :
-        tpmKey(k0,u0,f0,p0,signStatus(k,crs0)),
+      tpmKey(k0,u0,f0,p0,wk0,crs0) :
+        tpmKey(k0,u0,f0,p0,wk0,signStatus(k,crs0)),
       tpmDigest(digest0,crs0) :
         tpmDigest(digest0,signStatus(k,crs0)),
       tpmQuote(n0,p0,crs0) : tpmQuote(n0,p0,signStatus(k,crs0)),
@@ -287,13 +272,13 @@ key [DVAL,HVAL:TYPE+] : THEORY
 
   % Data signature checking
 
-  checkSigStatus(k:(asymKey?),c:CRYPTOSTATUS) : bool =
+  checkSigStatus(k:KVAL,c:CRYPTOSTATUS) : bool =
     CASES c OF
-      signed(kq,cq) : private(k) = kq
+      signed(kq,cq) : k = kq
       ELSE FALSE
     ENDCASES;
 
-  checkSig(k:(asymKey?),d:tpmData) : bool =
+  checkSig(k:KVAL,d:tpmData) : bool =
     CASES d OF
       tpmID(id0,crs0) : IF signed?(crs0) 
                            THEN checkSigStatus(k,crs0)
@@ -307,7 +292,7 @@ key [DVAL,HVAL:TYPE+] : THEORY
                            THEN checkSigStatus(k,crs0)
 			   ELSE FALSE
 			   ENDIF,
-      tpmKey(k0,u0,f0,p0,crs0) : IF signed?(crs0)
+      tpmKey(k0,u0,f0,p0,wk0,crs0) : IF signed?(crs0)
                            THEN checkSigStatus(k,crs0)
 			   ELSE FALSE
 			   ENDIF,
@@ -333,70 +318,51 @@ key [DVAL,HVAL:TYPE+] : THEORY
 
   % Lemmas on data signing and signature checking
 
-  check_sign : THEOREM FORALL (k:(asymKey?),c:CRYPTOSTATUS) : 
-    checkSigStatus(k,signStatus(private(k),c));
+  check_sign : THEOREM FORALL (k:KVAL,c:CRYPTOSTATUS) : 
+    checkSigStatus(k,signStatus(k,c));
   
-  check_sign_keys: THEOREM FORALL (k0,k1:(asymKey?),crs:CRYPTOSTATUS) :
-    k0=k1 IFF checkSigStatus(k1,signStatus(private(k0),crs));
+  %%%% Key sets, installation, and use
 
-
-  % Predicate subtype for a certified key.  Signed key may be clear or
-  % wrapped only.
-  certKey?(r:tpmData):bool =
-  CASES r OF
-    tpmKey(k0,u0,f0,p0,crs0) : CASES crs0 OF
-                           signed(k1,csr1) : clear?(csr1) OR wrapped?(csr1)
-			   ELSE FALSE
-			 ENDCASES
-    ELSE FALSE
-  ENDCASES;
-
-  %% Predicate subtype for a wrapped key.  Wrapped key must be clear by
-  %% definition of wrapping
-  wrapKey?(k:tpmData):bool =
-  CASES k OF
-    tpmKey(k0,u0,f0,p0,crs0) : CASES crs0 OF
-    		        wrapped(k1,csr1,p1) : clear?(csr1)
-		      	ELSE FALSE
-		      ENDCASES
-    ELSE FALSE
-  ENDCASES;
-
-  %% Accessors for wrapped key elements
-  childKey(k:(wrapKey?)):(asymKey?) = key(k)
-
-  parentKey(k:(wrapKey?)):KVAL = key(crs(k))
-
-  %% Key sets and installation - This needs to be completely rethought
-
-  %% A keyset is a set of wrapKeys
-  KEYSET : TYPE = set[(wrapKey?)];
- 
-  %% Check against the root key passed in as rk
-  checkKeyRoot(k:(wrapKey?),rk:KVAL):bool = parentKey(k)=rk;
- 
-  %% Check against the set of installed keys and the root key
-  checkKey(k:KVAL,pubsrk:KVAL,ks:KEYSET):bool =
-    some((LAMBDA (k0:(wrapKey?)): askey(key(k0)) = k),ks) OR (k=pubsrk);
- 
-  %% Add a key to a set of it checks out
-  addKey(k:(wrapKey?),srk:(asymKey?),ks:KEYSET,d:PCRS):KEYSET =
-    IF checkKey(parentKey(k),askey(srk),ks) AND d=PCRInfo(k) AND d=digest(crs(k))
-    THEN add(k,ks)
+  %% A keyset is a set of key values
+  KEYSET : TYPE = set[KVAL];
+  
+  %% Add a key to a set of it is: (i) wrapped by the srk or its
+  %% wrapping key is installed; and (ii) its digest matches the tpm pcr state
+  addKey(k:(tpmKey?),srk:KVAL,ks:KEYSET,d:PCRS):KEYSET =
+    IF (wrappingKey(k)=srk OR member(wrappingKey(k),ks)) AND d=PCRInfo(k)
+    THEN add(key(k),ks)
     ELSE ks
     ENDIF;
  
   %% Remove a key - this is not currently used
-  revokeKey(k:(wrapKey?),ks:KEYSET):KEYSET =
-    remove(k,ks);
+  revokeKey(k:(tpmKey?),ks:KEYSET):KEYSET =
+    remove(key(k),ks);
 
-  child_if_parent: THEOREM FORALL (k:(wrapKey?),srk:(asymKey?),ks:KEYSET,d:PCRS) : 
-    IF d=PCRInfo(k) AND checkKey(parentKey(k),askey(srk),ks) AND d=digest(crs(k))
-       THEN member(k,addKey(k,srk,ks,d))
+  child_if_parent: THEOREM FORALL (k:(tpmKey?),srk:KVAL,ks:KEYSET,d:PCRS) : 
+    IF d=PCRInfo(k) AND (wrappingKey(k)=srk OR member(wrappingKey(k),ks))
+       THEN member(key(k),addKey(k,srk,ks,d))
        ELSE ks=addKey(k,srk,ks,d)
     ENDIF;
 
-  no_child_if_no_parent: THEOREM FORALL (k:(wrapKey?),rk:(asymKey?),ks:KEYSET) :
-    NOT(member(k,revokeKey(k,ks)));
+  no_child_if_no_parent: THEOREM FORALL (k:(tpmKey?),ks:KEYSET) :
+    NOT(member(key(k),revokeKey(k,ks)));
+
+  %% Crypto functions using TPM keys.  Public keys from TPM keys are
+  %% public knowledge and require nothing for use - encrypt and
+  %% checkSig do not require a key set.  Private keys must be
+  %% installed in the key set ks passed to each function - decrypt and
+  %% sign require a key set.
+
+  installed?(k:(tpmKey?),ks:KEYSET):bool = member(key(k),ks)
+
+  encryptWrapped(k:(tpmKey?),d:tpmData):tpmData = encrypt(key(k),d)
+
+  decryptWrapped(k:(tpmKey?),d:tpmData,ks:KEYSET):tpmData =
+    IF installed?(k,ks) THEN decrypt(key(k),d) ELSE d ENDIF
+
+  signWrapped(k:(tpmKey?),d:tpmData,ks:KEYSET):tpmData =
+    IF installed?(k,ks) THEN sign(key(k),d) ELSE d ENDIF
+
+  checkSigWrapped(k:(tpmKey?),d:tpmData):bool = checkSig(key(k),d)
 
 END key
