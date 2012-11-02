@@ -77,7 +77,6 @@ key [DVAL,HVAL:TYPE+] : THEORY
     clear : clear?
     encrypted(key:KVAL,crstat:CRYPTOSTATUS) : encrypted?
     signed(key:KVAL,crstat:CRYPTOSTATUS) : signed?
-%%    wrapped(key:KVAL,crstat:CRYPTOSTATUS) : wrapped?
     sealed(key:KVAL,crstat:CRYPTOSTATUS,digest:PCRS) : sealed?
   END CRYPTOSTATUS;
 
@@ -100,7 +99,7 @@ key [DVAL,HVAL:TYPE+] : THEORY
     tpmKey(key:KVAL,
 	   keyUsage:KEY_USAGE,
 	   keyFlags:KEY_FLAGS,
-	   PCRInfo:PCRS,
+	   PCRInfo:list[PCR],
 	   wrappingKey:KVAL,
 	   crs:CRYPTOSTATUS) : tpmKey?
     %  tpmKey subsumes all asymmetric keys used by the TPM
@@ -132,6 +131,17 @@ key [DVAL,HVAL:TYPE+] : THEORY
                   crs:CRYPTOSTATUS) : tpmMigKeyAuth?
   END tpmData;
   
+  %% Reserved Key Handles - Should be moved to tpm.pvs
+  TPM_KH_SRK : (tpmKey?) = tpmKey(1,storage,keyFlagsF,null,0,clear)
+  TPM_KH_OWNER : (tpmKey?)
+  TPM_KH_REVOKE : (tpmKey?)
+  TPM_KH_TRANSPORT : (tpmKey?)
+  TPM_KH_OPERATOR : (tpmKey?)
+  TPM_KH_ADMIN : (tpmKey?)
+  %% Not sure if EK is an indentity key or not
+  TPM_KH_EK : (tpmKey?) = tpmKey(0,identity,keyFlagsF,null,0,clear)
+
+
   %% Any tpmKey? with key value 0 is invalid.
   invalidKey?(k:(tpmKey?)):bool = key(k)=0;
 
@@ -325,23 +335,33 @@ key [DVAL,HVAL:TYPE+] : THEORY
 
   %% A keyset is a set of key values
   KEYSET : TYPE = set[KVAL];
-  
-  %% Add a key to a set of it is: (i) wrapped by the srk or its
-  %% wrapping key is installed; and (ii) its digest matches the tpm pcr state
-  addKey(k:(tpmKey?),srk:KVAL,ks:KEYSET,d:PCRS):KEYSET =
-    IF (wrappingKey(k)=srk OR member(wrappingKey(k),ks)) AND d=PCRInfo(k)
-    THEN add(key(k),ks)
-    ELSE ks
-    ENDIF;
- 
-  %% Remove a key - this is not currently used
-  revokeKey(k:(tpmKey?),ks:KEYSET):KEYSET =
-    remove(key(k),ks);
+  	 
+  %% Is a key installed or the SRK?
+  installedOrSRK?(k:(tpmKey?),ks:KEYSET):bool =
+    member(key(k),ks) OR key(k)=key(TPM_KH_SRK); 
 
-  child_if_parent: THEOREM FORALL (k:(tpmKey?),srk:KVAL,ks:KEYSET,d:PCRS) : 
+  %% There is no magic for SRK - use the TPM_KH_SRK handle if the wrapping
+  %% key is the SRK.
+  addKey(k:(tpmKey?),ks:KEYSET):KEYSET = add(key(k),ks);
+    % IF (wrappingKey(k)=TPM_KH OR member(wrappingKey(k),ks)) AND d=PCRInfo(k)
+    % THEN add(key(k),ks)
+    % ELSE ks
+    % ENDIF;
+
+  loadKey(k:(tpmKey?),wk:(tpmKey?),ks:KEYSET,d:list[PCR]):KEYSET =
+    IF storage?(keyUsage(wk)) AND wrappingKey(k)=key(wk) AND d=PCRInfo(k)
+       AND installedOrSRK?(wk,ks)
+    THEN addKey(k,ks)
+    ELSE ks
+    ENDIF
+ 
+  %% Remove a key - this is not currently
+  revokeKey(k:(tpmKey?),ks:KEYSET):KEYSET = remove(key(k),ks);
+
+  child_if_parent: THEOREM FORALL (k:(tpmKey?),srk:KVAL,ks:KEYSET,d:list[PCR]) : 
     IF d=PCRInfo(k) AND (wrappingKey(k)=srk OR member(wrappingKey(k),ks))
-       THEN member(key(k),addKey(k,srk,ks,d))
-       ELSE ks=addKey(k,srk,ks,d)
+       THEN member(key(k),addKey(k,ks))
+       ELSE ks=addKey(k,ks)
     ENDIF;
 
   no_child_if_no_parent: THEOREM FORALL (k:(tpmKey?),ks:KEYSET) :
@@ -353,15 +373,13 @@ key [DVAL,HVAL:TYPE+] : THEORY
   %% installed in the key set ks passed to each function - decrypt and
   %% sign require a key set.
 
-  installed?(k:(tpmKey?),ks:KEYSET):bool = member(key(k),ks)
-
   encryptWrapped(k:(tpmKey?),d:tpmData):tpmData = encrypt(key(k),d)
 
   decryptWrapped(k:(tpmKey?),d:tpmData,ks:KEYSET):tpmData =
-    IF installed?(k,ks) THEN decrypt(key(k),d) ELSE d ENDIF
+    IF installedOrSRK?(k,ks) THEN decrypt(key(k),d) ELSE d ENDIF
 
   signWrapped(k:(tpmKey?),d:tpmData,ks:KEYSET):tpmData =
-    IF installed?(k,ks) THEN sign(key(k),d) ELSE d ENDIF
+    IF installedOrSRK?(k,ks) THEN sign(key(k),d) ELSE d ENDIF
 
   checkSigWrapped(k:(tpmKey?),d:tpmData):bool = checkSig(key(k),d)
 
