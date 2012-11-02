@@ -4,6 +4,10 @@
 
 (in-theory (disable asymmetric-key-p))
 
+(defn blob-p (x)
+  (declare (ignore x))
+  t)
+
 (defn keyset-p (keys)
   (cond ((atom keys)
          (null keys))

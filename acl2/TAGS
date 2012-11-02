@@ -1,46 +1,49 @@
 
-tpm.lisp,1410
-(defmacro why 27,1369
-(defrec tpm-state44,1845
-(defn srk-p 61,2555
-(defthm srk-p-implies-asymmetric-key-p64,2600
-(defn ek-p 68,2699
-(defthm ek-p-implies-asymmetric-key-p71,2741
-(defun key-p 78,2875
-(defun keys-p 82,2943
-(defthm keys-p-implies-true-listp89,3112
-(cutil::defaggregate restore-state-data95,3258
-(defconst *pcrs-reset* 122,4412
-(cutil::defaggregate tpm-state124,4441
-(defthm tpm-state->locality-nat-p170,6108
-(defconst *default-srk* 193,6892
-(defconst *default-ek* 194,6919
-(defconst *default-keys* 195,6945
-(defconst *default-pcrs* 196,6975
-(defconst *default-perm-data* 197,7005
-(defconst *default-perm-flags* 198,7053
-(defconst *default-restore-state-data*200,7104
-(defconst *tpm-post-init* 210,7367
-(defconst *tpm-startup*236,8006
-(defun after-init-p 251,8338
-(defthm after-init-p-boolean-p255,8446
-(defun after-startup-p 260,8589
-(defun+ pcrs-reset-senter-state 271,9003
-(defun+ change-locality-state 325,11012
-(defun+ revoke-key-state 344,11828
-(defthm revoke-key-state-preserves-tpm-state-p352,12168
-(defun+ load-key-to-state 357,12352
-(defun+ extend-state 366,12766
-(defun+ activate-identity-state 377,13259
-(defun+ clear 391,13924
-(defun+ owner-clear-state 398,14112
-(defun+ force-clear-state 410,14586
-(defun+ disable-owner-clear-state 418,14835
-(defun+ disable-force-clear-state 426,15210
-(defun+ save-state1 433,15450
-(defun+ save-state 456,16338
+tpm.lisp,1530
+(defmacro why 26,1321
+(defn srk-p 41,1666
+(defthm srk-p-implies-asymmetric-key-p44,1711
+(defn ek-p 48,1810
+(defthm ek-p-implies-asymmetric-key-p51,1852
+(defun key-p 58,1986
+(defun keys-p 62,2054
+(defthm keys-p-implies-true-listp69,2223
+(cutil::defaggregate restore-state-data75,2369
+(defconst *pcrs-reset* 102,3523
+(cutil::defaggregate tpm-state104,3552
+(defthm tpm-state->locality-nat-p150,5215
+(defconst *default-srk* 157,5397
+(defconst *default-ek* 158,5424
+(defconst *default-keys* 159,5450
+(defconst *default-pcrs* 160,5480
+(defconst *default-perm-data* 161,5510
+(defconst *default-perm-flags* 162,5558
+(defconst *default-restore-state-data*164,5609
+(defconst *tpm-post-init* 174,5872
+(defconst *tpm-startup*200,6511
+(defun after-init-p 215,6843
+(defthm after-init-p-boolean-p219,6951
+(defun after-startup-p 224,7094
+(defun+ pcrs-reset-senter-state 235,7508
+(defun+ change-locality-state 289,9517
+(defun+ revoke-key-state 308,10333
+(defthm revoke-key-state-preserves-tpm-state-p316,10673
+(defun+ load-key-to-state 321,10857
+(defun+ extend-state 330,11271
+(defun+ activate-identity-state 341,11764
+(defun+ clear 355,12429
+(defun+ owner-clear-state 360,12615
+(defun+ force-clear-state 371,13088
+(defun+ disable-owner-clear-state 379,13337
+(defun+ disable-force-clear-state 387,13712
+(defun+ save-state1 392,13927
+(defun+ save-state 415,14815
+(defun+ restore-state 427,15458
+(defun+ deactivate-state 447,16417
+(defun+ save-to-mem-state 453,16624
+(defun+ execute-com-post-init 464,17210
 
-pcr.lisp,1240
+pcr.lisp,1106
 (defconst *pcr-count* 7,161
 (defconst *pcr-bit-length* 9,188
 (defconst *max-pcr-value* 11,234
@@ -54,28 +57,88 @@ pcr.lisp,1240
 (cutil::deflist pcr-index-list-p 48,1050
 (cutil::defaggregate pcr-flag53,1146
 (cutil::deflist pcr-flag-list-p 63,1498
-(cutil::deflist pcr-list-p 117,3026
-(defun+ pcr-reset 200,5481
-(defun+ pcr-senter 207,5674
-(defn all-pcr-indexes-are-within-range 229,6351
-(defun induction-hint 273,7821
-(defthm pcr-list-p-of-update-nth279,7966
-(defun+ pcrs-reset 288,8311
-(defun+ pcrs-senter 311,9414
-(defun pcr-reset-ones-p 337,10652
-(defun pcr-reset-zeros-p 342,10783
-(defun+ pcrs-reset-ones-p 347,10903
-(defun+ pcrs-reset-zeros-p 356,11189
-(defun all-reset-access 366,11482
-(defun valid-extension-value-p 376,11830
-(defun+ extend 384,12036
-(defun+ pcrs-extend 391,12292
-(cutil::deflist nat-list-p 410,12998
-(defthm pcr-p-of-nth-of-pcr-list-p417,13147
-(defun valid-pcr-mask-element 423,13310
-(defun valid-pcr-masks 429,13538
-(defun+ get-pcrs 437,13873
-(defthm get-pcrs-correctness447,14249
-(defthm extension-is-antisymmetric464,14754
+(cutil::deflist pcr-list-p 71,1779
+(defun+ pcr-reset 94,2622
+(defun+ pcr-senter 101,2815
+(defn all-pcr-indexes-are-within-range 109,3058
+(defthm pcr-list-p-of-update-nth124,3555
+(defun+ pcrs-reset 133,3900
+(defun+ pcrs-senter 156,5003
+(defun pcr-reset-ones-p 182,6241
+(defun pcr-reset-zeros-p 187,6372
+(defun+ pcrs-reset-ones-p 192,6492
+(defun+ pcrs-reset-zeros-p 201,6778
+(defun all-reset-access 211,7071
+(defun valid-extension-value-p 221,7419
+(defun+ extend 229,7625
+(defun+ pcrs-extend 236,7881
+(defn pcr-mask-p 251,8460
+(cutil::deflist pcr-mask-list-p 256,8617
+(defun+ get-pcrs 261,8711
+(defthm get-pcrs-correctness271,9165
+(defthm extension-is-antisymmetric288,9670
+
+crypto.lisp,855
+(defn encryptable-list-p 17,759
+(defn decryptable-list-p 23,853
+(defn symmetric-key-p 30,986
+(defun+ encrypt-symmetric-list 33,1033
+(defun+ decrypt-symmetric-list 42,1372
+(defthm decrypt-of-encrypt-symmetric-equals-plaintext51,1711
+(defthm decrypt-of-encrypt-symmetric-needs-key56,1956
+(defn asymmetric-key-p 72,2532
+(defthm asymmetric-key-p-implies-integer-p76,2583
+(defthm asymmetric-key-p-implies-asymmetric-key-p-of-negative80,2689
+(defun+ compute-private-key-from-public-key 89,2938
+(defun public-private-key-pair-p 99,3298
+(defthm computed-private-key-is-paired-with-given-public-key104,3462
+(defun+ encrypt-asymmetric-list 115,3979
+(defun+ decrypt-asymmetric-list 124,4357
+(defthm decrypt-of-encrypt-asymmetric-equals-plaintext133,4700
+(defthm decrypt-of-encrypt-asymmetric-needs-key153,5518
+(cutil::defaggregate wrap-key165,6083
+
+key.lisp,335
+(defn blob-p 7,86
+(defn keyset-p 11,132
+(defthm keyset-p-implies-true-listp18,294
+(defthm keyset-p-implies-car-asymmetric-key-p23,424
+(defthm keyset-p-implies-member-asymmetric-key-p29,608
+(defun check-key-root 34,776
+(defun check-key 40,993
+(defun+ add-key 48,1329
+(defun+ remove-key 58,1762
+(defthm remove-key-lemma70,2279
+
+memory.lisp,344
+(defn memory-val-p 6,133
+(defn memory-p1 10,185
+(defn memory-p 18,401
+(defun+ empty-memory-p 22,464
+(defun+ empty-memory 30,669
+(defun update-loc 36,874
+(defun+ update-loc 45,1109
+(defun+ lookup-loc 52,1357
+(defthm read-of-write60,1590
+(defthm read-of-non-write64,1675
+(defthm write-of-write69,1827
+(defthm read-of-empty-mem74,1938
+
+perm-data.lisp,70
+(cutil::defaggregate perm-data7,93
+(defconst *perm-data-init*14,250
+
+perm-flags.lisp,73
+(cutil::defaggregate perm-flags5,71
+(defconst *perm-flags-init*71,2002
+
+startup-data.lisp,39
+(cutil::defenum tpm-startup-type6,115
+
+tpm-input.lisp,132
+(defun tpm-input->command 62,1170
+(defun tpm-input->arg1 71,1357
+(defun tpm-input->arg2 86,1793
+(defun tpm-input->arg3 105,2386
 
 top.lisp,0

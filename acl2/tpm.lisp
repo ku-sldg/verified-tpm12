@@ -35,6 +35,8 @@
 (include-book "key")
 (include-book "perm-flags")
 (include-book "perm-data")
+(include-book "startup-data")
+(include-book "tpm-input")
 
 (defn srk-p (srk)
   (asymmetric-key-p srk))
@@ -448,10 +450,38 @@
   (change-tpm-state tpm-s
                     :post-init t))
 
-(defun+ save-mem-to-state (i val tpm-s)
+(defun+ save-to-mem-state (i val tpm-s)
+; Here is an example of how we define memory-val-p instead of restricting val
+; to being a member of C inside memory.pvs.  I'm not yet sure what tpmAbsOutput
+; represents (I haven't even looked since it doesn't yet seem relevant).
   (declare (xargs :guard (and (natp i)
                               (memory-val-p val)
                               (tpm-state-p tpm-s))
-                  :output (tpm-state-p (save-mem-to-state i val tpm-s))))
+                  :output (tpm-state-p (save-to-mem-state i val tpm-s))))
   (change-tpm-state tpm-s
                     :memory (update-loc i val (tpm-state->memory tpm-s))))
+
+(defun+ execute-com-post-init (tpm-s cmd)
+  (declare (xargs :guard (and (tpm-state-p tpm-s) 
+
+; The following commented check of after-init is a precondition for the
+; execution of execute-com-post-init in the pvs model.  I would like to one day
+; include this precondition in this definition, but, in an effort to make guard
+; verification easier for now, I am omitting it for now.
+
+;                             (tpm-state->after-init tpm-s) 
+
+; We could use guards to ensure that execute-com-post-init is only called when
+; the cmd is a :startup command.  But, we adopt the pvs model's convention for
+; now.
+
+                              (tpm-input-p cmd))
+                  :output (tpm-state-p (execute-com-post-init tpm-s cmd))))
+  (cond ((equal (tpm-input->command cmd) :startup)
+         (case (tpm-input->arg1 cmd)
+           (:tpm-st-clear *tpm-startup*)
+           (:tpm-st-state (restore-state tpm-s))
+           (:tpm-st-deactivated (deactivate-state tpm-s))
+           (otherwise tpm-s)))
+        (t tpm-s)))
+
