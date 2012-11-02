@@ -20,11 +20,17 @@ key [DVAL,HVAL:TYPE+] : THEORY
   IMPORTING pcr[HVAL];
   IMPORTING ReturnCodes;
   
-  AUTHDATA : TYPE = string;
   KEYDATA : TYPE;
   
   %% Keys are integers.
   KVAL : TYPE = integer;
+
+  %%									(5.6)
+  AUTHDATA : DATATYPE
+  BEGIN
+    tpmSecret(i:nat) : tpmSecret?
+    tpmEncAuth : tpmEncAuth?
+  END AUTHDATA;
 
   %% The inverse of a key its negation
   inverse(k:KVAL):KVAL = -k;
@@ -33,6 +39,8 @@ key [DVAL,HVAL:TYPE+] : THEORY
   badkey:KVAL = 0;
 
   %% Purpose for key
+
+  %%									(5.8)
   KEY_USAGE : DATATYPE
   BEGIN
     signing : signing?
@@ -44,7 +52,7 @@ key [DVAL,HVAL:TYPE+] : THEORY
     migrate : migrate?
   END KEY_USAGE;
 
-  %% Flags for defining key properties
+  %% Flags for defining key properties					(5.10)
   KEY_FLAGS : TYPE = [#
   	      	     redirection : bool, 
 		     migratable : bool,
@@ -61,8 +69,7 @@ key [DVAL,HVAL:TYPE+] : THEORY
 	     pcrIgnoredOnRead := false,
 	     migrateAuthority := false #)
   	     
-
-  %% Migragion scheme indicator
+  %% Migragion scheme indicator						(4.10)
   migrateScheme : DATATYPE
   BEGIN 
     migrate : migrate?
@@ -85,18 +92,60 @@ key [DVAL,HVAL:TYPE+] : THEORY
   BEGIN
     %% Identifyier for naming things
     tpmID(id:string,crs:CRYPTOSTATUS) : tpmID?
+    
+    %% Stub for migrateScheme so can take digest - createMigBlob		(4.4)
+    tpmMigScheme(migScheme:migrateScheme) : tpmMigScheme?
 
-    %% Authdata - don't know what it is yet
-    tpmAuthData(authdata:AUTHDATA,crs:CRYPTOSTATUS) : tpmAuthData?
+    %% EK type - indicates what type of information the EK is dealing with (4.11)
+    tpmEKBlobActivate(sessK:(tpmSessKey?),idDigest:(tpmDigest?),pcrInfo:(tpmPCRInfo?)) 
+    	: tpmEKBlobActivate?
+    tpmEKBlobAuth(authValue:(tpmSecret?)) : tpmEKBlobAuth?
+    
+    %% Abitrarily long digest of arbitrary TPM data			(5.4)
+    tpmDigest(digest:list[tpmData],crs:CRYPTOSTATUS) : tpmDigest?
+    %  tpmDigest is the list of things concatenated and hashed to create the
+    %  digest value - #(d0++d1++...++dn).  Note that this digest does not
+    %  contain PCRs
 
-    %% Nonce value.
+    %% Random value that provides protection from replay.		(5.5)
     tpmNonce : tpmNonce?
 
-    %% Session keys are simply symetric keys
-    tpmSessKey(skey:KVAL,crs:CRYPTOSTATUS) : tpmSessKey?
+    %% Authdata - don't know what it is yet				(5.6)
+    tpmAuthData(tpmAuthData:AUTHDATA,crs:CRYPTOSTATUS) : tpmAuthData?
+    
+    %% Provides proof that the associated public key has TPM Owner AuthData(5.12)
+    %% to be a migration key
+    tpmMigKeyAuth(key:(tpmKey?),scheme:(tpmMigScheme?),digest:(tpmDigest?),crs:CRYPTOSTATUS) 
+    		: tpmMigKeyAuth?
+    
+    %% PCR Info								(8.4)
+    %% TODO: This is only a stub.
+    tpmPCRInfo(pcrs:PCRS) : tpmPCRInfo?
+    
+    %% Stored Data - necessary to ensure the enforcement of security
+    %% properties (9.2) Used by seal and unseal commands to identify
+    %% pcr index and values that must be present to properly unseal
+    %% data.
+    tpmStoredData(sealInfo:(tpmPCRInfo?),
+		  encData:(tpmSealedData?),
+		  crs:CRYPTOSTATUS) : tpmStoredData?
+		  %% encData is the piece encrypted by the crs.
+		  
+    %% Sealed Data - contains confidential info related to sealed data	(9.3)
+    tpmSealedData(authData:(tpmAuthData?),
+		  tpmProof:(tpmSecret?),
+		  storedDigest:(tpmDigest?),
+		  data:tpmData) : tpmSealedData?
+    
+    %% Session keys are simply symetric keys				(9.4)
+    tpmSessKey(skey:(symKey?),crs:CRYPTOSTATUS) : tpmSessKey?
+    
+    %% Bound data							(9.5)
+    tpmBoundData(payloadData:tpmData,crs:CRYPTOSTATUS) : tpmBoundData?
 
-    %% Assymetric keys used by the TPM - wrapped, signed, encrypted
+    %% Assymetric keys used by the TPM - wrapped, signed, encrypted	(10.3)
     tpmKey(key:KVAL,
+    tpmKey(key:(asymKey?),
 	   keyUsage:KEY_USAGE,
 	   keyFlags:KEY_FLAGS,
 	   PCRInfo:list[PCR],
@@ -112,23 +161,48 @@ key [DVAL,HVAL:TYPE+] : THEORY
     %  signed/certified key: tpmKey(k,signed(private(j),clear))
     %  clear key signed by private j
 
-    %% Abitrarily long digest of arbitrary TPM data
-    tpmDigest(digest:list[tpmData],crs:CRYPTOSTATUS) : tpmDigest?
-    %  tpmDigest is the list of things concatenated and hashed to create the
-    %  digest value - #(d0++d1++...++dn).  Note that this digest does not
-    %  contain PCRs
+    %% Store Pub Key								(10.4)
+    tpmStorePubkey(key:(asymKey?)):tpmStorePubkey?
+    %% Pub Key (used for ek, srk?)						(10.5)
+    tpmPubkey(pubKey:(tpmStorePubkey?)):tpmPubkey?
+    %% Store Asym Key								(10.6)
+    tpmStoreAsymkey(usageAuth:(tpmSecret?),migrationAuth:(tpmSecret?),
+	pubDataDigest:(tpmDigest?),privKey:(tpmStorePrivkey?)):tpmStoreAsymkey?
 
-    %%  Quote including a PCR digest and nonce.
+    %% Store Priv Key								(10.7)
+    tpmStorePrivkey(key:(asymKey?)):tpmStorePrivkey?
+
+    %% Migrate Asym Key								(10.8)
+    tpmMigrateAsymkey(usageAuth:(tpmSecret?),pubDataDigest:(tpmDigest?),
+		partPrivKey:(tpmKey?)):tpmMigrateAsymkey?
+
+    %%  Quote including a PCR digest and nonce.					(11.3)
     tpmQuote(digest:list[PCR],nonce:(tpmNonce?),crs:CRYPTOSTATUS) : tpmQuote?
     %  PCRs are not current TPM data, so the digest is over PCR values.
+    
+    %% Provides wrapper to each type of structure that will be in use when	(12.1)
+    %% EK is in use
+    tpmEKBlob(blob:tpmData,crs:CRYPTOSTATUS) : tpmEKBlob?
+    %% blob must be tpmEKBlobAuth or tpmEKBlobActivate
 
-    %% Certification request sent to Privacy CA
+    %% Certification request sent to Privacy CA					(12.5)
     tpmIdContents(digest:(tpmDigest?),aik:(tpmKey?),crs:CRYPTOSTATUS) : tpmIdContents?
     %  digest should contain CA public key, name, and AIK
     
     %% Migration authorization data
     tpmMigKeyAuth(key:(tpmKey?),scheme:migrateScheme,digest:(tpmDigest?),
                   crs:CRYPTOSTATUS) : tpmMigKeyAuth?
+
+    %% Contains symmetric key to encrypt the identity credential		(12.8)
+    tpmAsymCAContents(sessK:(tpmSessKey?),idDigest:(tpmDigest?),crs:CRYPTOSTATUS) : 
+    	tpmAsymCAContents?
+
+    %% tpmFullQuote(cert:(tpmCertKey?),sml:list[HVAL],quote:(tpmQuote?)):tpmFullQuote?
+    %  Implement as tpmAbsOutput
+    %  cert is a certified key and should be checked with certKey?
+    %  SML is the stored measurement list
+    %  Quote is the signed quote generated by the TPM
+    %  This is simply a triple represented below    
   END tpmData;
   
   %% Reserved Key Handles - Should be moved to tpm.pvs
@@ -204,10 +278,11 @@ key [DVAL,HVAL:TYPE+] : THEORY
 
   decrypt(k:KVAL,d:tpmData) : tpmData =
     CASES d OF
-      tpmID(id0,crs0) : IF encrypted?(crs0)
-                           THEN tpmID(id0,decryptStatus(k,crs0))
-			   ELSE d	
-			   ENDIF,
+      tpmID(id0,crs0) : 
+        IF encrypted?(crs0)
+        THEN tpmID(id0,decryptStatus(k,crs0))
+	ELSE d	
+	ENDIF,
       tpmAuthData(authdata0,crs0) :
         IF encrypted?(crs0)
         THEN tpmAuthData(authdata0,decryptStatus(k,crs0))

@@ -1,14 +1,9 @@
-PermanentData[HV:TYPE+] : THEORY
+PermanentData[DV,KV,HV:TYPE+] : THEORY
   BEGIN
 
   IMPORTING pcr[HV];
+  IMPORTING key[DV,KV,HV];
   
-  tpmAuthData:DATATYPE
-  BEGIN
-    tpmSecret(i:nat):tpmSecret?
-    tpmEncAuth:tpmEncAuth?
-  END tpmAuthData
-
   PermData : TYPE = [#
 %     tag : TPM_STRUCTURE_TAG,
 %     revMajor : BYTE,

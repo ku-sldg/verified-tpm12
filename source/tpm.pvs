@@ -43,7 +43,7 @@ tpm [ B:TYPE+ % BLOB
   IMPORTING ReturnCodes;
   IMPORTING startupData[B,K,HV];
   IMPORTING PermanentFlags;
-  IMPORTING PermanentData[HV];
+  IMPORTING PermanentData[B,K,HV];
 
   SML : TYPE = list[HV];
 
@@ -52,38 +52,38 @@ tpm [ B:TYPE+ % BLOB
   BEGIN
     OUT_Nothing : OUT_Nothing?
     OUT_Error(m:ReturnCode) : OUT_Error?
+    OUT_Data_Bind(outData:(tpmBoundData?)) : OUT_Data_Bind?
+  %% Admin Ownership (6)
     OUT_TakeOwnership(srkPub:(tpmKey?),m:ReturnCode) : OUT_TakeOwnership?
     OUT_OwnerClear(m:ReturnCode) : OUT_OwnerClear? 
     OUT_ForceClear(m:ReturnCode) : OUT_ForceClear? 
     OUT_DisableOwnerClear(m:ReturnCode) : OUT_DisableOwnerClear? 
     OUT_DisableForceClear(m:ReturnCode) : OUT_DisableForceClear? 
-    OUT_Seal(sealedData:tpmData,m:ReturnCode) : OUT_Seal?
+  %% Storage Functions (10)
+    OUT_Seal(sealedData:(tpmStoredData?),m:ReturnCode) : OUT_Seal?
+    OUT_Unseal(secret:tpmData,m:ReturnCode) : OUT_Unseal?
+    OUT_UnBind(outData:tpmData,m:ReturnCode) : OUT_UnBind?
     OUT_CreateWrapKey(wrappedKey:(wrapKey?),m:ReturnCode) : OUT_CreateWrapKey?
     OUT_LoadKey2(inkeyHandle:(tpmKey?),m:ReturnCode) : OUT_LoadKey2?
-    OUT_AuthorizeMigrationKey(outData:(tpmMigKeyAuth?),m:ReturnCode) : OUT_AuthorizeMigrationKey?
+  %% Migration (11)
     OUT_CreateMigrationBlob(random:int,outData:tpmData,m:ReturnCode) : OUT_CreateMigrationBlob?
+%     OUT_ConvertMigrationBlob(outData:(tpmKey?),m:ReturnCode) : OUT_ConvertMigrationBlob?
+    OUT_AuthorizeMigrationKey(outData:(tpmMigKeyAuth?),m:ReturnCode) : OUT_AuthorizeMigrationKey?
+    OUT_MigrateKey(outData:tpmData,m:ReturnCode) : OUT_MigrateKey?
+  %% Cryptographic Functions (13)
     OUT_Sign(sig:tpmData,m:ReturnCode) : OUT_Sign?
+  %% Endorsement Key Handling (14)
     OUT_CreateEndorsementKeyPair(pubEk:(tpmKey?),checksum:(tpmDigest?),m:ReturnCode) 
     		: OUT_CreateEndorsementKeyPair?
     OUT_ReadPubek(pubEk:(tpmKey?),checksum:(tpmDigest?),m:ReturnCode) : OUT_ReadPubek?
+  %% Identity Creation and Activation (15)
     OUT_MakeIdentity(idKey:(tpmKey?),idBinding:(tpmIdContents?),m:ReturnCode) 
 		: OUT_MakeIdentity?
-    OUT_ActivateIdentity(symmKey:(tpmSessKey?),m:ReturnCode) : OUT_ActivateIdentity?
+%    OUT_ActivateIdentity(symmKey:(tpmSessKey?),m:ReturnCode) : OUT_ActivateIdentity?
+  %% Integrity Collection and Reporting (16)
+    OUT_Extend(outDigest:PCR,m:ReturnCode) : OUT_Extend?
+    OUT_PCRRead(outDigest:PCR,m:ReturnCode) : OUT_PCRRead?
     OUT_Quote(pcrData:list[PCR],sig:(tpmQuote?),m:ReturnCode) : OUT_Quote?
-%     outWrapKey(owk:(wrapKey?),m:ReturnCode) : outWrapKey?
-%     outAsymKey(oask:KEY,m:ReturnCode) : outAsymKey?
-%     outSymKey(tpm,m:ReturnCode) : outSymKey?
-%     outBlob(obl:BLOB,m:ReturnCode) : outBlob?
-%     outCertReq(ocertaik:(wrapKey?),ocertek:(asymKey?), m:ReturnCode) : outCertReq?
-%     outIdentity(oidentaik:(wrapKey?),oidentc:(outCertReq?),
-%                 m:ReturnCode) : outIdentity?
-%     outIdentActivation(oactc:(certBlob?),%osessk:(symKey?),oactek:(asymKey?),
-%                        m:ReturnCode) : outIdentActivation?
-%     outFullQuote(ofullqc:(certBlob?),ofullqsml:SML,ofullqq:(outQuote?),
-%                  m:ReturnCode) : outFullQuote?
-%     outPCR(pcr:PCR,m:ReturnCode) : outPCR?
-%     outMigKeyAuth(migKey:(asymKey?),migScheme:migrateScheme,digest:HV,
-% 		  m:ReturnCode):outMigKeyAuth?
   END tpmAbsOutput;
 
   IMPORTING memory[tpmAbsOutput,OUT_Nothing];
@@ -93,7 +93,7 @@ tpm [ B:TYPE+ % BLOB
   %% parameters.
   tpmAbsInput : DATATYPE
   BEGIN
-  %% Admin Startup and State commands (4)
+  %% Admin Startup and State commands (3)
     ABS_Reset : ABS_Reset? %unimplemented
     ABS_Init : ABS_Init? 
     ABS_SaveState : ABS_SaveState?
@@ -105,17 +105,17 @@ tpm [ B:TYPE+ % BLOB
     ABS_DisableOwnerClear : ABS_DisableOwnerClear? 
     ABS_DisableForceClear : ABS_DisableForceClear? 
   %% Protected Storage Commands (10)
-    ABS_Seal(k:(tpmKey?),encAuth:(tpmAuthData?),pcrInfo:PCRS,inData:tpmData) : ABS_Seal?
-    ABS_Unseal(parent:(tpmKey?),inData:tpmData) : ABS_Unseal?   
-%     ABS_UnBind(inData:(encryptBlob?),dk:(asymKey?)) : ABS_UnBind?
+    ABS_Seal(k:(tpmKey?),encAuth:(tpmAuthData?),pcrInfo:(tpmPCRInfo?),inData:tpmData) : ABS_Seal?
+    ABS_Unseal(parent:(tpmKey?),inData:(tpmStoredData?)) : ABS_Unseal?   
+    ABS_UnBind(key:(tpmKey?),inData:(tpmBoundData?)) : ABS_UnBind?
     ABS_CreateWrapKey(parentk,keyInfo:(tpmKey?)): ABS_CreateWrapKey?  
     ABS_LoadKey2(parent:(tpmKey?),inKey:(wrapKey?)): ABS_LoadKey2? 
   %% Migration Commands (11)
-    ABS_CreateMigrationBlob(pk:(asymKey?),m:migrateScheme,migKeyAuth:(tpmMigKeyAuth?),
-			    encData:(tpmKey?)) : ABS_CreateMigrationBlob?
-%     ABS_ConvertMigrationBlob(k:(asymKey?),inData:BLOB) : ABS_ConvertMigrationBlob?
-    ABS_AuthorizeMigrationKey(migKey:(tpmKey?),migScheme:migrateScheme) : ABS_AuthorizeMigrationKey?
-%     ABS_MigrateKey(migKey,pubKey:(asymKey?),data:BLOB) : ABS_MigrateKey?
+    ABS_CreateMigrationBlob(p:(tpmKey?),m:migrateScheme,migKeyAuth:(tpmMigKeyAuth?),
+			    encData:tpmData) : ABS_CreateMigrationBlob?
+%     ABS_ConvertMigrationBlob(k:(tpmKey?),inData:tpmData,random:int) : ABS_ConvertMigrationBlob?
+    ABS_AuthorizeMigrationKey(migKey:(tpmKey?),migScheme:(tpmMigScheme?)) : ABS_AuthorizeMigrationKey?
+    ABS_MigrateKey(maKey,pubKey:(tpmKey?),inData:tpmData) : ABS_MigrateKey?
   %% Cryptographic Commands (13)
     ABS_Sign(keyHandle:(asymKey?),areaToSign:tpmData) : ABS_Sign?
   %% Endorsement Key Handling (14)
@@ -123,9 +123,10 @@ tpm [ B:TYPE+ % BLOB
     ABS_ReadPubek(n:(tpmNonce?)) : ABS_ReadPubek?
   %% Identity Creation and Activation (15)
     ABS_MakeIdentity(CADigest:(tpmDigest?),idKeyParams:(tpmKey?)) : ABS_MakeIdentity?
-    ABS_ActivateIdentity(caik:(wrapKey?),blob:tpmData) : ABS_ActivateIdentity?
+    ABS_ActivateIdentity(idKey:(tpmKey?),blob:tpmData) : ABS_ActivateIdentity?
   %% Integrity Collection and Reporting (16)
-    ABS_Extend(h:HV,i:PCRINDEX) : ABS_Extend?
+%     ABS_Extend(pcrNum:PCRINDEX,inDigest:(tpmDigest?)) : ABS_Extend?
+    ABS_Extend(d:HV,pcrNum:PCRINDEX) : ABS_Extend?
     ABS_PcrRead(ind:PCRINDEX) : ABS_PcrRead?
     ABS_Quote(aik:(wrapKey?),nonce:(tpmNonce?),pm:PCRMASK) : ABS_Quote?
   %% Changing AuthData (17)
@@ -135,7 +136,7 @@ tpm [ B:TYPE+ % BLOB
     ABS_sinit : ABS_sinit? % partially implemented
     ABS_save(i:nat,v:tpmAbsOutput) : ABS_save?
     ABS_read(i:nat) : ABS_read?
-    ABS_Data_Bind(k:KEY,d:tpmData) : ABS_Data_Bind?
+    ABS_Data_Bind(k:(tpmKey?),d:tpmData) : ABS_Data_Bind?
   %% CA Commands
 %    ABS_certify(aik:(wrapKey?),certReq:(outCertReq?)) : ABS_certify?
   %% Invented, imaginary Commands
@@ -271,19 +272,26 @@ tpm [ B:TYPE+ % BLOB
   genKeyState(s:tpmAbsState) : tpmAbsState =
     s WITH [`keyGenCnt := keyGenCnt(s)+1];
 
+  createWrapKey?(parentHandle,keyInfo:(tpmKey?)):bool = 
+    storage?(keyUsage(parentHandle)) AND
+    IF migratable(keyFlags(parentHandle)) AND not(migratable(keyFlags(keyInfo)))
+    THEN FALSE
+    ELSE IF identity?(keyUsage(keyInfo)) OR authChange?(keyUsage(keyInfo))
+    	 THEN FALSE
+	 ELSE not(migrateAuthority(keyFlags(keyInfo)))
+	 ENDIF
+    ENDIF;
+
   createWrapKeyState(s:tpmAbsState,p,keyInfo:(tpmKey?)) : tpmAbsState = 
-    IF storage?(keyUsage(p)) 
-       AND migratable(keyFlags(p))=FALSE AND migratable(keyFlags(keyInfo))=TRUE 
-       AND not(identity?(keyUsage(keyInfo)) or authChange?(keyUsage(keyInfo)))
-       AND migrateAuthority(keyFlags(keyInfo))=FALSE
-      THEN genKeyState(s)
-      ELSE s
+    IF createWrapKey?(p,keyInfo)
+    THEN genKeyState(s)
+    ELSE s
     ENDIF;
   
   makeIdentityState(s:tpmAbsState,CADigest:(tpmDigest?),idKeyParams:(tpmKey?)) : tpmAbsState = 
     IF identity?(keyUsage(idKeyParams)) AND migratable(keyFlags(idKeyParams))=FALSE
-      THEN genKeyState(s)
-      ELSE s
+    THEN genKeyState(s)
+    ELSE s
     ENDIF;
         
 
@@ -291,31 +299,36 @@ tpm [ B:TYPE+ % BLOB
   revokeKeyState(s:tpmAbsState,k:(wrapKey?)) : tpmAbsState =
     s WITH [`keys := revokeKey(k,keys(s))];
 
+
   %% Install key operation on TPM state.
   loadKey2State(s:tpmAbsState,parentHandle:(tpmKey?),k:(wrapKey?)) : tpmAbsState =
-    IF storage?(keyUsage(parentHandle)) AND key(parentHandle) = parentKey(k)
-      THEN CASES keyUsage(k) OF
-      	     identity: IF migratable(keyFlags(k))=FALSE
-	   	         THEN s with [`keys:=addKey(k,srk(s),keys(s),pcrs(s))]
-		     	 ELSE s
-		       ENDIF,
-	     authChange: s
-	     ELSE s with [`keys:=addKey(k,srk(s),keys(s),pcrs(s))]
-	   ENDCASES
-      ELSE s
+    IF storage?(keyUsage(parentHandle)) AND key(parentHandle)=parentKey(k)
+    THEN CASES keyUsage(k) OF
+    	 identity: IF migratable(keyFlags(k))=FALSE
+	 	   THEN s with [`keys:=addKey(k,srk(s),keys(s),pcrs(s))]
+		   ELSE s
+		   ENDIF,
+    	 authChange: s
+	 ELSE s with [`keys:=addKey(k,srk(s),keys(s),pcrs(s))]
+	 ENDCASES
+    ELSE s
     ENDIF;
-
+%       IF validateLoadKey2?(s,parentHandle,k)
+%       THEN s with [`keys:=addKey(k,srk(s),keys(s),pcrs(s))]
+%       ELSE s
+%       ENDIF
 
   %% Extend operation on TPM state
-  extendState(s:tpmAbsState,n:PCRINDEX,h:HV) : tpmAbsState =
-    s WITH [`pcrs := pcrsExtend(pcrs(s),n,h)];
+%   extendState(pcrNum:PCRINDEX,inDigest:(tpmDigest?)) : tpmAbsState =
+    extendState(s:tpmAbsState,n:PCRINDEX,h:HV) : tpmAbsState =
+    	s WITH [`pcrs := pcrsExtend(pcrs(s),n,h)];
 
   createEndorsementKeyPairState(s:tpmAbsState,antiReplay:(tpmNonce?),keyInfo:(tpmKey?)) : tpmAbsState = 
     IF (ek(s)/=invalidKey)
-      THEN s
-      ELSE s WITH [`ek := private(key(keyInfo)),
-      	     	   `permFlags(CEKPUsed) := TRUE, 
-		   `permFlags(enableRevokeEK) := FALSE]
+    THEN s
+    ELSE s WITH [`ek := private(key(keyInfo))
+    	   	,`permFlags(CEKPUsed) := TRUE
+		,`permFlags(enableRevokeEK) := FALSE]
     ENDIF;
 
 
@@ -326,9 +339,9 @@ tpm [ B:TYPE+ % BLOB
   takeOwnershipState(s:tpmAbsState,ownerAuth,srkAuth:(tpmAuthData?),srkParams:(tpmKey?)) : tpmAbsState =
    IF ownership(permFlags(s)) AND ek(s) /= invalidKey 
       AND storage?(keyUsage(srkParams)) AND not(migratable(keyFlags(srkParams)))
-     THEN s WITH [`srk:=key(srkParams),
-      	     	  `permFlags(readPubek):=FALSE]
-     ELSE s
+   THEN s WITH [`srk:=key(srkParams)
+   	       ,`permFlags(readPubek):=FALSE]
+   ELSE s
    ENDIF;
 
   clear(s:tpmAbsState) : tpmAbsState = %not fully implemented
@@ -349,14 +362,14 @@ tpm [ B:TYPE+ % BLOB
   ownerClearState(s:tpmAbsState) : tpmAbsState =
     IF %auth = private(srk(s)) AND 
        disableOwnerClear(permFlags(s))=FALSE
-      THEN clear(s)
-      ELSE s
+    THEN clear(s)
+    ELSE s
     ENDIF
 
   forceClearState(s:tpmAbsState) : tpmAbsState = 
     IF s`disableForceClear=FALSE
-      THEN clear(s)
-      ELSE s
+    THEN clear(s)
+    ELSE s
     ENDIF
   
   disableOwnerClearState(s:tpmAbsState) : tpmAbsState = 
@@ -378,8 +391,7 @@ tpm [ B:TYPE+ % BLOB
   restoreState(s:tpmAbsState) : tpmAbsState =
     IF valid?(restore(s))
        THEN LET rs=restore(s) IN
-             (#
-              restore := rs
+             (# restore := rs
 	      , memory := memory(s)
 	      , postInit := FALSE
 	      , ek := ek(rs)
@@ -430,12 +442,12 @@ tpm [ B:TYPE+ % BLOB
       ABS_ForceClear: forceClearState(s),
       ABS_DisableOwnerClear: disableOwnerClearState(s),
       ABS_DisableForceClear: disableForceClearState(s),
+      ABS_CreateWrapKey(parent,k) : createWrapKeyState(s,parent,k),
       ABS_LoadKey2(p,k): loadKey2State(s,p,k), 
       ABS_CreateEndorsementKeyPair(n,k) : createEndorsementKeyPairState(s,n,k),
-      ABS_CreateWrapKey(parent,k) : createWrapKeyState(s,parent,k),
       ABS_MakeIdentity(d,k) : makeIdentityState(s,d,k), 
 %       ABS_ActivateIdentity(a,b) : activateIdentityState(s,a,b),
-%       ABS_Extend(h,n) : extendState(s,n,h),
+%       ABS_Extend(n,d) : extendState(s,n,d),
 %       ABS_certify(aik,ek) : genKeyState(s),
 %       ABS_senter : 
 %         changeLocalityState(extendState(pcrsResetSenterState(s),0,hash(sinit))),
@@ -448,87 +460,101 @@ tpm [ B:TYPE+ % BLOB
   %% should be blocked if startup has not run and postInit=true.
   executeCom(s:tpmAbsState,c:tpmAbsInput) : tpmAbsState =
     IF afterInit?(s)
-       THEN executeComPostInit(s,c)
-       ELSE executeComStartup(s,c)
+    THEN executeComPostInit(s,c)
+    ELSE executeComStartup(s,c)
     ENDIF;
 
   
   % Output secret sealed with asymmetric key 
-%   sealOut(s:tpmAbsState,k:(tpmKey?),enc:(tpmAuthData?),pcr:PCRS,data:tpmData) : tpmAbsOutput = 
-%     IF storage?(keyUsage(key(k))) AND not(migratable(keyFlags(key(k))))
-%     THEN OUT_Seal(,TPM_SUCCESS)
-%     ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
-%     ENDIF
+  sealOut(s:tpmAbsState,k:(tpmKey?),enc:(tpmAuthData?),pcr:(tpmPCRInfo?),data:tpmData) : tpmAbsOutput = 
+    IF storage?(keyUsage(k)) AND not(migratable(keyFlags(k)))
+    THEN LET S2=tpmSealedData(enc,
+			      tpmProof(permData(s)),
+			      tpmDigest(cons(pcr,null),clear),%digest of params of S1 excluding encData
+    	     		      data) IN
+		LET S1=tpmStoredData(pcr,S2,encrypted(key(k),clear))
+    	     IN OUT_Seal(S1,TPM_SUCCESS)
+    ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
+    ENDIF
 %       	   tpmSealedData(data,sealed(k,clear,pcrs(s)),TPM_SUCCESS)
-%       	   %outBlob(sealBlob(k,pcrs(s),data),TPM_SUCCESS) %data:BLOB
 
   % Output secret unsealed with an asymmetric key and PCRs 
-%   unsealOut(s:tpmAbsState,d:(tpmSealedData?),k:(asymKey?)) : tpmAbsOutput = 
-%     LET b:tpmData = data(d) IN %unseal(d,pcrs(s),k) IN
-%     IF OUT_Nothing?(b)
-%       THEN OUT_Error(TPM_NOTSEALED_BLOB)
-%       ELSE b
-%     ENDIF
-
+  unsealOut(s:tpmAbsState,parent:(tpmKey?),inData:(tpmStoredData?)) : tpmAbsOutput = 
+    IF storage?(keyUsage(parent)) and migratable(keyFlags(parent))=FALSE
+    THEN IF encrypted?(crs(inData)) AND key(crs(inData))=key(parent)
+    	 THEN LET d1 = encData(inData) IN
+	      IF tpmProof(d1) = tpmProof(permData(s)) AND 
+	      	 tpmDigest(cons(sealInfo(inData),null),clear) = storedDigest(d1)
+	      THEN OUT_Unseal(data(d1),TPM_SUCCESS) %% TODO: way more going on here... not sure what.
+	      ELSE OUT_Error(TPM_NOTSEALED_BLOB)
+	      ENDIF
+	 ELSE OUT_Error(TPM_DECRYPT_ERROR)
+	 ENDIF
+    ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
+    ENDIF
+  
+  unBind?(k:(tpmKey?),d:(tpmBoundData?)) : bool =
+    legacy?(keyUsage(k)) OR bind?(keyUsage(k)) AND key(crs(d))=key(k) 
+    
   % Output decrypted key
-%   unBindOut(s:tpmAbsState,d:tpmData,k:(asymKey?)) : tpmAbsOutput =
-%     LET decrypt(d,k) IN
-% %% TODO: double check command specificiations... this might be okay without IF stmt
-% %      IF nothing?(b)
-% %        THEN OUT_Error()
-% %        ELSE 
-%        outBlob(b,TPM_SUCCESS)
-% %      ENDIF
-  	    
+  unBindOut(s:tpmAbsState,k:(tpmKey?),d:(tpmBoundData?)) : tpmAbsOutput =
+    IF legacy?(keyUsage(k)) OR bind?(keyUsage(k))
+    THEN IF key(crs(d))=key(k) 
+    	 THEN OUT_UnBind(payloadData(d),TPM_SUCCESS)
+	 ELSE OUT_Error(TPM_DECRYPT_ERROR) %unsure if this is correct
+	 ENDIF
+    ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
+    ENDIF  	    
 
   % Generate a NEW RANDOM key pair.
   createWrapKeyOut(s:tpmAbsState,parentHandle,keyInfo:(tpmKey?)) : tpmAbsOutput = 
-      IF storage?(keyUsage(parentHandle)) 
-      	 AND migratable(keyFlags(parentHandle))=FALSE AND migratable(keyFlags(keyInfo))=TRUE 
-	 AND not(identity?(keyUsage(keyInfo)) or authChange?(keyUsage(keyInfo)))
-	 AND migrateAuthority(keyFlags(keyInfo))=FALSE
-	THEN OUT_CreateWrapKey(tpmKey(asymKey(keyGenCnt(s)),
-				      keyUsage(keyInfo),
-				      keyFlags(keyInfo),
-				      PCRInfo(keyInfo),
-				      wrapped(key(parentHandle),clear)),
-		    	       TPM_SUCCESS)
-	ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
-	ENDIF
+      IF createWrapKey?(parentHandle,keyInfo)
+      THEN OUT_CreateWrapKey(tpmKey(asymKey(keyGenCnt(s)),
+				    keyUsage(keyInfo),
+				    keyFlags(keyInfo),
+				    PCRInfo(keyInfo),
+				    wrapped(key(parentHandle),clear)),
+			     TPM_SUCCESS)
+      ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
+      ENDIF
     
   loadKey2Out(parentHandle:(tpmKey?),inKey:(wrapKey?)) : tpmAbsOutput = 
     IF storage?(keyUsage(parentHandle))
-      THEN IF key(parentHandle) = parentKey(inKey)
-      	     THEN LET usage = keyUsage(inKey) IN
-	     	  CASES usage OF
-		    identity: IF migratable(keyFlags(inKey))=FALSE
-		    	        THEN OUT_LoadKey2(inKey,TPM_SUCCESS)
-				ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
-			      ENDIF,
-		    authChange: OUT_Error(TPM_INVALID_KEYUSAGE)
-		    ELSE OUT_LoadKey2(inKey,TPM_SUCCESS)
-		  ENDCASES
-	     ELSE OUT_Error(TPM_DECRYPT_ERROR) %% Might not be right.
-	   ENDIF
-      ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
+    THEN IF key(parentHandle)=parentKey(inKey)
+    	 THEN LET usage = keyUsage(inKey) IN
+	      CASES usage OF
+	      identity: IF migratable(keyFlags(inKey))=FALSE
+	      		THEN OUT_LoadKey2(inKey,TPM_SUCCESS)
+			ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
+			ENDIF,
+	      authChange: OUT_Error(TPM_INVALID_KEYUSAGE)
+	      ELSE OUT_LoadKey2(inKey,TPM_SUCCESS)
+	      ENDCASES
+    	 ELSE OUT_Error(TPM_DECRYPT_ERROR) %% TODO: Might not be right.
+	 ENDIF
+    ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
     ENDIF;
 
+  extendOut(pcrNum:PCRINDEX,inDigest:(tpmDigest?)) : tpmAbsOutput
 
   % Output PCR of given index
-%   pcrReadOut(s:tpmAbsState,ind:PCRINDEX) : tpmAbsOutput = 
-%   %% TODO: will ind not be allowed to be > 23 because of defn of PCRINDEX?
-%       	   LET p = pcrs(s) IN outPCR(p(ind),TPM_SUCCESS)
+  pcrReadOut(s:tpmAbsState,ind:PCRINDEX) : tpmAbsOutput = 
+  %% TODO: will ind not be allowed to be > 23 because of defn of PCRINDEX? 
+  %% Should throw TPM_BADINDEX if outside range
+     LET p = pcrs(s) IN OUT_PCRRead(p(ind),TPM_SUCCESS)
 
   % Output PCRs from a state as quote
   quoteOut(s:tpmAbsState,keyHandle:(wrapKey?),externalData:(tpmNonce?),targetPCR:PCRMASK) : tpmAbsOutput =
   %% TODO: will pm be allowed to have elements > 23? see pcrReadOut 
-      	   IF checkKeyRoot(keyHandle,srk(s))
-      	     THEN LET pcrData = getPCRs(s`pcrs,targetPCR) IN
-	     	  OUT_Quote(pcrData,
-			   tpmQuote(pcrData,externalData,signed(private(childKey(keyHandle)),clear)),
-			   TPM_SUCCESS)
-      	     ELSE OUT_Error(TPM_INVALID_KEYUSAGE) %% TODO: double check this
-	   ENDIF
+     IF checkKeyRoot(keyHandle,srk(s))
+     THEN LET pcrData = getPCRs(s`pcrs,targetPCR) IN
+	OUT_Quote(pcrData,
+		  tpmQuote(pcrData,
+			   externalData,
+			   signed(private(childKey(keyHandle)),clear)),
+		  TPM_SUCCESS)
+     ELSE OUT_Error(TPM_INVALID_KEYUSAGE) %% TODO: double check this
+     ENDIF
 
 
   % If ek doesn't exist, create a new ek from keyInfo
@@ -571,13 +597,15 @@ tpm [ B:TYPE+ % BLOB
   % The command will verify the association between the keys during the process.
   % The command will decrypt the input blob and extract the session key and verify the
   % connection between the public and private keys. p 157
-%   activateIdentityOut(s:tpmAbsState,idKey:(wrapKey?),b:tpmData) : tpmAbsOutput =
-%     IF identity?(keyUsage(childKey(idKey))) %AND checkKeyRoot(idKey,srk(s))
-%       THEN IF encrKey(b) = ekVal AND digest(b)=childKey(idKey)
+%   activateIdentityOut(s:tpmAbsState,idKey:(tpmKey?),b:tpmData) : tpmAbsOutput =
+%     IF identity?(keyUsage(idKey)) 
+%     THEN decrypt(ekVak,b)
+
+% IF encrKey(b) = ekVal AND digest(b)=childKey(idKey)
 % 	     THEN OUT_ActivateIdentity(tpmSessKey(symK(b),clear),TPM_SUCCESS)
 % 	     ELSE OUT_Error(TPM_DECRYPT_ERROR) %% TODO: This may be wrong
 % 	   ENDIF
-%       ELSE OUT_Error(TPM_BAD_PARAMETER)
+%     ELSE OUT_Error(TPM_BAD_PARAMETER)
 %     ENDIF;
 
 
@@ -626,34 +654,65 @@ tpm [ B:TYPE+ % BLOB
 
 
   checkMigKeyAuth?(s:tpmAbsState,a:(tpmMigKeyAuth?)):bool =
-    digest(a)=tpmDigest(cons(key(a),%++scheme(a)++tpmProof(permData(s)))
-				null),clear)
+    digest(a)=tpmDigest(cons(key(a),cons(scheme(a),cons(tpmAuthData(tpmProof(permData(s)),clear),
+				null))),clear)
   
-%   createMigBlobOut(s:tpmAbsState,parent:(asymKey?),migType:migrateScheme,
-% 			 migKeyAuth:(tpmMigKeyAuth?),encData:(tpmKey?)) : tpmAbsOutput =
+  createMigBlob?(s:tpmAbsState,p:(tpmKey?),m:migrateScheme,a:(tpmMigKeyAuth?),e:tpmData) : bool = 
+    storage?(keyUsage(p)) AND
+    CASES e OF
+      tpmKey(k,ku,kf,pcr,crs) : 
+	   key(p)=k AND checkMigKeyAuth?(s,a) AND
+	   	CASES m OF
+      	   	  migrate : FALSE, %TODO : not correct
+		  rewrap  : TRUE
+		ENDCASES	
+      ELSE FALSE
+    ENDCASES
+
+  createMigBlobOut(s:tpmAbsState,parent:(tpmKey?),migType:migrateScheme,
+			 migKeyAuth:(tpmMigKeyAuth?),encData:tpmData) : tpmAbsOutput =
+    IF storage?(keyUsage(parent))
+    THEN CASES encData OF
+    	 tpmKey(k,ku,kf,pcr,crs) : 
+	   IF key(parent)=k
+	   THEN IF checkMigKeyAuth?(s,migKeyAuth)
+	   	THEN CASES migType OF
+      	   	     migrate : OUT_Error(TPM_INSTALL_DISABLED),%TODO: not correct!
+		     rewrap  : OUT_CreateMigrationBlob(0,
+					tpmKey(k,ku,kf,pcr,
+					       wrapped(key(key(migKeyAuth)),clear)),
+					TPM_SUCCESS)
+		     %ELSE OUT_Error(TPM_BAD_PARAMETER)
+		     ENDCASES	
+	      	ELSE OUT_Error(TPM_RESOURCES) % TODO: not at all correct.
+	      	ENDIF
+    	   ELSE OUT_Error(TPM_DECRYPT_ERROR) % TODO: not correct?
+	   ENDIF
+	 ELSE OUT_Error(TPM_WRONG_ENTITYTYPE) % TODO: not correct?
+    	 ENDCASES
+    ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
+    ENDIF
+
+%   convertMigBlobOut(s:tpmAbsState,parent:(tpmKey?),inData:tpmData,rand:int) : tpmAbsOutput =
 %     IF storage?(keyUsage(parent))
-%     THEN IF parent=key(encData) 
-%       	 THEN IF checkMigKeyAuth?(s,migKeyAuth)
-% 	      THEN CASES migType OF
-%       	   	   migrate : OUT_Error(TPM_INSTALL_DISABLED),%TODO: not correct!
-%       		   rewrap  : OUT_CreateMigrationBlob(0,
-% 						     tpmKey(k,wrapped(key(migKeyAuth),clear)),
-% 						     TPM_SUCCESS)
-% 		   %ELSE OUT_Error(TPM_BAD_PARAMETER)
-% 		   ENDCASES	
-% 	      ELSE OUT_Error(TPM_INSTALL_DISABLED)%TODO: not at all correct.
-% 	      ENDIF
-% 	 ELSE OUT_Error(TPM_DECRYPT_ERROR)
-% 	 ENDIF
+%     THEN CASES inData OF
+%       	 tpmId(i,c) :
+% 	 tpmDigest(d,c) :
+% 	 tpmAuthData(a,c) :
+% 	 tpmMigKeyAuth(k,s,d,c) : 
+% 	 tpmStoredData(s,e,c) :
+% 	 tpmSessKey(s,c) :
+% 	 tpmBoundData(p,c) :
+% 	 tpmKey(k,u,f,p,c) : OUT_ConvertMigrationBlob(inData,TPM_SUCCESS)
+% 	 tpmQuote(d,n,c) : 
+% 	 tpmIdContents(d,a,c) : 
+%       	 ELSE OUT_Error(TPM_WRONG_ENTITYTYPE)
+%     	 ENDCASES
 %     ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
 %     ENDIF
+    
 
-
-%   convertMigBlobOut(s:tpmAbsState,k:(asymKey?),inData:BLOB) : tpmAbsOutput
-%     %%outData = encrypted private key that can be loaded with tpm_loadkey 
-%     %%inData:BLOB may be wrong
-
-  authorizeMigKeyOut(s:tpmAbsState,migKey:(tpmKey?),migScheme:migrateScheme) : tpmAbsOutput = 
+  authorizeMigKeyOut(s:tpmAbsState,migKey:(tpmKey?),migScheme:(tpmMigScheme?)) : tpmAbsOutput = 
     OUT_AuthorizeMigrationKey(
 	tpmMigKeyAuth(migKey,
 		      migScheme,
@@ -662,19 +721,16 @@ tpm [ B:TYPE+ % BLOB
 		      clear),
 	TPM_SUCCESS);
 
-%   %% Decrypts the input packet (coming from TPM_CreateMigrationBlob) and then 
-%   %% re-encrypts it with the input public key. The output would then be sent to 
-%   %% TPM_ConvertMigrationBlob on the target TPM.
-%   migrateKeyOut(s:tpmAbsState,maKey,pubKey:(asymKey?),inData:(encryptBlob?)) : tpmAbsOutput =
-%     IF migrate?(keyUsage(maKey))
-%       %The TPM decripts inData and re-encrypts it using pubKey
-%       %THEN outBlob(encryptBlob(pubKey,blob(inData)),TPM_SUCCESS)
-%       THEN CASES blob(inData) OF
-%       	     keyBlob(key) : tpmKey(key,wrapped(pubKey,clear),TPM_SUCCESS)
-% 	     ELSE OUT_Error(TPM_INSTALL_DISABLED) %%TODO: not correct!
-% 	   ENDCASES
-%       ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
-%     ENDIF
+  %% Decrypts the input packet (coming from TPM_CreateMigrationBlob) and then 
+  %% re-encrypts it with the input public key. The output would then be sent to 
+  %% TPM_ConvertMigrationBlob on the target TPM.
+  migrateKeyOut(s:tpmAbsState,maKey,pubKey:(tpmKey?),inData:tpmData) : tpmAbsOutput =
+    IF migrate?(keyUsage(maKey))
+      %The TPM decripts inData and re-encrypts it using pubKey
+      %THEN outBlob(encryptBlob(pubKey,blob(inData)),TPM_SUCCESS)
+      THEN OUT_MigrateKey(encrypt(key(pubKey),decrypt(key(maKey),inData)),TPM_SUCCESS)
+      ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
+    ENDIF
 
 %   changeAuthOut(s:tpmAbsState) : tpmAbsOutput
 
@@ -690,8 +746,8 @@ tpm [ B:TYPE+ % BLOB
 %   readOut(s:tpmAbsState,i:nat) : tpmAbsOutput =
 %     memory(s)(i);
   
-%   dataBindOut(s:tpmAbsState,k:KEY,d:BLOB) : tpmAbsOutput = 
-%     outBlob(encryptBlob(k,d),TPM_SUCCESS);
+  dataBindOut(s:tpmAbsState,k:(tpmKey?),d:tpmData) : tpmAbsOutput = 
+    OUT_Data_Bind(tpmBoundData(d,encrypted(key(k),clear)));
 
   %% Run if TPM_Init has run but TPM_Startup has not
   outputComPostInit(s:(afterInit?),c:tpmAbsInput) : tpmAbsOutput =
@@ -706,23 +762,24 @@ tpm [ B:TYPE+ % BLOB
       ABS_ForceClear : forceClearOut(s),
       ABS_DisableOwnerClear : disableOwnerClearOut(s),
       ABS_DisableForceClear : disableForceClearOut(s),
-%       ABS_Seal(k,data) : sealOut(s,k,data),
-%       ABS_Unseal(d,k) : unsealOut(s,d,k),
-%       ABS_UnBind(d,k) : unBindOut(s,d,k),
-%       ABS_Data_Bind(k,d) : dataBindOut(s,k,d)
+      ABS_Seal(k,a,p,data) : sealOut(s,k,a,p,data),
+      ABS_Unseal(d,k) : unsealOut(s,d,k),
+      ABS_UnBind(k,d) : unBindOut(s,k,d),
+      ABS_Data_Bind(k,d) : dataBindOut(s,k,d),
       ABS_CreateWrapKey(parent,k) : createWrapKeyOut(s,parent,k),
       ABS_LoadKey2(p,k) : loadKey2Out(p,k),
-%       ABS_CreateMigrationBlob(pk,m,migKAuth,encData) : 
-%       				createMigBlobOut(s,pk,m,migKAuth,encData),
-%       ABS_ConvertMigrationBlob(k,data) : convertMigBlobOut(s,k,data),
+      ABS_CreateMigrationBlob(pk,m,migKAuth,encData) : 
+      				createMigBlobOut(s,pk,m,migKAuth,encData),
+%       ABS_ConvertMigrationBlob(k,d,r) : convertMigBlobOut(s,k,d,r),
       ABS_AuthorizeMigrationKey(mk,ms) : authorizeMigKeyOut(s,mk,ms),
-%       ABS_MigrateKey(mk,pubKey,data) : migrateKeyOut(s,mk,pubKey,data),
+      ABS_MigrateKey(mk,pubKey,data) : migrateKeyOut(s,mk,pubKey,data),
 %       ABS_Sign(k,a) : signOut(s,k,a),
       ABS_CreateEndorsementKeyPair(n,k) : createEndorsementKeyPairOut(s,n,k),
       ABS_ReadPubek(n) : readPubekOut(s,n),
       ABS_MakeIdentity(d,k) : makeIdentityOut(s,d,k),
 %       ABS_ActivateIdentity(a,b) : activateIdentityOut(s,a,b),
-%       ABS_PcrRead(ind) : pcrReadOut(s,ind),
+%       ABS_Extend(n,d) : pcrExtendOut(s,n,d),
+      ABS_PcrRead(ind) : pcrReadOut(s,ind),
       ABS_Quote(k,n,pm) : quoteOut(s,k,n,pm)
 %       ABS_ChangeAuth : changeAuthOut(s),
 %       ABS_certify(aik,cr) : certOut(s,aik,cr),
@@ -1053,12 +1110,12 @@ tpm [ B:TYPE+ % BLOB
       disableForceClear(s) = TRUE
       AND a = OUT_DisableForceClear(TPM_SUCCESS);
 
-  TPM_AuthorizeMigrationKey(migKey:(tpmKey?),migScheme:migrateScheme) : State = 
+  TPM_AuthorizeMigrationKey(migKey:(tpmKey?),migScheme:(tpmMigScheme?)) : State = 
      output(LAMBDA (s:tpmAbsState) :
 	      outputCom(s,ABS_AuthorizeMigrationKey(migKey,migScheme)));
 
   authorize_migration_key_post: THEOREM 
-   FORALL (state:(afterStartup?),k:(tpmKey?),scheme:migrateScheme) : 
+   FORALL (state:(afterStartup?),k:(tpmKey?),scheme:(tpmMigScheme?)) : 
     LET(a,s) = runState(
     	       TPM_AuthorizeMigrationKey(k,scheme))
 	       (state) IN
@@ -1069,56 +1126,57 @@ tpm [ B:TYPE+ % BLOB
 				  TPM_SUCCESS)
       AND s=state
 
-  TPM_CreateMigrationBlob(pk:(asymKey?),m:migrateScheme,mka:(tpmMigKeyAuth?),
+  TPM_CreateMigrationBlob(pk:(tpmKey?),m:migrateScheme,mka:(tpmMigKeyAuth?),
 			    d:(tpmKey?)) : State = 
      output(LAMBDA (s:tpmAbsState) :
 	      outputCom(s,ABS_CreateMigrationBlob(pk,m,mka,d)));
 
-%   create_mig_blob_post: THEOREM 
-%    FORALL (state:(afterStartup?),pk:(asymKey?),m:migrateScheme,
-%    	   mka:(tpmMigKeyAuth?),d:(tpmKey?)) : 
-%     LET(a,s) = runState(
-%     	       TPM_CreateMigrationBlob(pk,m,mka,d))
-% 	       (state) IN
-%       IF storage?(keyUsage(pk))
-%       THEN IF pk=key(d) 
-%       	   THEN IF checkMigKeyAuth?(state,mka)
-% 	        THEN CASES m OF
-%       	   	   migrate : a=OUT_Error(TPM_INSTALL_DISABLED),%TODO: not correct in any sense.
-%       		   rewrap  : a=tpmKey(k,wrapped(migKey(mka),clear),TPM_SUCCESS)
-% 		   %ELSE OUT_Error(TPM_BAD_PARAMETER)
-% 		   ENDCASES	
-% 	        ELSE a=OUT_Error(TPM_INSTALL_DISABLED)%TODO: not at all correct.
-% 	        ENDIF
-% 	   ELSE a=OUT_Error(TPM_DECRYPT_ERROR)
-% 	   ENDIF
-%       ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
-%       ENDIF
-%       AND s=state 
+  create_mig_blob_post: THEOREM 
+   FORALL (state:(afterStartup?),pk:(tpmKey?),m:migrateScheme,
+		mka:(tpmMigKeyAuth?),d:(tpmKey?)) : 
+    LET(a,s) = runState(
+    	       TPM_CreateMigrationBlob(pk,m,mka,d))
+	       (state) IN
+    IF storage?(keyUsage(pk))
+    THEN CASES d OF
+      	 tpmKey(k,ku,kf,pcr,crs) :
+	   IF key(pk)=k 
+      	   THEN IF checkMigKeyAuth?(state,mka)
+	        THEN CASES m OF
+      	   	     migrate : a=OUT_Error(TPM_INSTALL_DISABLED), % TODO: not at all correct
+		     rewrap  : a=OUT_CreateMigrationBlob(0,
+							 tpmKey(k,ku,kf,pcr,
+							   wrapped(key(key(mka)),clear)),
+		     					 TPM_SUCCESS)
+		     %ELSE OUT_Error(TPM_BAD_PARAMETER)
+		     ENDCASES	
+	        ELSE a=OUT_Error(TPM_RESOURCES) % TODO: not at all correct.
+	        ENDIF 
+      	   ELSE a=OUT_Error(TPM_DECRYPT_ERROR) % TODO: not correct?
+	   ENDIF
+	ELSE a=OUT_Error(TPM_WRONG_ENTITYTYPE) % TODO: not correct?
+	ENDCASES
+      ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
+      ENDIF
+      AND s=state 
 
-%   TPM_ConvertMigrationBlob(k:(asymKey?),inData:BLOB) : State =
-%      output(OUT_Nothing,
-% 	    (LAMBDA (s:tpmAbsState) :
-% 	      outputCom(s,ABS_ConvertMigrationBlob(k,inData))));
+%   TPM_ConvertMigrationBlob(k:(tpmKey?),inData:tpmData,rand:int) : State =
+%      output(LAMBDA (s:tpmAbsState) :
+% 	      outputCom(s,ABS_ConvertMigrationBlob(k,inData,rand)));
 
-%   TPM_MigrateKey(migKey,pubKey:(asymKey?),data:BLOB) : State =
-%      output(OUT_Nothing,
-% 	    (LAMBDA (s:tpmAbsState) :
-% 	      outputCom(s,ABS_MigrateKey(migKey,pubKey,data))));
+  TPM_MigrateKey(migKey,pubKey:(tpmKey?),data:tpmData) : State =
+     output(LAMBDA (s:tpmAbsState) :
+	      outputCom(s,ABS_MigrateKey(migKey,pubKey,data)));
 
-%   migrate_key_post: THEOREM 
-%    FORALL (state:(afterStartup?),mk,k:(asymKey?),d:(encryptBlob?)) : 
-%     LET(a,s) = runState(
-%     	       TPM_MigrateKey(mk,k,d))
-% 	       (state) IN
-%     IF migrate?(keyUsage(mk))
-%       THEN a = 
-%       	   CASES blob(d) OF
-%       	     keyBlob(key) : tpmKey(key,wrapped(k,clear),TPM_SUCCESS)
-% 	     ELSE OUT_Error(TPM_INSTALL_DISABLED) %%TODO: not correct!
-% 	   ENDCASES
-%       ELSE a = OUT_Error(TPM_INVALID_KEYUSAGE)
-%     ENDIF
+  migrate_key_post: THEOREM 
+   FORALL (state:(afterStartup?),mk,k:(tpmKey?),d:tpmData) : 
+    LET(a,s) = runState(
+    	       TPM_MigrateKey(mk,k,d))
+	       (state) IN
+    IF migrate?(keyUsage(mk))
+      THEN a = OUT_MigrateKey(encrypt(key(k),decrypt(key(mk),d)),TPM_SUCCESS)
+      ELSE a = OUT_Error(TPM_INVALID_KEYUSAGE)
+    ENDIF
   
   %% Wrap new key k with parent key
   TPM_CreateWrapKey(parent,keyInfo:(tpmKey?)) : State = 
@@ -1130,24 +1188,50 @@ tpm [ B:TYPE+ % BLOB
 	      );
 
   create_wrap_key_post: THEOREM 
-    FORALL (p,keyInfo:(tpmKey?),state:(afterStartup?)) : 
+    FORALL (state:(afterStartup?),p,keyInfo:(tpmKey?)) : 
       LET (a,s) = runState(
      	          TPM_CreateWrapKey(p,keyInfo))
 		  (state) IN
-      IF storage?(keyUsage(p)) 
-      	 AND migratable(keyFlags(p))=FALSE AND migratable(keyFlags(keyInfo))=TRUE 
-	 AND not(identity?(keyUsage(keyInfo)) or authChange?(keyUsage(keyInfo)))
-	 AND migrateAuthority(keyFlags(keyInfo))=FALSE
-        THEN LET wk : (asymKey?) = asymKey(keyGenCnt(state)) IN
-             	 a = OUT_CreateWrapKey(tpmKey(wk,
+    IF storage?(keyUsage(p)) 
+    THEN IF migratable(keyFlags(p))=TRUE AND migratable(keyFlags(keyInfo))=FALSE
+    	 THEN a = OUT_Error(TPM_INVALID_KEYUSAGE)
+      	      AND s = state
+	 ELSE IF identity?(keyUsage(keyInfo)) or authChange?(keyUsage(keyInfo))
+	      THEN a = OUT_Error(TPM_INVALID_KEYUSAGE)
+      	      	   AND s = state
+	      ELSE IF migrateAuthority(keyFlags(keyInfo))=TRUE
+	      	   THEN a = OUT_Error(TPM_INVALID_KEYUSAGE)
+      	     	   	AND s = state
+		   ELSE a = OUT_CreateWrapKey(tpmKey(asymKey(keyGenCnt(state)),
 					      keyUsage(keyInfo),
 					      keyFlags(keyInfo),
 					      PCRInfo(keyInfo),
 					      wrapped(key(p),clear)),TPM_SUCCESS)
+      	     		AND s = state WITH [`keyGenCnt := keyGenCnt(state)+1]
+		   ENDIF
+	      ENDIF
+	 ENDIF
+    ELSE a = OUT_Error(TPM_INVALID_KEYUSAGE)
+      	 AND s = state
+    ENDIF
+
+  create_wrap_key_pred_test: THEOREM
+    FORALL (state:(afterStartup?),p,k:(tpmKey?)) :
+      LET (a,s) = runState(
+    		    TPM_CreateWrapKey(p,k))
+		    (state) IN
+	IF createWrapKey?(p,k)
+	THEN LET wk : (asymKey?) = asymKey(keyGenCnt(state)) IN
+             a = OUT_CreateWrapKey(tpmKey(wk,
+					  keyUsage(k),
+					  keyFlags(k),
+					  PCRInfo(k),
+					  wrapped(key(p),clear)),
+				   TPM_SUCCESS)
       	     AND s = state WITH [`keyGenCnt := keyGenCnt(state)+1]
-        ELSE 	 a = OUT_Error(TPM_INVALID_KEYUSAGE)
+        ELSE a = OUT_Error(TPM_INVALID_KEYUSAGE)
       	     AND s = state
-      ENDIF
+        ENDIF	
 
   %% Install key k in a TPM
   TPM_LoadKey2(p:(tpmKey?),k:(wrapKey?)):State =
@@ -1162,38 +1246,38 @@ tpm [ B:TYPE+ % BLOB
     		    TPM_LoadKey2(p,k))
 		    (state) IN
     IF storage?(keyUsage(p))
-      THEN IF key(p) = parentKey(k)
-      	     THEN LET usage = keyUsage(k) IN
-	     	  CASES usage OF
-		    identity: IF migratable(keyFlags(k))=FALSE
-		    	        THEN a=OUT_LoadKey2(k,TPM_SUCCESS)
-				     AND s=state with [`keys:=addKey(k,srk(state),keys(state),pcrs(state))]
-				ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
-				     AND s=state
-			      ENDIF,
-		    authChange: a=OUT_Error(TPM_INVALID_KEYUSAGE)
-		    		AND s=state
-		    ELSE a=OUT_LoadKey2(k,TPM_SUCCESS)
-		    	 AND s=state with [`keys:=addKey(k,srk(state),keys(state),pcrs(state))]
-		  ENDCASES
-	     ELSE a=OUT_Error(TPM_DECRYPT_ERROR) %% Might not be right.
-	     	  AND s=state
-	   ENDIF
-      ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
-      	   AND s=state
+    THEN IF key(p) = parentKey(k)
+    	 THEN LET usage = keyUsage(k) IN
+	      CASES usage OF
+	      identity: IF migratable(keyFlags(k))=FALSE
+	      		THEN a=OUT_LoadKey2(k,TPM_SUCCESS)
+			     AND s=state with [`keys:=addKey(k,srk(state),keys(state),pcrs(state))]
+			ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
+			     AND s=state
+			ENDIF,
+	      authChange: a=OUT_Error(TPM_INVALID_KEYUSAGE)
+	      		  AND s=state
+	      ELSE a=OUT_LoadKey2(k,TPM_SUCCESS)
+	      	   AND s=state with [`keys:=addKey(k,srk(state),keys(state),pcrs(state))]
+	      ENDCASES
+	 ELSE a=OUT_Error(TPM_DECRYPT_ERROR) %% Might not be right.
+	      AND s=state
+	 ENDIF
+    ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
+    	 AND s=state
     ENDIF;
 
-  loadKey?(p:(tpmKey?),k:(wrapKey?)):bool=
+  loadKey2?(p:(tpmKey?),k:(wrapKey?)):bool=
     storage?(keyUsage(p))
       AND key(p)=parentKey(k) AND
       	      LET usage = keyUsage(k) IN
 	     	  CASES usage OF
-		    identity: IF migratable(keyFlags(k))=FALSE
-		    	        THEN TRUE
-				ELSE FALSE
-			      ENDIF,
-		    authChange: FALSE
-		    ELSE TRUE
+		  identity: IF migratable(keyFlags(k))=FALSE
+		  	    THEN TRUE
+			    ELSE FALSE
+			    ENDIF,
+		  authChange: FALSE
+		  ELSE TRUE
 		  ENDCASES
 
   load_key_pred_test: THEOREM
@@ -1201,14 +1285,14 @@ tpm [ B:TYPE+ % BLOB
       LET (a,s) = runState(
     		    TPM_LoadKey2(p,k))
 		    (state) IN
-	IF loadKey?(p,k)
-	  THEN a=OUT_LoadKey2(k,TPM_SUCCESS)
-	       AND s=state with [`keys:=addKey(k,srk(state),keys(state),pcrs(state))]
-	  ELSE IF storage?(keyUsage(p)) AND key(p)/=parentKey(k) 
-	         THEN a=OUT_Error(TPM_DECRYPT_ERROR)
-		 ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
-	       ENDIF
-	       AND s=state
+	IF loadKey2?(p,k)
+	THEN a=OUT_LoadKey2(k,TPM_SUCCESS)
+	     AND s=state with [`keys:=addKey(k,srk(state),keys(state),pcrs(state))]
+	ELSE IF storage?(keyUsage(p)) AND key(p)/=parentKey(k) 
+	     THEN a=OUT_Error(TPM_DECRYPT_ERROR)
+	     ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
+	     ENDIF
+	     AND s=state
 	ENDIF
 
   %% A key is installed if it is wrapped with an installed key
@@ -1219,7 +1303,7 @@ tpm [ B:TYPE+ % BLOB
 %       	  	  TPM_LoadKey2(p,k)
 % 		  >> TPM_LoadKey2(childKey(k),j))
 % 		  (state) IN
-% 	p=srk(state) AND loadKey?(p,k) AND loadKey?(childKey(k),j)
+% 	p=srk(state) AND loadKey2?(p,k) AND loadKey2?(childKey(k),j)
 % 		=> member(childKey(j),keys(s));
 
 
@@ -1234,7 +1318,7 @@ tpm [ B:TYPE+ % BLOB
 % 			   ELSE TPM_Noop(a)
 % 			 ENDCASES))
 % 		    (state) IN 
-%       checkKey(p,srk(state),keys(state)) AND loadKey?(p,wrappedKey(memory(s)(0))) =>
+%       checkKey(p,srk(state),keys(state)) AND loadKey2?(p,wrappedKey(memory(s)(0))) =>
 %      		%member(asymKey(keyGenCnt(state),keyUsage(k),keyFlags(k)),keys(s))
 %       out = OUT_LoadKey2(wrappedKey(memory(s)(0)),TPM_SUCCESS) 
      
@@ -1402,18 +1486,17 @@ tpm [ B:TYPE+ % BLOB
 % % TODO: Need to test to make sure aik parameter is actual aik?
 
 	           	  
-%   %% Output PCR(i)
-%   TPM_PcrRead(i:PCRINDEX) : State = 
-%      output(OUT_Nothing,
-%             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_PcrRead(i))));
+  %% Output PCR(i)
+  TPM_PcrRead(i:PCRINDEX) : State = 
+     output(LAMBDA (s:tpmAbsState) : outputCom(s,ABS_PcrRead(i)));
 
-%   pcr_read_post: THEOREM
-%     FORALL (i:PCRINDEX,state:(afterStartup?)) : 
-%       LET(a,s) = runState(
-%      		  TPM_PcrRead(i))
-% 		  (state) IN
-% 	a = outPCR(pcrs(s)(i),TPM_SUCCESS)
-% 	AND s = state;
+  pcr_read_post: THEOREM
+    FORALL (state:(afterStartup?),i:PCRINDEX) : 
+      LET(a,s) = runState(
+     		  TPM_PcrRead(i))
+		  (state) IN
+	a = OUT_PCRRead(pcrs(s)(i),TPM_SUCCESS)
+	AND s = state;
 
 
   %% Generate and output a quote
@@ -1503,106 +1586,110 @@ tpm [ B:TYPE+ % BLOB
 	
 
 
-%   %% Seal and output a blob (should be binary or data)
-%   TPM_Seal(k:(asymKey?),data:BLOB) : State = 
-%      output(OUT_Nothing,
-%             (LAMBDA (s:tpmAbsState): outputCom(s,ABS_Seal(k,data))));
+  %% Seal and output a blob (should be binary or data)
+  TPM_Seal(k:(tpmKey?),encAuth:(tpmAuthData?),pcrInfo:(tpmPCRInfo?),inData:tpmData) : State = 
+     output(LAMBDA (s:tpmAbsState): outputCom(s,ABS_Seal(k,encAuth,pcrInfo,inData)));
 
-%   %% Seal a secret successfully
-%   seal_post: THEOREM
-%     FORALL (k:(asymKey?),b:BLOB,state:(afterStartup?)) :
-%       LET (a,s) = runState(
-%      	 	  TPM_Seal(k,b))
-%  		  (state) IN
-% 	IF nothing?(b) 
-% 	  THEN a = OUT_Error(TPM_BAD_PARAMETER) 
-% 	  ELSE a = outBlob(sealBlob(k,s`pcrs,b),TPM_SUCCESS)
-% 	ENDIF
-% 	AND s = state
+  %% Seal a secret successfully
+  seal_post: THEOREM
+    FORALL (state:(afterStartup?),k:(tpmKey?),e:(tpmAuthData?),p:(tpmPCRInfo?),d:tpmData) :
+      LET (a,s) = runState(
+     	 	  TPM_Seal(k,e,p,d))
+ 		  (state) IN
+      IF storage?(keyUsage(k)) AND not(migratable(keyFlags(k)))
+	  THEN a = OUT_Seal(tpmStoredData(p,tpmSealedData(e,
+							  tpmProof(permData(s)),
+							  tpmDigest(cons(p,null),clear),
+							  d),
+					  encrypted(key(k),clear)),
+			    TPM_SUCCESS)
+	  ELSE a = OUT_Error(TPM_INVALID_KEYUSAGE) 
+	ENDIF
+	AND s = state
+
+  %% Unseal and output a blob (should be binary or data)
+  TPM_Unseal(p:(tpmKey?),d:(tpmStoredData?)) : State = 
+     output(LAMBDA (s:tpmAbsState): outputCom(s,ABS_Unseal(p,d)));
+
+  unseal_post: THEOREM
+    FORALL (state:(afterStartup?),p:(tpmKey?),d:(tpmStoredData?)) :
+      LET (a,s) = runState(
+                    TPM_Unseal(p,d))
+		    (state) IN
+      IF storage?(keyUsage(p)) AND not(migratable(keyFlags(p)))
+      THEN IF encrypted?(crs(d)) AND key(crs(d))=key(p)
+      	   THEN IF tpmProof(encData(d))=tpmProof(permData(s)) AND 
+	   	   storedDigest(encData(d))=tpmDigest(cons(sealInfo(d),null),clear)
+		THEN a=OUT_Unseal(data(encData(d)),TPM_SUCCESS)
+		ELSE a=OUT_Error(TPM_NOTSEALED_BLOB)
+		ENDIF
+	   ELSE a=OUT_Error(TPM_DECRYPT_ERROR)
+	   ENDIF
+      ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
+      ENDIF 
+      AND s=state
+
+  unseal_prev_post: THEOREM
+    FORALL (state:(afterStartup?),k:(tpmKey?),e:(tpmAuthData?),p:(tpmPCRInfo?),d:tpmData) :
+      LET (a,s) = runState(
+      	  	  TPM_Seal(k,e,p,d)
+		  >>= (LAMBDA (a:tpmAbsOutput) : 
+		       CASES a OF
+		         OUT_Seal(s,m) : TPM_Unseal(k,s) 
+			 ELSE TPM_Noop(a)
+		       ENDCASES))
+		  (state) IN  
+	storage?(keyUsage(k)) and not(migratable(keyFlags(k))) 
+	   => a = OUT_Unseal(d,TPM_SUCCESS)
+	AND s = state
 
 
-%   %% Unseal and output a blob (should be binary or data)
-%   TPM_Unseal(d:(sealBlob?),k:(asymKey?)) : State = 
-%      output(OUT_Nothing,
-%             (LAMBDA (s:tpmAbsState): outputCom(s,ABS_Unseal(d,k))));
+  %% UnBind encrypted blob (decrypt)
+  TPM_UnBind(keyHandle:(tpmKey?),inData:(tpmBoundData?)) : State = 
+     output(LAMBDA (s:tpmAbsState): outputCom(s,ABS_UnBind(keyHandle,inData)));
 
-%   unseal_post: THEOREM
-%     FORALL (j,k:(asymKey?),b:BLOB,pcrs:PCRS,state:(afterStartup?)) :
-%       LET (out,s) = runState(
-%                     TPM_Unseal(sealBlob(k,pcrs,b),j))
-% 		    (state) IN
-%       IF j=private(k) AND pcrs=pcrs(s) AND not(nothing?(b))
-%          THEN out=outBlob(b,TPM_SUCCESS)
-%          ELSE out=OUT_Error(TPM_NOTSEALED_BLOB) 
-%       ENDIF 
-%       AND s = state;  
-
-%   unseal_prev_post: THEOREM
-%     FORALL (k,j:(asymKey?),b:BLOB,pcrs:PCRS,state:(afterStartup?)) :
-%       LET (out,s) = runState(
-%       	  	  TPM_Seal(k,b)
-% 		  >>= (LAMBDA (a:tpmAbsOutput) : 
-% 		       CASES a OF
-% 		         outBlob(obl,m) : CASES obl OF
-% 			 		    sealBlob(key,pcrs,blob) :
-% 		       			    	TPM_Unseal(obl(a),j) 
-% 		       				ELSE TPM_Noop(a)
-% 						ENDCASES
-% 			 ELSE TPM_Noop(a)
-% 		       ENDCASES))
-% 		  (state) IN  
-% 	j=private(k) AND pcrs=pcrs(s) AND not(nothing?(b))
-% 	   => out = outBlob(b,TPM_SUCCESS)      
-% 	AND s = state
-
-
-%   %% UnBind encrypted blob (decrypt)
-%   TPM_UnBind(d:(encryptBlob?),k:(asymKey?)) : State = 
-%      output(OUT_Nothing,
-% 	    (LAMBDA (s:tpmAbsState): outputCom(s,ABS_UnBind(d,k))));
-
-%   %% UnBind an encrypted blob successfully
-%   unBind_post: THEOREM
-%     FORALL (k,j:(asymKey?),b:BLOB,state:(afterStartup?)) : 
-%       LET (a,s) = runState(
-% 		  TPM_UnBind(encryptBlob(j,b),k))
-% 		  (state) IN
-%       j = private(k) =>
-%          a = outBlob(b,TPM_SUCCESS)
-%      AND s = state
+  %% UnBind an encrypted blob successfully
+  unBind_post: THEOREM
+    FORALL (state:(afterStartup?),k:(tpmKey?),d:(tpmBoundData?)) : 
+      LET (a,s) = runState(
+		  TPM_UnBind(k,d))
+		  (state) IN
+      IF legacy?(keyUsage(k)) OR bind?(keyUsage(k))
+      THEN IF key(crs(d))=key(k) 
+    	   THEN a=OUT_UnBind(payloadData(d),TPM_SUCCESS)
+	   ELSE a=OUT_Error(TPM_DECRYPT_ERROR) %unsure if this is correct
+	   ENDIF
+      ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
+      ENDIF  	    
+      AND s = state
 
 	
-%   Tspi_Data_Bind(k:KEY,d:BLOB) : State = 
-%      output(OUT_Nothing,
-%             (LAMBDA (s:tpmAbsState): outputCom(s,ABS_Data_Bind(k,d))));
+  Tspi_Data_Bind(k:(tpmKey?),d:tpmData) : State = 
+     output(LAMBDA (s:tpmAbsState): outputCom(s,ABS_Data_Bind(k,d)));
 
-%   %% UnBind an encrypted blob successfully
-%   unBind_prev_post: THEOREM 
-%     FORALL (d:BLOB,k,j,jInfo:(asymKey?),state:tpmAbsState) : 
-%       LET (a,s) = runState(
-%                   TPM_Init
-%       		  >> TPM_Startup(TPM_ST_CLEAR)
-% 		  >> CPU_senter
-% 		  >> CPU_sinit
-% 		  >> TPM_CreateWrapKey(j,jInfo)
-% 		  >>= LAMBDA (a:tpmAbsOutput) : 
-% 		      CASES a OF 
-% 		        wrapKey?(a) : TPM_LoadKey2(j,key(a)) 
-% 			ELSE TPM_Noop(a) 
-% 			ENDCASES
-% 		  >> Tspi_Data_Bind(k,d)
-% 		  >>= LAMBDA (a:tpmAbsOutput) : 
-% 		      CASES a OF
-% 		        outBlob(obl,m) : CASES obl OF
-% 				           encryptBlob(key,blob) : 
-% 					   	TPM_UnBind(obl,private(k)) 
-% 						ELSE TPM_Noop(a) ENDCASES
-% 			ELSE TPM_Noop(a) 
-% 		      ENDCASES)
-%  		  (state) IN 
-%  	  j = srk(s) OR  member(j,keys(s)) => 
-% 	  a = outBlob(d,TPM_SUCCESS)
-	
+  %% UnBind an encrypted blob successfully
+  unBind_prev_post: THEOREM 
+    FORALL (state:(afterStartup?),d:tpmData,p,k:(tpmKey?)) : 
+      LET (a,s) = runState(
+		  TPM_CreateWrapKey(p,k)
+		  >>= LAMBDA (a:tpmAbsOutput) : 
+		      CASES a OF 
+		        OUT_CreateWrapKey(k,m) : TPM_LoadKey2(p,k) 
+			ELSE TPM_Noop(a) 
+			ENDCASES
+		  >> Tspi_Data_Bind(k,d)
+		  >>= LAMBDA (a:tpmAbsOutput) : 
+		      CASES a OF
+		        OUT_Data_Bind(d) : TPM_UnBind(k,d) 
+			ELSE TPM_Noop(a) 
+		      ENDCASES)
+ 		  (state) IN 
+	  createWrapKey?(p,k) AND loadKey2?(p,k) AND unBind?(k,d) =>
+	  a = OUT_UnBind(d,TPM_SUCCESS) 
+	  AND
+	  s = state WITH [`keyGenCnt := keyGenCnt(state)+1]
+	    %`keys := addKey(k,srk(state),keys(state),pcrs(state)),
+	      	    	  
 
   %% Monotonicity of locality
   %% Assuming that we're not resetting or powering on, locality goes down
@@ -1632,47 +1719,47 @@ tpm [ B:TYPE+ % BLOB
           ABS_CreateEndorsementKeyPair?(c) ) =>
         ek(s) = ek(executeCom(s,c));
 
-%   keys_unchanged: THEOREM 
-%     FORALL (s:tpmAbsState,c:tpmAbsInput) :
-%       not(ABS_Startup?(c) or ABS_Init?(c) or 
-%     	  ABS_LoadKey2?(c) or ABS_ActivateIdentity?(c) or
-% 	  ABS_OwnerClear?(c) or ABS_ForceClear?(c)) =>
-%       keys(s) = keys(executeCom(s,c));
+  keys_unchanged: THEOREM 
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c) or 
+    	  ABS_LoadKey2?(c) or ABS_ActivateIdentity?(c) or
+	  ABS_OwnerClear?(c) or ABS_ForceClear?(c)) =>
+      keys(s) = keys(executeCom(s,c));
 
-%   postInit_unchanged: THEOREM 
-%     FORALL (s:tpmAbsState,c:tpmAbsInput) :
-%       not(ABS_Startup?(c) or ABS_Init?(c)) =>
-%         postInit(s) = postInit(executeCom(s,c));
+  postInit_unchanged: THEOREM 
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c)) =>
+        postInit(s) = postInit(executeCom(s,c));
 
-%   disableForceClear_unchanged: THEOREM
-%     FORALL (s:tpmAbsState,c:tpmAbsInput) :
-%       not(ABS_Startup?(c) or ABS_Init?(c) or
-%       	  ABS_DisableForceClear?(c)) =>
-%         disableForceClear(s) = disableForceClear(executeCom(s,c));
+  disableForceClear_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c) or
+      	  ABS_DisableForceClear?(c)) =>
+        disableForceClear(s) = disableForceClear(executeCom(s,c));
 
-%   restore_unchanged: THEOREM
-%     FORALL (s:tpmAbsState,c:tpmAbsInput) :
-%       not(ABS_Startup?(c) or ABS_Init?(c) or
-%       	  ABS_SaveState?(c)) =>
-%         restore(s) = restore(executeCom(s,c));
+  restore_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c) or
+      	  ABS_SaveState?(c)) =>
+        restore(s) = restore(executeCom(s,c));
 
-%   memory_unchanged: THEOREM
-%     FORALL (s:tpmAbsState,c:tpmAbsInput) :
-%       not(ABS_Startup?(c) or ABS_Init?(c) or
-%       	  ABS_save?(c)) =>
-%         memory(s) = memory(executeCom(s,c));
+  memory_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c) or
+      	  ABS_save?(c)) =>
+        memory(s) = memory(executeCom(s,c));
 
-%   permFlags_unchanged: THEOREM
-%     FORALL (s:tpmAbsState,c:tpmAbsInput) :
-%       not(ABS_Startup?(c) or ABS_Init?(c) or
-%           ABS_DisableOwnerClear?(c) or ABS_ForceClear?(c) or
-% 	  ABS_OwnerClear?(c) or ABS_TakeOwnership?(c)) =>
-%         permFlags(s) = permFlags(executeCom(s,c));
+  permFlags_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c) or
+          ABS_DisableOwnerClear?(c) or ABS_ForceClear?(c) or
+	  ABS_OwnerClear?(c) or ABS_TakeOwnership?(c)) =>
+        permFlags(s) = permFlags(executeCom(s,c));
 
-%   permData_unchanged: THEOREM
-%     FORALL (s:tpmAbsState,c:tpmAbsInput) :
-%       not(ABS_Startup?(c) or ABS_Init?(c)) =>
-%         permData(s) = permData(executeCom(s,c));
+  permData_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c)) =>
+        permData(s) = permData(executeCom(s,c));
   
 
 %   %% Prove that skipping SENTER is detectable by showing the quote following
