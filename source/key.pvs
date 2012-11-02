@@ -138,14 +138,13 @@ key [DVAL,HVAL:TYPE+] : THEORY
 		  data:tpmData) : tpmSealedData?
     
     %% Session keys are simply symetric keys				(9.4)
-    tpmSessKey(skey:(symKey?),crs:CRYPTOSTATUS) : tpmSessKey?
+    tpmSessKey(skey:KVAL,crs:CRYPTOSTATUS) : tpmSessKey?
     
     %% Bound data							(9.5)
     tpmBoundData(payloadData:tpmData,crs:CRYPTOSTATUS) : tpmBoundData?
 
     %% Assymetric keys used by the TPM - wrapped, signed, encrypted	(10.3)
     tpmKey(key:KVAL,
-    tpmKey(key:(asymKey?),
 	   keyUsage:KEY_USAGE,
 	   keyFlags:KEY_FLAGS,
 	   PCRInfo:list[PCR],
@@ -161,39 +160,35 @@ key [DVAL,HVAL:TYPE+] : THEORY
     %  signed/certified key: tpmKey(k,signed(private(j),clear))
     %  clear key signed by private j
 
-    %% Store Pub Key								(10.4)
-    tpmStorePubkey(key:(asymKey?)):tpmStorePubkey?
-    %% Pub Key (used for ek, srk?)						(10.5)
+    %% Store Pub Key							(10.4)
+    tpmStorePubkey(key:KVAL):tpmStorePubkey?
+    %% Pub Key (used for ek, srk?)					(10.5)
     tpmPubkey(pubKey:(tpmStorePubkey?)):tpmPubkey?
-    %% Store Asym Key								(10.6)
+    %% Store Asym Key							(10.6)
     tpmStoreAsymkey(usageAuth:(tpmSecret?),migrationAuth:(tpmSecret?),
 	pubDataDigest:(tpmDigest?),privKey:(tpmStorePrivkey?)):tpmStoreAsymkey?
 
-    %% Store Priv Key								(10.7)
-    tpmStorePrivkey(key:(asymKey?)):tpmStorePrivkey?
+    %% Store Priv Key							(10.7)
+    tpmStorePrivkey(key:KVAL):tpmStorePrivkey?
 
-    %% Migrate Asym Key								(10.8)
+    %% Migrate Asym Key							(10.8)
     tpmMigrateAsymkey(usageAuth:(tpmSecret?),pubDataDigest:(tpmDigest?),
 		partPrivKey:(tpmKey?)):tpmMigrateAsymkey?
 
-    %%  Quote including a PCR digest and nonce.					(11.3)
+    %%  Quote including a PCR digest and nonce.				(11.3)
     tpmQuote(digest:list[PCR],nonce:(tpmNonce?),crs:CRYPTOSTATUS) : tpmQuote?
     %  PCRs are not current TPM data, so the digest is over PCR values.
     
-    %% Provides wrapper to each type of structure that will be in use when	(12.1)
+    %% Provides wrapper to each type of structure that will be in use when(12.1)
     %% EK is in use
     tpmEKBlob(blob:tpmData,crs:CRYPTOSTATUS) : tpmEKBlob?
     %% blob must be tpmEKBlobAuth or tpmEKBlobActivate
 
-    %% Certification request sent to Privacy CA					(12.5)
+    %% Certification request sent to Privacy CA				(12.5)
     tpmIdContents(digest:(tpmDigest?),aik:(tpmKey?),crs:CRYPTOSTATUS) : tpmIdContents?
     %  digest should contain CA public key, name, and AIK
     
-    %% Migration authorization data
-    tpmMigKeyAuth(key:(tpmKey?),scheme:migrateScheme,digest:(tpmDigest?),
-                  crs:CRYPTOSTATUS) : tpmMigKeyAuth?
-
-    %% Contains symmetric key to encrypt the identity credential		(12.8)
+    %% Contains symmetric key to encrypt the identity credential	(12.8)
     tpmAsymCAContents(sessK:(tpmSessKey?),idDigest:(tpmDigest?),crs:CRYPTOSTATUS) : 
     	tpmAsymCAContents?
 
@@ -269,6 +264,7 @@ key [DVAL,HVAL:TYPE+] : THEORY
       tpmNonce : tpmNonce,
       tpmMigKeyAuth(k0,s0,d0,crs0) : 
         tpmMigKeyAuth(k0,s0,d0,encryptStatus(k,crs0))
+      ELSE d
     ENDCASES;
 
   % Data decryption
@@ -318,6 +314,7 @@ key [DVAL,HVAL:TYPE+] : THEORY
         THEN tpmMigKeyAuth(k0,s0,d0,decryptStatus(k,crs0)) 
 	ELSE d
 	ENDIF
+      ELSE d
     ENDCASES;
  
   % Lemmas on decryption and encryption
@@ -353,6 +350,7 @@ key [DVAL,HVAL:TYPE+] : THEORY
       tpmNonce : tpmNonce,
       tpmMigKeyAuth(k0,s0,d0,crs0) :
         tpmMigKeyAuth(k0,s0,d0,signStatus(k,crs0))
+      ELSE d
     ENDCASES;
 
   % Data signature checking
@@ -398,7 +396,7 @@ key [DVAL,HVAL:TYPE+] : THEORY
       				     THEN checkSigStatus(k,crs0)
 				     ELSE FALSE
 				     ENDIF
-
+      ELSE FALSE
    ENDCASES;
 
   % Lemmas on data signing and signature checking
@@ -433,11 +431,11 @@ key [DVAL,HVAL:TYPE+] : THEORY
   %% Remove a key - this is not currently
   revokeKey(k:(tpmKey?),ks:KEYSET):KEYSET = remove(key(k),ks);
 
-  child_if_parent: THEOREM FORALL (k:(tpmKey?),srk:KVAL,ks:KEYSET,d:list[PCR]) : 
-    IF d=PCRInfo(k) AND (wrappingKey(k)=srk OR member(wrappingKey(k),ks))
-       THEN member(key(k),addKey(k,ks))
-       ELSE ks=addKey(k,ks)
-    ENDIF;
+  child_if_parent: THEOREM FORALL (k,wk:(tpmKey?),srk:KVAL,ks:KEYSET,d:list[PCR]) : 
+    wrappingKey(k)=key(wk) AND storage?(keyUsage(wk)) AND d=PCRInfo(k)
+    AND (member(wrappingKey(k),ks) OR wrappingKey(k)=key(TPM_KH_SRK))
+       => member(key(k),loadKey(k,wk,ks,d))
+
 
   no_child_if_no_parent: THEOREM FORALL (k:(tpmKey?),ks:KEYSET) :
     NOT(member(key(k),revokeKey(k,ks)));
