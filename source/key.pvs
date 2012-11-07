@@ -24,7 +24,7 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   AUTHDATA : DATATYPE
   BEGIN
     tpmSecret(i:nat) : tpmSecret?
-    tpmEncAuth : tpmEncAuth?
+    tpmEncAuth(i:nat) : tpmEncAuth?
   END AUTHDATA;
 
 
@@ -104,6 +104,8 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
     %% EK type - indicates what type of information the EK is dealing with	(4.11)
     tpmEKBlobActivate(sessK:(tpmSessKey?),idDigest:(tpmDigest?),pcrInfo:(tpmPCRInfo?)) 
     	: tpmEKBlobActivate?
+
+    %%			
     tpmEKBlobAuth(authValue:(tpmSecret?)) : tpmEKBlobAuth?
     
     %% Abitrarily long digest of arbitrary TPM data				(5.4)
@@ -116,12 +118,20 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
     tpmNonce : tpmNonce?
 
     %% Authdata - don't know what it is yet					(5.6)
-    tpmAuthData(tpmAuthData:AUTHDATA,crs:CRYPTOSTATUS) : tpmAuthData?
-    
+    tpmAuthData(authData:AUTHDATA,crs:CRYPTOSTATUS) : tpmAuthData?
+    %% cases authData of
+    %% secret : crs = clear
+    %% encauth : crs = encrypted depending on context   
+
     %% Provides proof that the associated public key has TPM Owner AuthData	(5.12)
     %% to be a migration key
-    tpmMigKeyAuth(key:(tpmKey?),scheme:(tpmMigScheme?),digest:(tpmDigest?),crs:CRYPTOSTATUS) 
+    tpmMigKeyAuth(key:(tpmKey?),scheme:(tpmMigScheme?),digest:(tpmDigest?),
+	crs:CRYPTOSTATUS) 
     		: tpmMigKeyAuth?
+
+    %% Structure signed for certain commands (TPM_ReleaseTransportSigned)	(5.14)
+%     tpmSignInfo(replay:(tpmNonce?),data:tpmData,crs:CRYPTOSTATUS) : tpmSignInfo?
+    %% crs should be signed? %%TODO
     
     %% PCR Info									(8.4)
     %% TODO: This is only a stub.
@@ -165,11 +175,14 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
 
     %% Store Pub Key								(10.4)
     tpmStorePubkey(key:(asymKey?)):tpmStorePubkey?
+
     %% Pub Key (used for ek, srk?)						(10.5)
     tpmPubkey(pubKey:(tpmStorePubkey?)):tpmPubkey?
+
     %% Store Asym Key								(10.6)
     tpmStoreAsymkey(usageAuth:(tpmSecret?),migrationAuth:(tpmSecret?),
-	pubDataDigest:(tpmDigest?),privKey:(tpmStorePrivkey?)):tpmStoreAsymkey?
+	pubDataDigest:(tpmDigest?),privKey:(tpmStorePrivkey?),crs:CRYPTOSTATUS)
+	: tpmStoreAsymkey?
 
     %% Store Priv Key								(10.7)
     tpmStorePrivkey(key:(asymKey?)):tpmStorePrivkey?
@@ -203,6 +216,13 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
     %  This is simply a triple represented below    
   END tpmData;
   
+  activateIdentityBlob?(blob:tpmData) : bool =
+  CASES blob OF
+    tpmEKBlob(b,c) : TRUE,
+    tpmAsymCAContents(k,d,c) : TRUE
+    ELSE FALSE
+  ENDCASES
+
   %% Basic crypto functions.  xStatus functions operate on status
   %% indicators while x functions operate on tpmData.  Need to account
   %% for private and public keys in this, but the basic process seems to be
@@ -213,21 +233,58 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   encrypt(k:(asymKey?),d:tpmData) : tpmData =
     CASES d OF 
       tpmID(id0,crs0) : tpmID(id0,encryptStatus(k,crs0)),
-      tpmAuthData(authdata0,crs0) :
-        tpmAuthData(authdata0,encryptStatus(k,crs0)),
-      tpmSessKey(k0,crs0) :
-        tpmSessKey(k0,encryptStatus(k,crs0)),
-      tpmKey(k0,u0,f0,p0,crs0) :
-        tpmKey(k0,u0,f0,p0,encryptStatus(k,crs0)),
+      tpmMigScheme(m) : tpmMigScheme(m),
+      tpmEKBlobActivate(s0,d0,p0) : tpmEKBlobActivate(s0,d0,p0),
+      tpmEKBlobAuth(a0) : tpmEKBlobAuth(a0),
       tpmDigest(digest0,crs0) :
         tpmDigest(digest0,encryptStatus(k,crs0)),
+      tpmNonce : tpmNonce,
+      tpmAuthData(authdata0,crs0) :
+        tpmAuthData(authdata0,encryptStatus(k,crs0)),
+      tpmMigKeyAuth(k0,s0,d0,crs0) : 
+        tpmMigKeyAuth(k0,s0,d0,encryptStatus(k,crs0)),
+      tpmPCRInfo(p0) : tpmPCRInfo(p0),
+      tpmStoredData(s0,e0,crs0) : tpmStoredData(s0,e0,encryptStatus(k,crs0)),
+      tpmSealedData(a0,t0,s0,d0) : tpmSealedData(a0,t0,s0,d0),
+      tpmSessKey(k0,crs0) :
+        tpmSessKey(k0,encryptStatus(k,crs0)),
+      tpmBoundData(p0,crs0) : tpmBoundData(p0,encryptStatus(k,crs0)),
+      tpmKey(k0,u0,f0,p0,crs0) :
+        tpmKey(k0,u0,f0,p0,encryptStatus(k,crs0)),
+      tpmStorePubkey(k0) : tpmStorePubkey(k0),
+      tpmPubkey(p0) : tpmPubkey(p0),
+      tpmStoreAsymkey(u0,m0,p0,k0,crs0) : 
+      	tpmStoreAsymkey(u0,m0,p0,k0,encryptStatus(k,crs0)),
+      tpmStorePrivkey(k0) : tpmStorePrivkey(k0),
+      tpmMigrateAsymkey(u0,p0,k0) : tpmMigrateAsymkey(u0,p0,k0),
       tpmQuote(n0,p0,crs0) : tpmQuote(n0,p0,encryptStatus(k,crs0)),
+      tpmEKBlob(b0,crs0) : tpmEKBlob(b0,encryptStatus(k,crs0)),
       tpmIdContents(digest0,aik0,crs0) :
         tpmIdContents(digest0,aik0,encryptStatus(k,crs0)),
-      tpmNonce : tpmNonce,
-      tpmMigKeyAuth(k0,s0,d0,crs0) : 
-        tpmMigKeyAuth(k0,s0,d0,encryptStatus(k,crs0))
+      tpmAsymCAContents(s0,i0,crs0) : 
+      	tpmAsymCAContents(s0,i0,encryptStatus(k,crs0))
     ENDCASES;
+
+  noCrypto?(d:tpmData) : bool =
+    CASES d OF
+      tpmMigScheme(m0) : TRUE,
+      tpmEKBlobActivate(k0,i0,p0) : TRUE,
+      tpmEKBlobAuth(a0) : TRUE,
+      tpmNonce : TRUE,
+      tpmPCRInfo(p0) : TRUE,
+      tpmSealedData(a0,p0,s0,d0) : TRUE,
+      tpmStorePubkey(k0) : TRUE,
+      tpmPubkey(k0) : TRUE,
+      tpmStorePrivkey(k0) : TRUE,
+      tpmMigrateAsymkey(u0,d0,p0) : TRUE
+      ELSE FALSE
+    ENDCASES;
+
+%   encrypt(k:(asymKey?),d:tpmData) : tpmData =
+%     IF noCrypto?(d)
+%     THEN d
+%     ELSE d WITH [`crs := encryptStatus(k,crs(d))]
+%     ENDIF;
 
   decryptStatus(k:(asymKey?),c:(encrypted?)) : CRYPTOSTATUS =
     IF private(key(c)) = k THEN crstat(c) ELSE c ENDIF;
@@ -239,9 +296,24 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
         THEN tpmID(id0,decryptStatus(k,crs0))
 	ELSE d	
 	ENDIF,
+      tpmDigest(digest0,crs0) :
+        IF encrypted?(crs0)
+        THEN tpmDigest(digest0,decryptStatus(k,crs0))
+	ELSE d
+	ENDIF,
       tpmAuthData(authdata0,crs0) :
         IF encrypted?(crs0)
         THEN tpmAuthData(authdata0,decryptStatus(k,crs0))
+	ELSE d
+	ENDIF,
+      tpmMigKeyAuth(k0,s0,d0,crs0) :
+        IF encrypted?(crs0)
+        THEN tpmMigKeyAuth(k0,s0,d0,decryptStatus(k,crs0)) 
+	ELSE d
+	ENDIF,
+      tpmStoredData(s0,e0,crs0) : 
+        IF encrypted?(crs0)
+        THEN tpmStoredData(s0,e0,decryptStatus(k,crs0))
 	ELSE d
 	ENDIF,
       tpmSessKey(k0,crs0) : 
@@ -249,14 +321,19 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
         THEN tpmSessKey(k0,decryptStatus(k,crs0))
 	ELSE d
 	ENDIF,
+      tpmBoundData(p0,crs0) : 
+      	IF encrypted?(crs0)
+      	THEN tpmBoundData(p0,decryptStatus(k,crs0))
+	ELSE d
+	ENDIF,
       tpmKey(k0,u0,f0,p0,crs0) : 
       	IF encrypted?(crs0)
       	THEN tpmKey(k0,u0,f0,p0,decryptStatus(k,crs0))
 	ELSE d
 	ENDIF,
-      tpmDigest(digest0,crs0) :
+      tpmStoreAsymkey(u0,m0,p0,k0,crs0) :
         IF encrypted?(crs0)
-        THEN tpmDigest(digest0,decryptStatus(k,crs0))
+        THEN tpmStoreAsymkey(u0,m0,p0,k0,decryptStatus(k,crs0))
 	ELSE d
 	ENDIF,
       tpmQuote(n0,p0,crs0) :
@@ -264,17 +341,22 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
         THEN tpmQuote(n0,p0,decryptStatus(k,crs0))
 	ELSE d
 	ENDIF,
+      tpmEKBlob(b0,crs0) : 
+        IF encrypted?(crs0)
+	THEN tpmEKBlob(b0,decryptStatus(k,crs0))
+	ELSE d
+	ENDIF,
       tpmIdContents(digest0,aik0,crs0) :
         IF encrypted?(crs0)
         THEN tpmIdContents(digest0,aik0,decryptStatus(k,crs0)) 
 	ELSE d
 	ENDIF,
-      tpmNonce : tpmNonce,
-      tpmMigKeyAuth(k0,s0,d0,crs0) :
+      tpmAsymCAContents(k0,d0,crs0) :
         IF encrypted?(crs0)
-        THEN tpmMigKeyAuth(k0,s0,d0,decryptStatus(k,crs0)) 
+	THEN tpmAsymCAContents(k0,d0,decryptStatus(k,crs0))
 	ELSE d
 	ENDIF
+      ELSE d
     ENDCASES;
 
   decrypt_encrypt : THEOREM FORALL (k:(asymKey?),c:CRYPTOSTATUS) : 
@@ -289,23 +371,33 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
   signStatus(k:(asymKey?),c:CRYPTOSTATUS) : (signed?) =
     signed(k,c);
 
+
   sign(k:(asymKey?),d:tpmData) : tpmData =
     CASES d OF 
       tpmID(id0,crs0) : tpmID(id0,signStatus(k,crs0)),
-      tpmAuthData(authdata0,crs0) :
-        tpmAuthData(authdata0,signStatus(k,crs0)),
-      tpmSessKey(k0,crs0) :
-        tpmSessKey(k0,signStatus(k,crs0)),
-      tpmKey(k0,u0,f0,p0,crs0) :
-        tpmKey(k0,u0,f0,p0,signStatus(k,crs0)),
       tpmDigest(digest0,crs0) :
         tpmDigest(digest0,signStatus(k,crs0)),
+      tpmAuthData(authdata0,crs0) :
+        tpmAuthData(authdata0,signStatus(k,crs0)),
+      tpmMigKeyAuth(k0,s0,d0,crs0) :
+        tpmMigKeyAuth(k0,s0,d0,signStatus(k,crs0)),
+      tpmStoredData(s0,e0,crs0) : 
+      	tpmStoredData(s0,e0,signStatus(k,crs0)),
+      tpmSessKey(k0,crs0) :
+        tpmSessKey(k0,signStatus(k,crs0)),
+      tpmBoundData(p0,crs0) : 
+        tpmBoundData(p0,signStatus(k,crs0)),
+      tpmKey(k0,u0,f0,p0,crs0) :
+        tpmKey(k0,u0,f0,p0,signStatus(k,crs0)),
+      tpmStoreAsymkey(u0,m0,p0,k0,crs0) :
+        tpmStoreAsymkey(u0,m0,p0,k0,signStatus(k,crs0)),
       tpmQuote(n0,p0,crs0) : tpmQuote(n0,p0,signStatus(k,crs0)),
+      tpmEKBlob(b0,crs0) : tpmEKBlob(b0,signStatus(k,crs0)),
       tpmIdContents(digest0,aik0,crs0) :
         tpmIdContents(digest0,aik0,signStatus(k,crs0)),
-      tpmNonce : tpmNonce,
-      tpmMigKeyAuth(k0,s0,d0,crs0) :
-        tpmMigKeyAuth(k0,s0,d0,signStatus(k,crs0))
+      tpmAsymCAContents(k0,d0,crs0) :
+        tpmAsymCAContents(k0,d0,signStatus(k,crs0))
+      ELSE d
     ENDCASES;
 
 
@@ -316,41 +408,22 @@ key [DVAL,KVAL,HVAL:TYPE+] : THEORY
     ENDCASES;
 
   checkSig(k:(asymKey?),d:tpmData) : bool =
-    CASES d OF
-      tpmID(id0,crs0) : IF signed?(crs0) 
-                           THEN checkSigStatus(k,crs0)
-			   ELSE FALSE
-			   ENDIF,
-      tpmAuthData(authdata0,crs0) : IF signed?(crs0) 
-                           THEN checkSigStatus(k,crs0)
-			   ELSE FALSE
-			   ENDIF,
-      tpmSessKey(k0,crs0) : IF signed?(crs0)
-                           THEN checkSigStatus(k,crs0)
-			   ELSE FALSE
-			   ENDIF,
-      tpmKey(k0,u0,f0,p0,crs0) : IF signed?(crs0)
-                           THEN checkSigStatus(k,crs0)
-			   ELSE FALSE
-			   ENDIF,
-      tpmDigest(digest0,crs0) : IF signed?(crs0)
-      			           THEN checkSigStatus(k,crs0)
-				   ELSE FALSE
-				   ENDIF,
-      tpmQuote(n0,p0,crs0) : IF signed?(crs0)
-				THEN checkSigStatus(k,crs0)
-				ELSE FALSE
-				ENDIF,
-      tpmIdContents(digest0,aik0,crs0) : IF signed?(crs0)
-      			                 THEN checkSigStatus(k,crs0)
-					 ELSE FALSE
-					 ENDIF,
+    CASES d OF    
+      tpmMigScheme(m0) : FALSE,
+      tpmEKBlobActivate(k0,i0,p0) : FALSE,
+      tpmEKBlobAuth(a0) : FALSE,
       tpmNonce : FALSE,
-      tpmMigKeyAuth(k0,s0,d0,crs0) : IF signed?(crs0)
-      				     THEN checkSigStatus(k,crs0)
-				     ELSE FALSE
-				     ENDIF
-
+      tpmPCRInfo(p0) : FALSE,
+      tpmSealedData(a0,p0,s0,d0) : FALSE,
+      tpmStorePubkey(k0) : FALSE,
+      tpmPubkey(k0) : FALSE,
+      tpmStorePrivkey(k0) : FALSE,
+      tpmMigrateAsymkey(u0,d0,p0) : FALSE
+      ELSE 
+        IF signed?(crs(d))
+      	THEN checkSigStatus(k,crs(d))
+	ELSE FALSE
+	ENDIF
    ENDCASES;
 
   check_sign : THEOREM FORALL (k:(asymKey?),c:CRYPTOSTATUS) : 

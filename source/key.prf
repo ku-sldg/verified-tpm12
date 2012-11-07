@@ -2,8 +2,9 @@
  (double_private 0
   (double_private-1 nil 3560017522 ("" (postpone) nil nil) nil
    shostak))
- (encrypt_TCC1 0
-  (encrypt_TCC1-1 nil 3560527479 ("" (cases-tcc) nil nil) nil nil))
+ (decryptStatus_TCC1 0
+  (decryptStatus_TCC1-1 nil 3561316134 ("" (subtype-tcc) nil nil) nil
+   nil))
  (decrypt_encrypt 0
   (decrypt_encrypt-1 nil 3560017507 ("" (grind))
    ((encryptStatus const-decl "(encrypted?)" key nil)
@@ -32,6 +33,9 @@
     (encryptStatus const-decl "(encrypted?)" key nil)
     (/= const-decl "boolean" notequal nil))
    shostak))
+ (checkSig_TCC1 0
+  (checkSig_TCC1-1 nil 3561308360 ("" (subtype-tcc) nil nil) nil
+   shostak))
  (check_sign 0
   (check_sign-1 nil 3560017507 ("" (grind))
    ((signStatus const-decl "(signed?)" key nil)
@@ -50,7 +54,7 @@
     (signStatus const-decl "(signed?)" key nil))
    shostak))
  (childKey_TCC1 0
-  (childKey_TCC1-1 nil 3560017462 ("" (subtype-tcc) nil nil)
+  (childKey_TCC1-1 nil 3560017462 ("" (tcc))
    ((boolean nonempty-type-decl nil booleans nil)
     (bool nonempty-type-eq-decl nil booleans nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
@@ -66,9 +70,17 @@
     (wrapKey? const-decl "bool" key nil))
    nil))
  (parentKey_TCC2 0
-  (parentKey_TCC2-1 nil 3560622928 ("" (subtype-tcc) nil nil) nil nil))
+  (parentKey_TCC2-1 nil 3561311813
+   ("" (subtype-tcc)
+    (("" (rewrite wrapKey?) (("" (grind) nil nil)) nil)) nil)
+   ((boolean nonempty-type-decl nil booleans nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (NOT const-decl "[bool -> bool]" booleans nil)
+    (tpmData type-decl nil key nil)
+    (wrapKey? const-decl "bool" key nil))
+   nil))
  (checkFullQuote_TCC1 0
-  (checkFullQuote_TCC1-1 nil 3560017462 ("" (subtype-tcc) nil nil)
+  (checkFullQuote_TCC1-1 nil 3560017462 ("" (tcc))
    ((boolean nonempty-type-decl nil booleans nil)
     (bool nonempty-type-eq-decl nil booleans nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
@@ -80,7 +92,7 @@
     (checkSig const-decl "bool" key nil))
    nil))
  (addKey_TCC1 0
-  (addKey_TCC1-1 nil 3560622928 ("" (subtype-tcc) nil nil)
+  (addKey_TCC1-1 nil 3561311813 ("" (subtype-tcc) nil nil)
    ((boolean nonempty-type-decl nil booleans nil)
     (bool nonempty-type-eq-decl nil booleans nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
@@ -92,7 +104,7 @@
     (checkKey const-decl "bool" key nil))
    nil))
  (child_if_parent_TCC1 0
-  (child_if_parent_TCC1-1 nil 3560622928 ("" (subtype-tcc) nil nil)
+  (child_if_parent_TCC1-1 nil 3561311813 ("" (subtype-tcc) nil nil)
    ((boolean nonempty-type-decl nil booleans nil)
     (bool nonempty-type-eq-decl nil booleans nil)
     (NOT const-decl "[bool -> bool]" booleans nil)

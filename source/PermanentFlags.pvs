@@ -2,8 +2,8 @@ PermanentFlags : THEORY
   BEGIN
   
   PermFlags : TYPE = [#
-%     disable : bool
-    ownership : bool
+    disable : bool
+    , ownership : bool
 %     , deactivated : bool
     , readPubek : bool
     , disableOwnerClear : bool
@@ -25,8 +25,8 @@ PermanentFlags : THEORY
   #];
 
   permFlagsInit : PermFlags = (#
-%     disable:=TRUE
-    ownership:=TRUE
+    disable:=TRUE
+    , ownership:=TRUE
 %     , deactivated:=TRUE
     , readPubek:=TRUE
     , disableOwnerClear:=FALSE
