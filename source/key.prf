@@ -1,46 +1,100 @@
 (key
- (double_private 0
-  (double_private-1 nil 3560017522 ("" (postpone) nil nil) nil
+ (double_inverse 0
+  (double_inverse-1 nil 3560197474 ("" (grind) nil nil)
+   ((inverse const-decl "KVAL" key nil)
+    (minus_int_is_int application-judgement "int" integers nil))
    shostak))
- (decryptStatus_TCC1 0
-  (decryptStatus_TCC1-1 nil 3561316134 ("" (subtype-tcc) nil nil) nil
-   nil))
- (decrypt_encrypt 0
-  (decrypt_encrypt-1 nil 3560017507 ("" (grind))
-   ((encryptStatus const-decl "(encrypted?)" key nil)
-    (decryptStatus const-decl "CRYPTOSTATUS" key nil))
+ (inverse_private 0
+  (inverse_private-1 nil 3560197084 ("" (grind) nil nil)
+   ((inverse const-decl "KVAL" key nil)
+    (private const-decl "KVAL" key nil)
+    (public const-decl "KVAL" key nil)
+    (minus_int_is_int application-judgement "int" integers nil))
    shostak))
- (decrypt_equal_keys 0
-  (decrypt_equal_keys-1 nil 3560017507 ("" (grind))
+ (inverse_public 0
+  (inverse_public-1 nil 3560281095 ("" (grind) nil nil)
+   ((public const-decl "KVAL" key nil)
+    (inverse const-decl "KVAL" key nil)
+    (private const-decl "KVAL" key nil))
+   shostak))
+ (equal_inverse 0
+  (equal_inverse-1 nil 3560883973 ("" (grind) nil nil)
    ((boolean nonempty-type-decl nil booleans nil)
     (bool nonempty-type-eq-decl nil booleans nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
-    (KEY type-decl nil key nil)
-    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
+    (number nonempty-type-decl nil numbers nil)
+    (number_field_pred const-decl "[number -> boolean]" number_fields
+     nil)
+    (number_field nonempty-type-from-decl nil number_fields nil)
+    (real_pred const-decl "[number_field -> boolean]" reals nil)
+    (real nonempty-type-from-decl nil reals nil)
+    (rational_pred const-decl "[real -> boolean]" rationals nil)
+    (rational nonempty-type-from-decl nil rationals nil)
+    (integer_pred const-decl "[rational -> boolean]" integers nil)
+    (KVAL type-eq-decl nil key nil)
+    (minus_int_is_int application-judgement "int" integers nil)
+    (inverse const-decl "KVAL" key nil))
+   shostak))
+<<<<<<< HEAD
+ (decryptStatus_TCC1 0
+  (decryptStatus_TCC1-1 nil 3561316134 ("" (subtype-tcc) nil nil) nil
+   nil))
+=======
+>>>>>>> 2e706fd5750807f7da71a66c71f7b25a69f9a3e0
+ (decrypt_encrypt 0
+  (decrypt_encrypt-1 nil 3560012031 ("" (grind) nil nil)
+   ((inverse const-decl "KVAL" key nil)
+    (encryptStatus const-decl "(encrypted?)" key nil)
+    (decryptStatus const-decl "CRYPTOSTATUS" key nil))
+   shostak))
+ (decrypt_equal_keys 0
+  (decrypt_equal_keys-1 nil 3560012037 ("" (grind) nil nil)
+   ((boolean nonempty-type-decl nil booleans nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (NOT const-decl "[bool -> bool]" booleans nil)
+    (number nonempty-type-decl nil numbers nil)
+    (number_field_pred const-decl "[number -> boolean]" number_fields
+     nil)
+    (number_field nonempty-type-from-decl nil number_fields nil)
+    (real_pred const-decl "[number_field -> boolean]" reals nil)
+    (real nonempty-type-from-decl nil reals nil)
+    (rational_pred const-decl "[real -> boolean]" rationals nil)
+    (rational nonempty-type-from-decl nil rationals nil)
+    (integer_pred const-decl "[rational -> boolean]" integers nil)
+    (KVAL type-eq-decl nil key nil) (inverse const-decl "KVAL" key nil)
     (encryptStatus const-decl "(encrypted?)" key nil)
     (decryptStatus const-decl "CRYPTOSTATUS" key nil))
    shostak))
  (no_decrypt_unequal_keys 0
-  (no_decrypt_unequal_keys-1 nil 3560017507
-   ("" (grind) (("" (rewrite "equal_private_equal_key") nil nil)) nil)
-   ((equal_private_equal_key formula-decl nil key nil)
-    (boolean nonempty-type-decl nil booleans nil)
+  (no_decrypt_unequal_keys-1 nil 3560012042 ("" (grind) nil nil)
+   ((boolean nonempty-type-decl nil booleans nil)
     (bool nonempty-type-eq-decl nil booleans nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
-    (KEY type-decl nil key nil)
-    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
-    (decryptStatus const-decl "CRYPTOSTATUS" key nil)
+    (number nonempty-type-decl nil numbers nil)
+    (number_field_pred const-decl "[number -> boolean]" number_fields
+     nil)
+    (number_field nonempty-type-from-decl nil number_fields nil)
+    (real_pred const-decl "[number_field -> boolean]" reals nil)
+    (real nonempty-type-from-decl nil reals nil)
+    (rational_pred const-decl "[real -> boolean]" rationals nil)
+    (rational nonempty-type-from-decl nil rationals nil)
+    (integer_pred const-decl "[rational -> boolean]" integers nil)
+    (KVAL type-eq-decl nil key nil)
+    (minus_int_is_int application-judgement "int" integers nil)
+    (/= const-decl "boolean" notequal nil)
+    (inverse const-decl "KVAL" key nil)
     (encryptStatus const-decl "(encrypted?)" key nil)
-    (/= const-decl "boolean" notequal nil))
+    (decryptStatus const-decl "CRYPTOSTATUS" key nil))
    shostak))
  (checkSig_TCC1 0
   (checkSig_TCC1-1 nil 3561308360 ("" (subtype-tcc) nil nil) nil
    shostak))
  (check_sign 0
-  (check_sign-1 nil 3560017507 ("" (grind))
+  (check_sign-1 nil 3560012098 ("" (grind) nil nil)
    ((signStatus const-decl "(signed?)" key nil)
     (checkSigStatus const-decl "bool" key nil))
    shostak))
+<<<<<<< HEAD
  (check_sign_keys 0
   (check_sign_keys-1 nil 3560017508
    ("" (grind) (("" (rewrite "equal_private_equal_key") nil nil)) nil)
@@ -111,25 +165,24 @@
     (tpmData type-decl nil key nil)
     (wrapKey? const-decl "bool" key nil))
    nil))
+=======
+>>>>>>> 2e706fd5750807f7da71a66c71f7b25a69f9a3e0
  (child_if_parent 0
-  (child_if_parent-1 nil 3560017508 ("" (grind) nil nil)
-   ((boolean nonempty-type-decl nil booleans nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (NOT const-decl "[bool -> bool]" booleans nil)
-    (tpmData type-decl nil key nil)
-    (wrapKey? const-decl "bool" key nil) (KEY type-decl nil key nil)
-    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
-    (parentKey const-decl "(asymKey?)" key nil)
-    (member const-decl "bool" sets nil)
-    (childKey const-decl "(asymKey?)" key nil)
-    (checkKey const-decl "bool" key nil)
+  (child_if_parent-1 nil 3560203723
+   ("" (skosimp)
+    (("" (prop) (("1" (grind) nil nil) ("2" (grind) nil nil)) nil))
+    nil)
+   ((member const-decl "bool" sets nil)
+    (keyFlagsF const-decl "KEY_FLAGS" key nil)
+    (TPM_KH_SRK const-decl "(tpmKey?)" key nil)
+    (installedOrSRK? const-decl "bool" key nil)
     (addKey const-decl "KEYSET" key nil)
+    (loadKey const-decl "KEYSET" key nil)
     (add const-decl "(nonempty?)" sets nil))
    shostak))
  (no_child_if_no_parent 0
-  (no_child_if_no_parent-1 nil 3560017508 ("" (grind))
-   ((childKey const-decl "(asymKey?)" key nil)
-    (revokeKey const-decl "KEYSET" key nil)
+  (no_child_if_no_parent-1 nil 3560012006 ("" (grind) nil nil)
+   ((revokeKey const-decl "KEYSET" key nil)
     (member const-decl "bool" sets nil)
     (remove const-decl "set" sets nil))
    shostak)))
