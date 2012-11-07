@@ -55,8 +55,46 @@
     (:startup tpm-startup-type) ; defined in startup-data.lisp
     ;; protected storage commands
     (:seal asymmetric-key-p blob-p)
-    ;(:unseal
+    ;; (:unseal)
+    ;; (:unbind)
+    ;; (:create-wrap-key)
+    ;; key management commands
 
+; We can observe a key difference between the PVS model and the ACL2 model by
+; looking at the declaration of load-key-2.  In the PVS model, we must declare
+; a return type for the monad.  However, in ACL2, we "get" to skip that syntax.
+; If it turns out we need it, we can make the input signature a list and then
+; also add a list that represents the output signature (to the syntax of
+; defenum+).
+
+    (:load-key-2 wrap-key-p)
+    ;; measurement collection commands
+    ;; (:extend)
+    ;; measurement reporting commands
+    ;; (:pcr-read)
+    ;; (:quote)
+    ;; AIK commands
+    ;; (:make-identity)
+    ;; (:activate-identity)
+    ;; cryptographic commands
+    ;; (:sign)
+    ;; TPM ownership commands
+    ;; (:take-ownership)
+    ;; operational flags commands
+    ;; (:owner-clear)
+    ;; (:force-clear)
+    ;; (:disable-owner-clear)
+    ;; (:disable-force-clear)
+    ;; software commands
+    ;; (:senter)
+    ;; (:sinit)
+    ;; (:save)
+    (:read natp)
+    ;; (:data-bind)
+    ;; ca commands
+    ;; (:certify)
+    ;; invented, imaginary commands
+    ;; (:noop-com)
     ))
 
 (defun tpm-input->command (x)

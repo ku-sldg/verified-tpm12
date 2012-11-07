@@ -461,7 +461,10 @@
   (change-tpm-state tpm-s
                     :memory (update-loc i val (tpm-state->memory tpm-s))))
 
-(defun+ execute-com-post-init (tpm-s cmd)
+#|
+(i-am-here)
+
+(defun+ execute-com-post-init (cmd tpm-s)
   (declare (xargs :guard (and (tpm-state-p tpm-s) 
 
 ; The following commented check of after-init is a precondition for the
@@ -485,3 +488,15 @@
            (otherwise tpm-s)))
         (t tpm-s)))
 
+(defun+ execute-com-startup (cmd tpm-s)
+  (declare (xargs :guard (and (tpm-input-p cmd)
+                              (tpm-state-p tpm-s))))
+  (case (tpm-input->cmd cmd)
+    (:load-key2 (load-key-to-state (tpm-input->arg1 cmd) tpm-s))
+
+;;     (:extend (extend-state 
+;; ; argument order is different here than in pvs model
+;;               (tpm-input->arg1 cmd) 
+;;               tpm-s
+    (otherwise tpm-s)))
+|#

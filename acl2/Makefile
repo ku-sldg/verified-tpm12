@@ -14,6 +14,10 @@ key.cert: crypto.cert
 tpm-input.cert: key.cert
 tpm-input.cert: $(DIRS)
 
+#tpm-output.cert: key.cert
+tpm-output.cert: $(DIRS)
+
+
 perm-data.cert: pcr.cert
 
 tpm.cert: pcr.cert
@@ -24,6 +28,7 @@ tpm.cert: perm-data.cert
 tpm.cert: memory.cert
 tpm.cert: tpm-input.cert
 tpm.cert: startup-data.cert
+tpm.cert: tpm-output.cert
 
 top.cert: tpm.cert 
 
