@@ -947,11 +947,17 @@ tpm [ B:TYPE+ % BLOB
   TPM_Off : State = put(OUT_Nothing,tpmUnknown);
 
   %% Power up the TPM and hit the TPM_Init signal
-  TPM_Init : State = put(OUT_Nothing,tpmPostInit);
+  TPM_Init : State = put(OUT_Init(TPM_SUCCESS),tpmPostInit);
+
+  init_post : THEOREM
+    FORALL (state:tpmAbsState) :
+      LET (a,s) = runState(TPM_Init)(state) IN
+       	  a=OUT_Init(TPM_SUCCESS) AND
+       	  s=tpmPostInit
 
   %% Save the TPM state in preparation for restore at startup
   TPM_SaveState : State =
-    modify(OUT_Nothing,
+    modify(OUT_SaveState(TPM_SUCCESS),
             (LAMBDA (s:tpmAbsState):executeCom(s,ABS_SaveState)))
   
   %% Save state actually saves the correct information.
@@ -971,12 +977,12 @@ tpm [ B:TYPE+ % BLOB
 	      ENDIF
 	AND permFlags(save) = permFlags(s0)
 	AND permData(save) = permData(s0)
+	AND a=OUT_SaveState(TPM_SUCCESS)
 
   %% Start up the TPM after TPM_Init
   TPM_Startup(st:TPM_STARTUP_TYPE) : State =
-    modifyOutput(
-            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_Startup(st))),
-	    (LAMBDA (s:tpmAbsState):outputCom(s,ABS_Startup(st))));
+    modify(OUT_Startup(TPM_SUCCESS),
+            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_Startup(st))));
 
   %% TPM_Startup post condition covering three major cases: clear, restore
   %% state and deactivate.
@@ -1000,6 +1006,7 @@ tpm [ B:TYPE+ % BLOB
 			      AND permData(save) = permData(s),
 	  TPM_ST_DEACTIVATED : postInit(s)
         ENDCASES
+	AND a=OUT_Startup(TPM_SUCCESS)
 
   %% Prove that the only command that can run and do anyting folling a
   %% TPM_Init is TPM_Startup.  If anything else tries to run, nothing happens. 
