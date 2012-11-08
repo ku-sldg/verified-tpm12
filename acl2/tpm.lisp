@@ -461,8 +461,6 @@
   (change-tpm-state tpm-s
                     :memory (update-loc i val (tpm-state->memory tpm-s))))
 
-#|
-(i-am-here)
 
 (defun+ execute-com-post-init (cmd tpm-s)
   (declare (xargs :guard (and (tpm-state-p tpm-s) 
@@ -479,7 +477,7 @@
 ; now.
 
                               (tpm-input-p cmd))
-                  :output (tpm-state-p (execute-com-post-init tpm-s cmd))))
+                  :output (tpm-state-p (execute-com-post-init cmd tpm-s))))
   (cond ((equal (tpm-input->command cmd) :startup)
          (case (tpm-input->arg1 cmd)
            (:tpm-st-clear *tpm-startup*)
@@ -487,6 +485,9 @@
            (:tpm-st-deactivated (deactivate-state tpm-s))
            (otherwise tpm-s)))
         (t tpm-s)))
+
+#|
+(i-am-here)
 
 (defun+ execute-com-startup (cmd tpm-s)
   (declare (xargs :guard (and (tpm-input-p cmd)
