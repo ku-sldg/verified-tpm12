@@ -35,12 +35,6 @@
     (minus_int_is_int application-judgement "int" integers nil)
     (inverse const-decl "KVAL" key nil))
    shostak))
-<<<<<<< HEAD
- (decryptStatus_TCC1 0
-  (decryptStatus_TCC1-1 nil 3561316134 ("" (subtype-tcc) nil nil) nil
-   nil))
-=======
->>>>>>> 2e706fd5750807f7da71a66c71f7b25a69f9a3e0
  (decrypt_encrypt 0
   (decrypt_encrypt-1 nil 3560012031 ("" (grind) nil nil)
    ((inverse const-decl "KVAL" key nil)
@@ -94,79 +88,6 @@
    ((signStatus const-decl "(signed?)" key nil)
     (checkSigStatus const-decl "bool" key nil))
    shostak))
-<<<<<<< HEAD
- (check_sign_keys 0
-  (check_sign_keys-1 nil 3560017508
-   ("" (grind) (("" (rewrite "equal_private_equal_key") nil nil)) nil)
-   ((equal_private_equal_key formula-decl nil key nil)
-    (boolean nonempty-type-decl nil booleans nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (NOT const-decl "[bool -> bool]" booleans nil)
-    (KEY type-decl nil key nil)
-    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
-    (checkSigStatus const-decl "bool" key nil)
-    (signStatus const-decl "(signed?)" key nil))
-   shostak))
- (childKey_TCC1 0
-  (childKey_TCC1-1 nil 3560017462 ("" (tcc))
-   ((boolean nonempty-type-decl nil booleans nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (NOT const-decl "[bool -> bool]" booleans nil)
-    (tpmData type-decl nil key nil)
-    (wrapKey? const-decl "bool" key nil))
-   nil))
- (parentKey_TCC1 0
-  (parentKey_TCC1-1 nil 3560017462 ("" (tcc))
-   ((boolean nonempty-type-decl nil booleans nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (NOT const-decl "[bool -> bool]" booleans nil)
-    (tpmData type-decl nil key nil)
-    (wrapKey? const-decl "bool" key nil))
-   nil))
- (parentKey_TCC2 0
-  (parentKey_TCC2-1 nil 3561311813
-   ("" (subtype-tcc)
-    (("" (rewrite wrapKey?) (("" (grind) nil nil)) nil)) nil)
-   ((boolean nonempty-type-decl nil booleans nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (NOT const-decl "[bool -> bool]" booleans nil)
-    (tpmData type-decl nil key nil)
-    (wrapKey? const-decl "bool" key nil))
-   nil))
- (checkFullQuote_TCC1 0
-  (checkFullQuote_TCC1-1 nil 3560017462 ("" (tcc))
-   ((boolean nonempty-type-decl nil booleans nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (NOT const-decl "[bool -> bool]" booleans nil)
-    (tpmData type-decl nil key nil)
-    (certKey? const-decl "bool" key nil)
-    (tpmQuote? adt-recognizer-decl "[tpmData -> boolean]" key nil)
-    (fullQuote? const-decl "bool" key nil) (KEY type-decl nil key nil)
-    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
-    (checkSig const-decl "bool" key nil))
-   nil))
- (addKey_TCC1 0
-  (addKey_TCC1-1 nil 3561311813 ("" (subtype-tcc) nil nil)
-   ((boolean nonempty-type-decl nil booleans nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (NOT const-decl "[bool -> bool]" booleans nil)
-    (tpmData type-decl nil key nil)
-    (wrapKey? const-decl "bool" key nil) (KEY type-decl nil key nil)
-    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
-    (parentKey const-decl "(asymKey?)" key nil)
-    (member const-decl "bool" sets nil)
-    (checkKey const-decl "bool" key nil))
-   nil))
- (child_if_parent_TCC1 0
-  (child_if_parent_TCC1-1 nil 3561311813 ("" (subtype-tcc) nil nil)
-   ((boolean nonempty-type-decl nil booleans nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (NOT const-decl "[bool -> bool]" booleans nil)
-    (tpmData type-decl nil key nil)
-    (wrapKey? const-decl "bool" key nil))
-   nil))
-=======
->>>>>>> 2e706fd5750807f7da71a66c71f7b25a69f9a3e0
  (child_if_parent 0
   (child_if_parent-1 nil 3560203723
    ("" (skosimp)

@@ -5,10 +5,9 @@
     (bool nonempty-type-eq-decl nil booleans nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
     (B formal-nonempty-type-decl nil startupData nil)
-    (K formal-nonempty-type-decl nil startupData nil)
     (HV formal-nonempty-type-decl nil startupData nil)
-    (KEY type-decl nil key nil)
-    (asymKey? adt-recognizer-decl "[KEY -> boolean]" key nil)
+    (tpmData type-decl nil key nil)
+    (tpmKey? adt-recognizer-decl "[tpmData -> boolean]" key nil)
     (number nonempty-type-decl nil numbers nil)
     (number_field_pred const-decl "[number -> boolean]" number_fields
      nil)

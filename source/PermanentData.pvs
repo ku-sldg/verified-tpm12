@@ -2,7 +2,7 @@ PermanentData[DV,KV,HV:TYPE+] : THEORY
   BEGIN
 
   IMPORTING pcr[HV];
-  IMPORTING key[DV,KV,HV];
+  IMPORTING key[DV,HV];
   
   PermData : TYPE = [#
 %     tag : TPM_STRUCTURE_TAG,

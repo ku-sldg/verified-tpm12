@@ -3,7 +3,7 @@ startupData[B,K,HV : TYPE+] : THEORY
   BEGIN
 
   IMPORTING pcr[HV];
-  IMPORTING key[B,K,HV];
+  IMPORTING key[B,HV];
   IMPORTING PermanentFlags;
   IMPORTING PermanentData[B,K,HV];
 
@@ -24,8 +24,8 @@ startupData[B,K,HV : TYPE+] : THEORY
   %% to be consistent here.
   restoreStateData : TYPE = [#
   		          valid? : bool,
-                          srk : (asymKey?),
-		          ek : (asymKey?),
+                          srk : (tpmKey?),
+		          ek : (tpmKey?),
 			  keyGenCnt : K,
 			  keys : KEYSET,
                           pcrs : PCRS,
@@ -41,8 +41,8 @@ startupData[B,K,HV : TYPE+] : THEORY
   %% Create a save record with keys, pcrs, and pcr flags.  Throw out pcr
   %% values if they are resettable
   saveState(tpmKeys: KEYSET,
-            tpmEK : (asymKey?),
-	    tpmSRK : (asymKey?),
+            tpmEK : (tpmKey?),
+	    tpmSRK : (tpmKey?),
        	    tpmKeyGenCnt : K,
 	    tpmPcrs : PCRS,
 	    tpmPermFlags : PermFlags,
@@ -64,15 +64,15 @@ startupData[B,K,HV : TYPE+] : THEORY
   %% Initial value for saved data.  The only field that matters is the valid?
   %% field that must be false.
 
-  ekInit : K
-  srkInit : K
+  ekInit : (tpmKey?)
+  srkInit : (tpmKey?)
   keyGenCntInit : K
 
   initSaveData : (wellFormedRestore?) =
     (# valid? := FALSE,
        keys := emptyset,
-       ek := asymKey(ekInit),
-       srk := asymKey(srkInit),
+       ek := ekInit,
+       srk := srkInit,
        keyGenCnt := keyGenCntInit,
        pcrs := pcrsPower,
        permFlags := permFlagsInit,
