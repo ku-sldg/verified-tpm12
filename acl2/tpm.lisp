@@ -486,13 +486,14 @@
            (otherwise tpm-s)))
         (t tpm-s)))
 
+
 #|
 (i-am-here)
 
 (defun+ execute-com-startup (cmd tpm-s)
   (declare (xargs :guard (and (tpm-input-p cmd)
                               (tpm-state-p tpm-s))))
-  (case (tpm-input->cmd cmd)
+  (case (tpm-input->command cmd)
     (:load-key2 (load-key-to-state (tpm-input->arg1 cmd) tpm-s))
 
 ;;     (:extend (extend-state 
