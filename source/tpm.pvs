@@ -386,12 +386,11 @@ tpm [ B:TYPE+ % BLOB
     	     IN OUT_Seal(S1,TPM_SUCCESS)
     ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
     ENDIF
-%       	   tpmSealedData(data,sealed(k,clear,pcrs(s)),TPM_SUCCESS)
 
   % Output secret unsealed with an asymmetric key and PCRs 
   unsealOut(s:tpmAbsState,parent:(tpmKey?),inData:(tpmStoredData?)) : tpmAbsOutput = 
     IF storage?(keyUsage(parent)) and migratable(keyFlags(parent))=FALSE
-    THEN LET d1 = decrypt(key(parent),inData) IN%encrypted?(crs(inData)) AND key(crs(inData))=key(parent)
+    THEN LET d1 = decrypt(key(parent),inData) IN %encrypted?(crs(inData)) AND key(crs(inData))=key(parent)
     	 IF crs(d1)=clear 
 	 THEN LET d2 = encData(inData) IN
 	      IF tpmProof(d2) = tpmProof(permData(s)) AND 
@@ -718,11 +717,6 @@ tpm [ B:TYPE+ % BLOB
 	 ENDCASES
     ELSE OUT_Error(TPM_BAD_PARAMETER)
     ENDIF;
-% IF encrKey(b) = ekVal AND digest(b)=childKey(idKey)
-% 	     THEN OUT_ActivateIdentity(tpmSessKey(symK(b),clear),TPM_SUCCESS)
-% 	     ELSE OUT_Error(TPM_DECRYPT_ERROR) %% TODO: This may be wrong
-% 	   ENDIF
-
         
   %% Extend operation on TPM state
   extendState(s:tpmAbsState,pcrNum:PCRINDEX,inDigest:HV) : tpmAbsState =
@@ -898,9 +892,8 @@ tpm [ B:TYPE+ % BLOB
       ABS_Extend(n,d) : extendOut(s,n,d),
       ABS_PCRRead(ind) : pcrReadOut(s,ind),
       ABS_Quote(k,n,pm) : quoteOut(s,k,n,pm),
-%       ABS_ChangeAuth : changeAuthOut(s),
-      ABS_certify(aik,cr) : certOut(s,aik,cr)
-%       ABS_read(i) : readOut(s,i),
+      ABS_certify(aik,cr) : certOut(s,aik,cr),
+      ABS_read(i) : readOut(s,i)
     ELSE OUT_Error(TPM_SUCCESS)
   ENDCASES;
   
@@ -1869,14 +1862,14 @@ tpm [ B:TYPE+ % BLOB
   %% Output after going through tpm commands is same as grabbing pcrs
   %% This is one of those theorems where assert must be called before grind
   %% proved - Fri Jun 22 16:56:08 CDT 2012
-%   check_PCRS: THEOREM (
-%     FORALL (k:(wrapKey?),hv:HV,pm:PCRMASK,n:nat,state:(afterStartup?)) :
-%       LET (a,s) = runState(
-%         	  TPM_Extend(hv,0)
-%         	  >> TPM_Quote(k,n,pm))
-%       		  (state) IN
+  check_PCRS: THEOREM (
+    FORALL (state:(afterStartup?),k:(tpmKey?),hv:HV,pm:PCRMASK,n:(tpmNonce?),i:PCRINDEX) :
+      LET (a,s) = runState(
+        	  TPM_Extend(i,hv)
+        	  >> TPM_Quote(k,n,pm))
+      		  (state) IN
 %     checkKeyRoot(k,srk(s)) => 
-%       a = tpmQuote(n,map(s`pcrs,pm),signed(private(childKey(k)),clear),TPM_SUCCESS));
+      a = OUT_Quote(map(s`pcrs,pm),tpmQuote(map(s`pcrs,pm),n,signed(private(k),clear)),TPM_SUCCESS));
 
   %% Prove that quote generation returns the correct PCR.  This theorem
   %% needs to be updated with something cleaner.
@@ -1894,29 +1887,22 @@ tpm [ B:TYPE+ % BLOB
 		     TPM_SUCCESS)
 	AND s = state
       
-  %% TODO: need way to reference waik in proof.
-%   quote_with_prev_key: THEOREM
-%     FORALL (state:tpmAbsState,k,idKeyParams:(asymKey?),n:nat,
-%             pm:PCRMASK) :
-%       LET (a,s) = runState(
-%       	  	  TPM_Init
-% 		  >> TPM_Startup(TPM_ST_CLEAR)
-% 		  >> CPU_senter
-% 		  >> CPU_sinit
-% 		  >> TPM_MakeIdentity(idKeyParams)
-% 		  >>=CPU_saveOutput(0)
-% 		  >>= (LAMBDA (a:tpmAbsOutput) : 
-% 		       CASES a OF 
-% 		         outIdentity(waik,creq,m) : TPM_Quote(waik,n,pm) 
-% 			 ELSE TPM_Noop(a) 
-% 		       ENDCASES))
-% 		  (state) IN
-% 		  LET waik=oidentaik(memory(s)(0)) IN
-% 	checkKeyRoot(waik,srk(s)) => 
-%         a = outQuote(private(asymKey(100,keyUsage(idKeyParams),keyFlags(idKeyParams))),
-% 	             n,
-%                      map(pcrs(s),pm),
-% 		     TPM_SUCCESS)
+  quote_with_prev_key: THEOREM
+    FORALL (state:(afterStartup?),pk,k:(tpmKey?),n:(tpmNonce?),pm:PCRMASK) :
+      LET (a,s) = runState(
+		  TPM_CreateWrapKey(pk,k)
+		  >>=CPU_saveOutput(0)
+		  >>= (LAMBDA (a:tpmAbsOutput) : 
+		       CASES a OF 
+		         OUT_CreateWrapKey(wk,m) : TPM_Quote(wk,n,pm) 
+			 ELSE TPM_Noop(a) 
+		       ENDCASES))
+		  (state) IN
+	OUT_CreateWrapKey?(memory(s)(0)) => LET key=wrappedKey(memory(s)(0)) IN
+ 	createWrapKey?(pk,k) => 
+        a=OUT_Quote(map(pcrs(state),pm),
+	            tpmQuote(map(pcrs(state),pm),n,signed(private(key),clear)),
+		    TPM_SUCCESS)
 	
 
   %% Monotonicity of locality
@@ -2002,39 +1988,40 @@ tpm [ B:TYPE+ % BLOB
         permData(s) = permData(executeCom(s,c));
   
 
-%   %% Prove that skipping SENTER is detectable by showing the quote following
-%   %% a command differs when SENTER is excluded.
-%   %% proved - Tue Jun 12 15:34:24 CDT 2012
-%   no_senter: THEOREM 
-%     FORALL (k:(wrapKey?),hv:HV,n:BLOB,pcrMask:PCRMASK,state:tpmAbsState) :
-%       runState(
-% 	TPM_Init
-%       	>> TPM_Startup(TPM_ST_CLEAR)
-%       	>> CPU_senter
-%       	>> CPU_sinit
-%       	>> TPM_Extend(hv,0)
-%       	>> TPM_Quote(k,n,pcrMask))
-%       	(state)
-%       /=
-%       runState(
-% 	TPM_Init
-% 	>> TPM_Extend(hv,0)
-% 	>> TPM_Quote(k,n,pcrMask))
-% 	(state)
+  %% Prove that skipping SENTER is detectable by showing the quote following
+  %% a command differs when SENTER is excluded.
+  %% proved - Tue Jun 12 15:34:24 CDT 2012
+  no_senter: THEOREM 
+    FORALL (state:tpmAbsState,k:(tpmKey?),hv:HV,n:(tpmNonce?),pm:PCRMASK,i:PCRINDEX) :
+      runState(
+	TPM_Init
+      	>> TPM_Startup(TPM_ST_CLEAR)
+      	>> CPU_senter
+      	>> CPU_sinit
+      	>> TPM_Extend(i,hv)
+      	>> TPM_Quote(k,n,pm))
+      	(state)
+      /=
+      runState(
+	TPM_Init
+	>> TPM_Extend(i,hv)
+	>> TPM_Quote(k,n,pm))
+	(state)
 
 %   %% TPMs will not lie about who they are.  If the AIK cannot be installed
 %   %% then no quote will be generated
 %   %% proved - Wed Jul 11 11:28:46 EDT 2012
 %   aik_binding: THEOREM
-%     FORALL (aik:(wrapKey?),b:BLOB,pm:PCRMASK,state:tpmAbsState) :
-%       LET (out,s) = runState(
+%     FORALL (aik:(tpmKey?),b:(tpmNonce?),pm:PCRMASK,state:tpmAbsState) :
+%       LET (a,s) = runState(
 %                   TPM_Init
 %       		  >> TPM_Startup(TPM_ST_CLEAR)
 % 		  >> CPU_senter
 % 		  >> CPU_sinit
 % 		  >> TPM_Quote(aik,b,pm))
 % 		  (state) IN
-%        NOT checkKeyRoot(aik,srk(s)) => out=OUT_Error(TPM_INVALID_KEYUSAGE);
+%        %NOT checkKeyRoot(aik,srk(s)) => 
+%        a=OUT_Error(TPM_INVALID_KEYUSAGE);
 
    %% Simple verification of the quote generation process from init
    %% through generation of the appraiser's quote.  Yay.  This is what
