@@ -9,7 +9,7 @@ PermanentData[DV,KV,HV:TYPE+] : THEORY
 %     revMajor : BYTE,
 %     revMinor : BYTE,
     tpmProof : (tpmSecret?),
-%     ekReset : TPM_NONCE,
+    ekReset : (tpmNonce?),
 %     ownerAuth : TPM_SECRET,
 %     operatorAuth : TPM_SECRET,
 %     authDIR[1] : TPM_DIRVALUE,
@@ -33,7 +33,9 @@ PermanentData[DV,KV,HV:TYPE+] : THEORY
 %     daaBlobKey : TPM_KEY
   #];
 
+  nonce:(tpmNonce?)
   permDataInit : PermData = (# tpmProof:=tpmSecret(0),
+  	       	 	       ekReset:=nonce,
   	       	 	       pcrAttrib := allResetAccess #)
 
   END PermanentData

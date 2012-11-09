@@ -17,7 +17,7 @@ PermanentFlags : THEORY
 %     , FIPS : bool
     , operator : bool
     , enableRevokeEK : bool
-%     , nvLocked : bool
+    , nvLocked : bool
 %     , readSRKPub : bool
 %     , tpmEstablished : bool
     , maintenanceDone : bool
@@ -39,7 +39,7 @@ PermanentFlags : THEORY
 %     , FIPS:=FALSE
     , operator:=FALSE
     , enableRevokeEK:=FALSE
-%     , nvLocked:=FALSE
+    , nvLocked:=FALSE
 %     , readSRKPub:=FALSE
 %     , tpmEstablished:=FALSE
     , maintenanceDone:=FALSE
