@@ -1,14 +1,15 @@
-PermanentData[HV:TYPE+] : THEORY
+PermanentData[DV,KV,HV:TYPE+] : THEORY
   BEGIN
 
   IMPORTING pcr[HV];
+  IMPORTING key[DV,HV];
   
   PermData : TYPE = [#
 %     tag : TPM_STRUCTURE_TAG,
 %     revMajor : BYTE,
 %     revMinor : BYTE,
-%     tpmProof : TPM_SECRET,
-%     ekReset : TPM_NONCE,
+    tpmProof : (tpmSecret?),
+    ekReset : (tpmNonce?),
 %     ownerAuth : TPM_SECRET,
 %     operatorAuth : TPM_SECRET,
 %     authDIR[1] : TPM_DIRVALUE,
@@ -32,6 +33,9 @@ PermanentData[HV:TYPE+] : THEORY
 %     daaBlobKey : TPM_KEY
   #];
 
-  permDataInit : PermData = (# pcrAttrib := allResetAccess #)
+  nonce:(tpmNonce?)
+  permDataInit : PermData = (# tpmProof:=tpmSecret(0),
+  	       	 	       ekReset:=nonce,
+  	       	 	       pcrAttrib := allResetAccess #)
 
   END PermanentData
