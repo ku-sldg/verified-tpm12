@@ -19,43 +19,24 @@
 ; space, then one could write |pcrs reset senter state|, however, the vertical
 ; bars are annoying and typically avoided.
 
-; (include-book "tools/defconsts" :dir :system)
 (include-book "misc/assert" :dir :system)
 (include-book "misc/defun-plus" :dir :system)
 (include-book "cutil/defaggregate" :dir :system)
 
 (defmacro why (rule)
-  ;; BOZO eventually improve this to handle other rule-classes and
-  ;; such automatically.  That is, look up the name of the rule, etc.
+  ;; Proof debugging tool.
   `(ACL2::er-progn
     (ACL2::brr t)
     (ACL2::monitor '(:rewrite ,rule) ''(:eval :go t))))
 
+(include-book "memory")
 (include-book "pcr")
 (include-book "crypto")
 (include-book "key")
 (include-book "perm-flags")
-
-; potentially useful for proof debugging
-;(include-book "misc/untranslate-patterns" :dir :system)
-
-#|
-(defrec tpm-state
-  (mem post-init srk ek keys pcrs locality)
-  t)
-
-; Have ACL2 untranslate the following terms when it does printing, so that
-; it's easier to read.
-(add-untranslate-pattern (car tpm-s) (mem tpm-s))
-(add-untranslate-pattern (car (cdr tpm-s)) (post-init tpm-s))
-(add-untranslate-pattern (car (cdr (cdr tpm-s))) (srk tpm-s))
-(add-untranslate-pattern (car (cdr (cdr (cdr tpm-s)))) (ek tpm-s))
-(add-untranslate-pattern (car (cdr (cdr (cdr (cdr tpm-s))))) (keys tpm-s))
-(add-untranslate-pattern (car (cdr (cdr (cdr (cdr (cdr tpm-s)))))) 
-                         (pcrs tpm-s))
-(add-untranslate-pattern (car (cdr (cdr (cdr (cdr (cdr (cdr tpm-s))))))) 
-                         (locality tpm-s))
-|#
+(include-book "perm-data")
+(include-book "startup-data")
+(include-book "tpm-input")
 
 (defn srk-p (srk)
   (asymmetric-key-p srk))
@@ -91,64 +72,80 @@
            (true-listp x)))
 |#
 
+(cutil::defaggregate restore-state-data
+  (valid srk ek key-gen-count keys pcrs perm-flags perm-data)
+  :require  ((booleanp-of-restore-state-data->valid
+              (booleanp valid)
+              :rule-classes :forward-chaining)
+             (srk-p-of-restore-state-data->srk
+              (srk-p srk)
+              :rule-classes :forward-chaining)
+             (ek-p-of-restore-state-data->ek
+              (ek-p ek)
+              :rule-classes :forward-chaining)
+             (keyset-p-of-restore-state-data->keys
+              (keyset-p keys)
+              :rule-classes :forward-chaining)
+             ;; TODO: add predicate about key-gen-count, but just saying K-p
+             ;; seems weak
+             (pcr-list-p-of-restore-state-data->pcrs
+              (pcr-list-p pcrs)
+              :rule-classes :forward-chaining)
+             (perm-flags-p-of-restore-state-data->perm-flags
+              (perm-flags-p perm-flags)
+              :rule-classes :forward-chaining)
+             (perm-data-p-of-restore-state-data->perm-data
+              (perm-data-p perm-data)
+              :rule-classes :forward-chaining))
+  :tag :restore-state-data)
+
 (defconst *pcrs-reset* nil)
 
-(defnd locality-p (locality)
-  (and (integerp locality)
-       (<= locality 4)
-       (>= locality 0)))
-
 (cutil::defaggregate tpm-state
-  (mem post-init srk ek keys pcrs locality perm-flags perm-data disable-force-clear)
-  :require ((tpm-state->mem-true-listp
-             (true-listp mem)
-;             :rule-classes :forward-chaining
+  (restore memory post-init srk ek key-gen-count keys pcrs locality perm-flags perm-data disable-force-clear)
+  :require ((restore-state-data-p-of-tpm-state->restore
+             (restore-state-data-p restore)
+             :rule-classes :forward-chaining)
+            (memory-p-of-tpm-state->memory
+             (memory-p memory)
+             :rule-classes :forward-chaining
              )
-            (tpm-state->post-init-booleanp
+            (booleanp-of-tpm-state->post-init
              (booleanp post-init)
- ;            :rule-classes :forward-chaining
+             :rule-classes :forward-chaining
              )
-            (tpm-state->srk-srk-p
+            (srk-p-of-tpm-state->srk
              (srk-p srk)
-  ;           :rule-classes :forward-chaining
+             :rule-classes :forward-chaining
              )
-            (tpm-state->ek-ek-p
+            (ek-p-of-tpm-state->ek
              (ek-p ek)
-   ;          :rule-classes :forward-chaining
+             :rule-classes :forward-chaining
              )
-            (tpm-state->keyset-keyset-p
+            ;; TODO: make some statement about key-gen-count
+            (keyset-p-of-tpm-state->keyset
              (keyset-p keys)
-    ;         :rule-classes :forward-chaining
+             :rule-classes :forward-chaining
              )
-            (tpm-state->pcrs-pcrs-p
-             (pcrs-p pcrs)
-     ;        :rule-classes :forward-chaining
+            (pcr-list-p-of-tpm-state->pcrs
+             (pcr-list-p pcrs)
+             :rule-classes :forward-chaining
              )
-            (tpm-state->locality-locality-p
+            (locality-p-of-tpm-state->locality
              (locality-p locality)
-      ;       :rule-classes :forward-chaining
+             :rule-classes :forward-chaining
              )
-            (tpm-state->perm-flags-perm-flags-p
+            (perm-data-p-of-tpm-state->perm-data
+             (perm-data-p perm-data)
+             :rule-classes :forward-chaining)
+
+            (perm-flags-p-of-tpm-state->perm-flags
              (perm-flags-p perm-flags))
 
-            (tpm-state->disable-force-clear-booleanp
+            (booleanp-of-tpm-state->disable-force-clear
              (booleanp disable-force-clear)
              :rule-classes :type-prescription))
   :tag :tpm-state)
-
-(defthm locality-p-implies-natp
-  
-; TODO: ask someone why this is needed for the proof of
-; change-locality-state-lemma1.  Shouldn't tpm-state->locality-locality-p
-; suffice?
-
-  (implies (locality-p x)
-           (and (natp x)
-                (<= x 4)
-                (>= x 0)))
-            
-  :rule-classes :compound-recognizer
-  :hints (("Goal" :in-theory (enable locality-p))))
 
 (defthm tpm-state->locality-nat-p
   (implies (force (tpm-state-p x))
@@ -157,31 +154,34 @@
 
 ; locality < 5 as a linear rule
 
+(defconst *default-srk* 1)
+(defconst *default-ek* 1)
+(defconst *default-keys* nil)
+(defconst *default-pcrs* nil)
+(defconst *default-perm-data* *perm-data-init*)
+(defconst *default-perm-flags* *perm-flags-init*)
 
-
-; (why tpm-state->locality-locality-p)
-
-;; (defun tpm-state-p (tpm-s)
-;;   (declare (xargs :guard t)) ; "type" predicate functions typically have a guard of t
-;;   (and (true-listp tpm-s)
-;;        (equal (length tpm-s) 7)
-;;        (true-listp (access tpm-state tpm-s :mem))
-;;        (booleanp (access tpm-state tpm-s :post-init))
-;;        (srk-p (access tpm-state tpm-s :srk))
-;;        (ek-p (access tpm-state tpm-s :ek))
-;;        (keyset-p (access tpm-state tpm-s :keys))
-;;        (pcrs-p (access tpm-state tpm-s :pcrs))
-;;        (locality-p (access tpm-state tpm-s :locality))))
+(defconst *default-restore-state-data*
+  (make-restore-state-data
+   :valid nil ; should maybe be t
+   :srk *default-srk*
+   :ek *default-ek*
+   :keys *default-keys*
+   :pcrs *default-pcrs*
+   :perm-data *default-perm-data*
+   :perm-flags *default-perm-flags*))
 
 (defconst *tpm-post-init* 
-  (make-tpm-state						
-        :mem nil
+  (make-tpm-state
+        :restore *default-restore-state-data*
+        :memory nil
         :post-init t
         :srk 1
         :ek 1
         :keys nil
         :pcrs nil
         :locality 4
+        :perm-data *perm-data-init*
         :perm-flags *perm-flags-init*))
 
 (assert! (tpm-state-p *tpm-post-init*))
@@ -195,17 +195,19 @@
 ; of type tpm-state.
 
 ; (change-tpm-state *tpm-post-init*
-;         :mem '(1 2 3))
+;         :memory '(1 2 3))
 
 (defconst *tpm-startup*
   (make-tpm-state
-        :mem nil
+        :restore *default-restore-state-data*
+        :memory nil
         :post-init nil
         :srk 1
         :ek 1
         :keys nil
         :pcrs nil
         :locality 4
+        :perm-data *perm-data-init*
         :perm-flags *perm-flags-init*))
 
 (assert! (tpm-state-p *tpm-startup*))
@@ -241,9 +243,9 @@
    (implies (and (tpm-state-p tpm-s)
                  (< 0 (tpm-state->locality tpm-s)))
             (locality-p (1- (tpm-state->locality tpm-s))))
-   :hints (("Goal" :use ((:instance tpm-state->locality-locality-p
+   :hints (("Goal" :use ((:instance locality-p-of-tpm-state->locality
                                     (x tpm-s)))
-            :in-theory (e/d (locality-p) (tpm-state->locality-locality-p))))))
+            :in-theory (e/d (locality-p) (locality-p-of-tpm-state->locality))))))
 
 ;; (local 
 ;;  (defthm change-locality-state-lemma-other-option
@@ -251,9 +253,9 @@
 ;;                  (< 0 (tpm-state->locality tpm-s)))
 ;;             (<= (tpm-state->locality tpm-s)
 ;;                 5))
-;;    :hints (("Goal" :use ((:instance tpm-state->locality-locality-p
+;;    :hints (("Goal" :use ((:instance locality-p-of-tpm-state->locality
 ;;                                     (x tpm-s)))
-;;             :in-theory (e/d (locality-p) (tpm-state->locality-locality-p))))
+;;             :in-theory (e/d (locality-p) (locality-p-of-tpm-state->locality))))
 ;;    :rule-classes :linear))
 
 ;; "Hand" proof of change-locality-state-lemma2, based off of forward-chaining
@@ -264,7 +266,7 @@
 ;; (implies (tpm-state-p tpm-s)
 ;;          (rationalp (tpm-state->locality tpm-s)))
 
-;; < tpm-state->locality-locality-p >
+;; < locality-p-of-tpm-state->locality >
 
 ;; (implies (and (tpm-state-p tpm-s)
 ;;               (locality-p (tpm-state->locality tpm-s)))
@@ -355,15 +357,13 @@
                   :output (tpm-state-p (clear tpm-s))))
   (change-tpm-state tpm-s :keys nil))
 
-
-#|
 (defun+ owner-clear-state (auth tpm-s)
   (declare (xargs :guard (and (tpm-state-p tpm-s)
                               (asymmetric-key-p auth))
                   :output (tpm-state-p (owner-clear-state auth tpm-s))))
   (cond ((and (equal auth (compute-private-key-from-public-key 
                            (tpm-state->srk tpm-s)))
-              (not *disable-owner-clear-flag*))
+              (not (perm-flags->disable-owner-clear (tpm-state->perm-flags tpm-s))))
          (clear tpm-s))
         (t 
          tpm-s)))
@@ -371,8 +371,134 @@
 (defun+ force-clear-state (tpm-s)
   (declare (xargs :guard (tpm-state-p tpm-s)
                   :output (tpm-state-p (force-clear-state tpm-s))))
-  (cond (*disable-force-clear*
+  (cond ((tpm-state->disable-force-clear tpm-s)
          tpm-s)
         (t
-         tpm-s)))
+         (clear tpm-s))))
+
+(defun+ disable-owner-clear-state (tpm-s)
+  (declare (xargs :guard (tpm-state-p tpm-s)
+                  :output (tpm-state-p (disable-owner-clear-state tpm-s))))
+  (change-tpm-state tpm-s :perm-flags
+                    (change-perm-flags (tpm-state->perm-flags tpm-s)
+                                       :disable-owner-clear
+                                       t)))
+
+(defun+ disable-force-clear-state (tpm-s)
+  (declare (xargs :guard (tpm-state-p tpm-s)
+                  :output (tpm-state-p (disable-force-clear-state tpm-s))))
+  (change-tpm-state tpm-s :disable-force-clear t))
+
+(defun+ save-state1 (keys ek srk key-gen-count pcrs perm-flags perm-data)
+
+; Defined as saveState in startupData.pvs.
+
+  (declare (xargs :guard (and (keyset-p keys)
+                              (ek-p ek)
+                              (srk-p srk)
+                              (pcr-list-p pcrs)
+                              (perm-flags-p perm-flags)
+                              (perm-data-p perm-data))
+                  :output (restore-state-data-p (save-state1 keys ek srk
+                                                             key-gen-count pcrs 
+                                                             perm-flags perm-data))))
+  (make-restore-state-data
+   :keys keys
+   :ek ek
+   :srk srk
+   :key-gen-count key-gen-count
+   :perm-flags perm-flags
+   :perm-data perm-data
+   :pcrs pcrs ; this used to be nil with a TODO, but I don't know why, so I'm changing it
+   ))
+
+(defun+ save-state (tpm-s)
+  (declare (xargs :guard (tpm-state-p tpm-s)
+                  :output (tpm-state-p (save-state tpm-s))))
+  (change-tpm-state tpm-s 
+                    :restore (save-state1 (tpm-state->keys tpm-s)
+                                          (tpm-state->ek tpm-s)
+                                          (tpm-state->srk tpm-s)
+                                          (tpm-state->key-gen-count tpm-s)
+                                          (tpm-state->pcrs tpm-s)
+                                          (tpm-state->perm-flags tpm-s)
+                                          (tpm-state->perm-data tpm-s))))
+
+(defun+ restore-state (tpm-s)
+  (declare (xargs :guard (tpm-state-p tpm-s)
+                  :output (tpm-state-p (restore-state tpm-s))))
+  (let ((rs (tpm-state->restore tpm-s)))
+    (if (restore-state-data->valid rs)
+        (change-tpm-state tpm-s
+                          ;; restore unchanged
+                          ;; memory unchanged
+                          :post-init nil
+                          :ek (restore-state-data->ek rs)
+                          :srk (restore-state-data->srk rs)
+                          :pcrs (restore-state-data->pcrs rs)
+                          :keys (restore-state-data->keys rs)
+                          :key-gen-count (restore-state-data->key-gen-count rs)
+                          :locality 3
+                          :perm-flags (restore-state-data->perm-flags rs)
+                          :perm-data (restore-state-data->perm-data rs)
+                          :disable-force-clear nil)
+      tpm-s)))
+
+(defun+ deactivate-state (tpm-s)
+  (declare (xargs :guard (tpm-state-p tpm-s)
+                  :output (tpm-state-p (deactivate-state tpm-s))))
+  (change-tpm-state tpm-s
+                    :post-init t))
+
+(defun+ save-to-mem-state (i val tpm-s)
+; Here is an example of how we define memory-val-p instead of restricting val
+; to being a member of C inside memory.pvs.  I'm not yet sure what tpmAbsOutput
+; represents (I haven't even looked since it doesn't yet seem relevant).
+  (declare (xargs :guard (and (natp i)
+                              (memory-val-p val)
+                              (tpm-state-p tpm-s))
+                  :output (tpm-state-p (save-to-mem-state i val tpm-s))))
+  (change-tpm-state tpm-s
+                    :memory (update-loc i val (tpm-state->memory tpm-s))))
+
+
+(defun+ execute-com-post-init (cmd tpm-s)
+  (declare (xargs :guard (and (tpm-state-p tpm-s) 
+
+; The following commented check of after-init is a precondition for the
+; execution of execute-com-post-init in the pvs model.  I would like to one day
+; include this precondition in this definition, but, in an effort to make guard
+; verification easier for now, I am omitting it for now.
+
+;                             (tpm-state->after-init tpm-s) 
+
+; We could use guards to ensure that execute-com-post-init is only called when
+; the cmd is a :startup command.  But, we adopt the pvs model's convention for
+; now.
+
+                              (tpm-input-p cmd))
+                  :output (tpm-state-p (execute-com-post-init cmd tpm-s))))
+  (cond ((equal (tpm-input->command cmd) :startup)
+         (case (tpm-input->arg1 cmd)
+           (:tpm-st-clear *tpm-startup*)
+           (:tpm-st-state (restore-state tpm-s))
+           (:tpm-st-deactivated (deactivate-state tpm-s))
+           (otherwise tpm-s)))
+        (t tpm-s)))
+
+
+#|
+(i-am-here)
+
+(defun+ execute-com-startup (cmd tpm-s)
+  (declare (xargs :guard (and (tpm-input-p cmd)
+                              (tpm-state-p tpm-s))))
+  (case (tpm-input->command cmd)
+    (:load-key2 (load-key-to-state (tpm-input->arg1 cmd) tpm-s))
+
+;;     (:extend (extend-state 
+;; ; argument order is different here than in pvs model
+;;               (tpm-input->arg1 cmd) 
+;;               tpm-s
+    (otherwise tpm-s)))
 |#
