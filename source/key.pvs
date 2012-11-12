@@ -38,6 +38,9 @@ key [DVAL,HVAL:TYPE+] : THEORY
   %% The bad key value is 0
   badkey:KVAL = 0;
 
+  goodkey?(key:KVAL) : bool =
+    key/=badkey
+
   %% Purpose for key
 
   %%									(5.8)
