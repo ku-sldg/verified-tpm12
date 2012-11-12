@@ -230,6 +230,38 @@ then the two protocols are basically the same.
 
 \nocite{---::TCG-TPM-Specifi,Ryan:09:Introduction-to}
 
+\begin{figure}
+  \centering
+  \begin{footnotesize}
+  \begin{sequencediagram}
+    \newthread[white]{tpm}{TPM}
+    \newinst[2]{user}{User Software}
+    \newinst[2]{issuer}{Issuer}
+    \newinst[2]{verifier}{verifier}
+    \begin{call}{user}{$\public{EK}$,$\public{DAA}$}{issuer}{$\sign{\public{DAA}}{IS}$}
+    \end{call}
+    \begin{call}{user}{$(\sign{\public{AIK}}{AIK},\sign{PCR_d}{AIK})$}{verifier}{}
+    \end{call}
+  \end{sequencediagram}
+  \end{footnotesize}
+  \caption{Basic DAA protocol execution **DRAFT**}
+  \label{fig:daa}
+\end{figure}
+
+Don't actually deliver the DAA certificate signed by the issuer.
+Instead, a proof
+$\sign{DAA}{IS},\sign{\public{AIK},\public{V},n}{DAA}$ that:
+
+\begin{itemize}
+\item User generated signature by $DAA$ on $AIK$, $V$, and
+  $n$.  $V$ identifiers the target verifier.  $AIK$ is the
+  identity being verified as coming from a legitimate TPM and used for
+  the quote.  $n$ is a nonce to ensure freshness.
+\item User possess $\sign{DAA}{IS}$, but does not send it to the
+  verifier.
+\end{itemize}
+
+
 \section{Glossary}
 
 \begin{description}
