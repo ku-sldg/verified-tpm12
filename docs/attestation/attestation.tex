@@ -85,45 +85,62 @@ appraiser and the user software.
   from the TPM, wrapped with the TPM's SRK using the
   \verb+TPM_MakeIdentity+ command.  Parameters to the
   \verb+TPM_MakeIdentity+ command describe properties of the desired
-  AIK pair.
+  AIK pair and include a digest of the CA and Label identifying the
+  target CA ($CA_d$).  
 
 \item The TPM responds to the \verb+TPM_MakeIdentity+ command by
-  generating a new AIK wrapped by SRK, installing the new AIK, and
-  returning $\public{AIK}$, signed by the TPM using $\private{AIK}$ --
-  $\sign{\public{AIK}}{AIK}$.
+  generating a new AIK wrapped by SRK and returns the new wrapped AIK
+  along with $idContents$ containing $CA_d$ and $\public{AIK}$ signed
+  by $\private{AIK}$.
 
-  \emph{The new AIK is a key wrapped by SRK.  The only way that
-    $\sign{\public{AIK}}{AIK}$ can be created is in the presence of
-    the TPM that generated AIK.}
+  \emph{The new AIK is a key wrapped by SRK and can only be installed
+    on the TPM associated with SRK.  Thus, the only way that
+    $\sign{CA_d,\public{AIK}}{AIK}$ can be created is in the presence
+    of the TPM that generated AIK.}
 
-\item The user software sends the certified public EK
-  ($\sign{EK}{AIK}$) and the signed public \public{AIK}
-  ($\sign{AIK}{AIK}$) obtained from the TPM to the Privacy CA and
-  requests that it certify $\public{AIK}$.
+\item The user software sends a certified public EK ($\sign{EK}{AIK}$)
+  and the $idContents$ ($\sign{CA_d,\public{AIK}}{AIK}$) obtained from
+  the TPM to the Privacy CA and requests that it certify
+  $\public{AIK}$.
 
-\item The Privacy CA uses $\public{AIK}$ to check the signature on EK
-  and then determines if it has been revoked.  It then uses
-  $\public{AIK}$ to check the signature on itself.  If AIK signature
-  check and EK signature check succeed, the Privacy CA knows the AIK
-  and EK came from the same TPM.  If both checks are successful, the
-  Privacy CA signs the public AIK and encrypts the certificate with a
-  fresh session key.  It they encrypts both the new session key and
-  the AIK with EK and returns both to the user software.
+  \emph{It is not clear where the certified public EK is obtained, but
+    the public EK is available to the CA in many different fashions.}
+
+\item The Privacy CA uses $\public{AIK}$ to check the signature on
+  $\public{EK}$ and then determines if the $EK$ has been revoked.  It
+  then uses $\public{AIK}$ to check the signature on
+  $idContents$. \emph{If $idContents$ signature check and EK signature
+    check succeed, the Privacy CA knows the $\public{AIK}$, $CA_d$ and
+    $\public{EK}$ came from the same TPM.}  It then uses its own
+  public key and name to regenerate $CA_d$ and compare with the signed
+  $CA_d$ sent to it.  \emph{If the generated digest is the same as the
+    received digest, the CA knows the certification request is
+    intended for it.} If all three checks are successful -- EK
+  signature, $idContents$ signature, and $CA_d$ generation -- the
+  Privacy CA signs the public AIK and encrypts the AIK certificate
+  with a fresh session key.  It they encrypts both the session key and
+  the certified $\public{AIK}$ with $\public{EK}$ and returns both to
+  the user software.  \emph{Only the TPM with $\private{EK}$ can
+    decrypt this package, ensuring that only the TPM that generated
+    the request can decrypt the response.}
 
 \item The user software uses the \verb+TPM_ActivateIdentity+ command
-  to decyrpt the session key ($\encrypt{K}{EK}$).  Only the TPM
-  associated with EK can decrypt the session key.  The user software
-  then turn decrypts the signed AIK ($\encrypt{\sign{AIK}{CA}}{K}$)
-  using $K$.  The $\public(AIK)$ signed by the Privacy CA
-  ($\sign{\public{AIK}}{CA}$) can only be obtained in the presence of
-  the TPM associated with EK.
+  to decyrpt the session key ($\encrypt{K}{EK}$).  \emph{Only the TPM
+    associated with $\private{EK}$ can decrypt the session key.}  The
+  user software then in turn decrypts the signed AIK
+  ($\encrypt{\sign{AIK}{CA}}{K}$) using $K$.  \emph{The $\public(AIK)$
+    signed by the Privacy CA ($\sign{\public{AIK}}{CA}$) can only be
+    obtained in the presence of the TPM associated with EK.}
 
-\item The user software requests a quote from the TPM using the
-  \verb+TPM_Quote+ command and the nonce, $n$, sent by the appraiser.
-  The TPM produces the quote, signed using $\private{AIK}$.
-  $\sign{\public{AIK}}{CA}$ is also signed with $\private{AIK}$.  The
-  user software sends the signed, certified AIK and signed quote back
-  to the appraiser.\footnote{The details of this communication are not
+\item The user software requests a quote signed with $\private{AIK}$
+  from the TPM using the \verb+TPM_Quote+ command and the nonce, $n$,
+  sent by the appraiser.  The TPM produces the quote, signed using
+  $\private{AIK}$.  \emph{This ensures the quote comes from the holder
+    of $\private{AIK}$.}  $\sign{\public{AIK}}{CA}$ is also signed
+  with $\private{AIK}$.  \emph{This ensures the certified public AIK
+    comes from the only TPM that could decrypt it.}  The user software
+  sends the signed, certified AIK and signed quote back to the
+  appraiser.\footnote{The details of this communication are not
     specified.}
 
 \item The appraiser analyzes the signed blobs received from the user
@@ -136,7 +153,9 @@ appraiser and the user software.
     
   \item $\public{CA}$ is used to check the signature of
     $\sign{\public{AIK}}{CA}$ --- The Privacy CA has certified the AIK
-    is installed in a legitimate TPM.
+    is installed in a legitimate TPM.  The session key encrypting the
+    certificate can only be decrypted by the TPM making the
+    certification request.
   
   \item $\public{AIK}$ is used to check the quote signature --- The
     quote sent was signed by the TPM where the AIK is installed and
@@ -154,33 +173,44 @@ appraiser and the user software.
 
 \begin{figure}
   \centering
+  \begin{itemize}
+    \parskip=0pt\itemsep=0pt
+  \item $CA_d \equiv$ CA public key and label digest
+  \item $SRK_h \equiv$ SRK key handle
+  \item $AIK_h \equiv$ AIK key handle
+  \item $AIK_d \equiv$ public AIK key digest    
+  \item $PCR_m \equiv$ mask specifying target PCRs for a quote    
+  \item $PCR_d \equiv$ digest of PCR values
+  \end{itemize}
+
+  \begin{footnotesize}
   \begin{sequencediagram}
     \newthread[white]{tpm}{TPM}
-    \newinst[3]{user}{User Software}
+    \newinst[5]{user}{User Software}
     \newinst[3]{ca}{Certificate Authority}
-    \newinst[1]{a}{Appraiser}
+    \newinst[0.25]{a}{Appraiser}
 
-    \begin{call}{a}{Attestation Request with $n$ and $PCR$ mask}{user}{$(\sign{\sign{\public{AIK}}{CA}}{AIK},\sign{n,PCRDigest}{AIK})$}
-      \begin{call}{user}{\textsf{MakeIdentity}}{tpm}{$\sign{\public{AIK}}{AIK}$,\sign{\public{EK}}{AIK}}
-        \begin{callself}{tpm}{Generate new AIK}{$\wrap{AIK}{SRK}$}
-        \end{callself}
-        \begin{callself}{tpm}{Install $\wrap{AIK}{SRK}$}{}
-        \end{callself}
+    \begin{call}{a}{Attestation Request with $n$ and $PCR$ mask}{user}{$(\sign{\sign{\public{AIK}}{CA}}{AIK},\sign{n,PCR_d}{AIK})$}
+      \begin{call}{user}{$\mathtt{MakeIdentity}(CA_d)$}{tpm}{$\wrap{AIK}{SRK},\sign{CA_d,AIK}{AIK}$}
       \end{call}
-      \begin{call}{user}{$(\sign{\public{EK}}{AIK},\sign{\public{AIK}}{AIK})$}{ca}{$(\encrypt{\sign{\public{AIK}}{CA}}{K},\encrypt{K,\public{AIK}}{EK})$}
+      \begin{call}{user}{$\mathtt{LoadKey2}(\wrap{AIK}{SRK},SRK_h)$}{tpm}{$AIK_h$}
+      \end{call}
+%{$\sign{\public{AIK}}{AIK}$,\sign{\public{EK}}{AIK}}
+      \begin{call}{user}{$(\sign{\public{EK}}{AIK},\sign{\public{CA_d,AIK}}{AIK})$}{ca}{$(\encrypt{\sign{\public{AIK}}{CA}}{K},\encrypt{K,\public{AIK}}{EK})$}
         \begin{callself}{ca}{Check \public{AIK}}{}
         \end{callself}     
         \begin{callself}{ca}{Check \public{EK}}{}
         \end{callself}
       \end{call}
-      \begin{call}{user}{$\mathsf{ActivateIdentity}(\encrypt{K,AIK}{EK})$}{tpm}{$K$}
+      \begin{call}{user}{$\mathtt{ActivateIdentity}(AIK_h,\encrypt{K,AIK_d}{EK})$}{tpm}{$K$}
       \end{call}
       \begin{callself}{user}{Decrypt $\encrypt{\sign{\public{AIK}}{CA}}{K}$}{$\sign{\public{AIK}}{CA}$}
       \end{callself}     
-      \begin{call}{user}{$\mathsf{Quote}(n,PCRMask)$}{tpm}{$\sign{n,PCRDigest}{AIK}$}
+      \begin{call}{user}{$\mathtt{Quote}(n,AIK_h,PCR_m)$}{tpm}{$\sign{n,PCR_d}{AIK}$}
       \end{call}
     \end{call}
   \end{sequencediagram}
+  \end{footnotesize}
   \caption{Sequence Diagram for the Privacy CA protocol as described
     by Ryan}
   \label{fig:ryan-ca}
@@ -196,9 +226,134 @@ $\public{EK}$ in addition to the signed $\public{AIK}$.  If we can
 determine that this is the same as the certification request ($CR$),
 then the two protocols are basically the same.
 
+\newpage
+
 \section{Direct Anonymous Attestation}
 
 \nocite{---::TCG-TPM-Specifi,Ryan:09:Introduction-to}
+
+\begin{figure}
+  \centering
+  \begin{footnotesize}
+  \begin{sequencediagram}
+    \newthread[white]{tpm}{TPM}
+    \newinst[2]{user}{User Software}
+    \newinst[2]{issuer}{Issuer}
+    \newinst[2]{verifier}{verifier}
+    \begin{call}{verifier}{Attestation Request with $n$ and $PCR$
+        mask}{user}{$(\sign{\public{AIK}}{AIK},\sign{n,PCR_d}{AIK}),\sign{\public{AIK},\public{V},n}{DAA}$}
+      \begin{call}{user}{\emph{request} $\public{DAA}$}{tpm}{$\public{EK},\public{DAA}$}
+      \end{call}
+    \begin{call}{user}{$\public{EK}$,$\public{DAA}$}{issuer}{$\sign{\public{DAA}}{IS}$}
+    \end{call}
+    \begin{call}{user}{$\mathtt{Quote}(n,AIK_h,PCR_m)$}{tpm}{$\sign{n,PCR_d}{AIK}$}
+    \end{call}
+  \end{call}
+  \end{sequencediagram}
+  \end{footnotesize}
+  \caption{Basic DAA protocol execution **DRAFT**.}
+  \label{fig:daa}
+\end{figure}
+
+Don't actually deliver the DAA certificate signed by the issuer.
+Instead, a proof that:
+
+\begin{itemize}
+\item User generated signature by $DAA$ on $AIK$, $V$, and $n$
+  $(\sign{\public{AIK},\public{V},n}{DAA})$.  $V$ identifiers the
+  target verifier.  $AIK$ is the identity being verified as coming
+  from a legitimate TPM and used for the quote.  $n$ is a nonce to
+  ensure freshness.
+\item User possess the certified DAA from the issuer
+  $(\sign{DAA}{IS})$, but does not send it to the verifier.
+\end{itemize}
+
+\subsection{Camenisch-Lysyanskaya Signature Scheme}
+
+Define the public key of the DAA signature issuer as:
+
+\[\public{IS} \equiv (n,a,b,d)\]
+
+where $n$ is an RSA modulus.  Then define the DAA signature on message
+$x$:
+
+\[\sign{x}{DAA} \equiv (c,e,s)\]
+
+such that:
+
+\begin{equation}
+  c^e = a^xb^sd \bmod n
+  \label{eq:sig-check}
+\end{equation}
+
+The DAA signature gives $c$, $e$, and $s$ while the DAA public key
+gives $n$, $a$, $b$, and $d$.  Knowing $x$, its DAA signature, and the
+DAA public key for the signer allows checking
+equation~\ref{eq:sig-check}.  However, we don't want to hand out the
+signature on $x$.  Can we instead prove that we have it without
+handing it out?
+
+For DAA, the public key associated with a TPM is
+
+\[DAA \equiv a^x \bmod n\]
+
+where $x$ is the secret key of the TPM.  Is $x$ equal to
+$\private{AIK}$ or $\private{EK}$?
+
+The protocol convinces the verifier of possession of certificate on
+secret message.  Specifically, Prover wants to convince Verifier that
+they know $x$ such that $y=a^x$ where the verifier learns only $y$ and
+$a$:
+
+\begin{figure}[h]
+  \begin{itemize}
+    \itemsep=0pt\parskip=0pt
+  \item $r$ is random
+  \item $c$ is random
+  \item Verifier checks $t=y^ca^s$ (I think)
+  \end{itemize}
+  \begin{sequencediagram}
+    \newthread[white]{prover}{Prover}
+    \newinst[3]{verifier}{Verifier}
+    \begin{call}{prover}{$t=a^r$}{verifier}{$c$}
+    \end{call}
+    \mess{prover}{$s=r-cx$}{verifier}
+  \end{sequencediagram}
+  \caption{Proving knowledge of certificate on secret message}
+  \label{fig:proof-of-knowledge}
+\end{figure}
+
+Prover wants to convince verifier that they know $x_1$ and $x_2$
+such that $y=a^{x_1}b^{x_2}$ where the verifier learns only $y$, $a$
+and $b$:
+
+\begin{figure}[h]
+  \begin{itemize}
+    \itemsep=0pt\parskip=0pt
+  \item $r_1$, $r_2$ are random
+  \item $c$ is random
+  \item Verifier checks $t=y^ca^{s_1}b^{s_2}$ (I think)
+  \end{itemize}
+  \begin{sequencediagram}
+    \newthread[white]{prover}{Prover}
+    \newinst[4]{verifier}{Verifier}
+    \begin{call}{prover}{$t=a^{r_1}b^{r_2}$}{verifier}{$c$}
+    \end{call}
+    \mess{prover}{$s_1=r_1-cx_1$,$s_2=r_2-cx_2$}{verifier}
+  \end{sequencediagram}
+  \caption{Proving knowledge of certificate on secret message}
+  \label{fig:proof-of-knowledge}
+\end{figure}
+
+Recall $x$ and $(c,e,s)$ such that $c^e=a^xb^sd \bmod n$.
+
+\begin{itemize}
+  \item blind cert: compute $c'=cb^{s'} \bmod n$ with random $s'$.
+    $c'^e=a^xb^{s^*}d \bmod n$
+  \item send $c'$ to verifier
+  \item prove knowledge of $x$, $e$, $s^*$ such that
+    $d=c'^ea^{-x}b^{-s^*} \bmod n$
+\end{itemize}
 
 \section{Glossary}
 
@@ -206,6 +361,8 @@ then the two protocols are basically the same.
 \item[$\sign{M}{K}$] --- M signed with private K.
 \item[$\encrypt{M}{K}$]  --- M encrypted with public K.
 \end{description}
+
+\nocite{Camenisch:03:A-Signature-Sch}
 
 \bibliography{attestation}
 
