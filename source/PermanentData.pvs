@@ -8,8 +8,8 @@ PermanentData[DV,KV,HV:TYPE+] : THEORY
 %     tag : TPM_STRUCTURE_TAG,
 %     revMajor : BYTE,
 %     revMinor : BYTE,
-    tpmProof : (tpmSecret?),
-    ekReset : (tpmNonce?),
+    tpmProof : (tpmSecret?)
+    , ekReset : (tpmNonce?)
 %     ownerAuth : TPM_SECRET,
 %     operatorAuth : TPM_SECRET,
 %     authDIR[1] : TPM_DIRVALUE,
@@ -20,7 +20,10 @@ PermanentData[DV,KV,HV:TYPE+] : THEORY
 %     delegateKey : TPM_KEY,
 %     auditMonotonicCounter : TPM_COUNTER_VALUE,
 %     monotonicCounter[TPM_MIN_COUNTERS] : TPM_COUNTER_VALUE,
-     pcrAttrib : PCRFLAGS
+    % PCR attributes set during manufacturing
+    % for specific register, the attributes must match requirements of the TCG platform
+    % specific specification that describes the platform.
+    , pcrAttrib : PCR_ATTRIBUTES
 %     ordinalAuditStatus[] : BYTE[],
 %     rngState : BYTE[],
 %     familyTable : TPM_FAMILY_TABLE,
@@ -36,6 +39,6 @@ PermanentData[DV,KV,HV:TYPE+] : THEORY
   nonce:(tpmNonce?)
   permDataInit : PermData = (# tpmProof:=tpmSecret(0),
   	       	 	       ekReset:=nonce,
-  	       	 	       pcrAttrib := allResetAccess #)
+  	       	 	       pcrAttrib := pcrInit #)
 
   END PermanentData

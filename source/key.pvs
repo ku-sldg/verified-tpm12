@@ -87,7 +87,7 @@ key [DVAL,HVAL:TYPE+] : THEORY
     clear : clear?
     encrypted(key:KVAL,crstat:CRYPTOSTATUS) : encrypted?
     signed(key:KVAL,crstat:CRYPTOSTATUS) : signed?
-    sealed(key:KVAL,crstat:CRYPTOSTATUS,digest:PCRS) : sealed?
+    sealed(key:KVAL,crstat:CRYPTOSTATUS) : sealed?
   END CRYPTOSTATUS;
 
   %% Data items that the TPM is aware of
@@ -96,11 +96,11 @@ key [DVAL,HVAL:TYPE+] : THEORY
     %% Identifyier for naming things
     tpmID(id:string,crs:CRYPTOSTATUS) : tpmID?
     
-    %% Stub for migrateScheme so can take digest - createMigBlob		(4.4)
+    %% Stub for migrateScheme so can take digest - createMigBlob	(4.4)
     tpmMigScheme(migScheme:migrateScheme) : tpmMigScheme?
 
-    %% EK type - indicates what type of information the EK is dealing with (4.11)
-    tpmEKBlobActivate(sessK:(tpmSessKey?),idDigest:(tpmDigest?),pcrInfo:(tpmPCRInfo?)) 
+    %% EK type - indicates what type of information the EK is dealing with(4.11)
+    tpmEKBlobActivate(sessK:(tpmSessKey?),idDigest:(tpmDigest?),pcrInfo:PCR_INFO_SHORT) 
     	: tpmEKBlobActivate?
 
     %%			
@@ -115,30 +115,30 @@ key [DVAL,HVAL:TYPE+] : THEORY
     %% Random value that provides protection from replay.		(5.5)
     tpmNonce : tpmNonce?
 
-    %% Authdata - don't know what it is yet					(5.6)
+    %% Authdata - don't know what it is yet				(5.6)
     tpmAuthData(authData:AUTHDATA,crs:CRYPTOSTATUS) : tpmAuthData?
     %% cases authData of
     %% secret : crs = clear
     %% encauth : crs = encrypted depending on context   
 
-    %% Provides proof that the associated public key has TPM Owner AuthData	(5.12)
-    %% to be a migration key
+    %% Provides proof that the associated public key has		(5.12)
+    %% TPM Owner AuthData to be a migration key
     tpmMigKeyAuth(key:(tpmKey?),scheme:(tpmMigScheme?),digest:(tpmDigest?),
 	crs:CRYPTOSTATUS) : tpmMigKeyAuth?
 
-    %% Structure signed for certain commands (TPM_ReleaseTransportSigned)	(5.14)
+    %% Structure signed for certain commands (TPM_ReleaseTransportSigned)(5.14)
 %     tpmSignInfo(replay:(tpmNonce?),data:tpmData,crs:CRYPTOSTATUS) : tpmSignInfo?
     %% crs should be signed? %%TODO
     
     %% PCR Info								(8.4)
     %% TODO: This is only a stub.
-    tpmPCRInfo(pcrs:PCRS) : tpmPCRInfo?
-    
+    tpmPCRInfo(pcrs:PCR_INFO_LONG) : tpmPCRInfo?
+    tpmPCRComposite(comp:PCR_COMPOSITE)?    
     %% Stored Data - necessary to ensure the enforcement of security
     %% properties (9.2) Used by seal and unseal commands to identify
     %% pcr index and values that must be present to properly unseal
     %% data.
-    tpmStoredData(sealInfo:(tpmPCRInfo?),
+    tpmStoredData(sealInfo:PCR_INFO_LONG,
 		  encData:(tpmSealedData?),
 		  crs:CRYPTOSTATUS) : tpmStoredData?
 		  %% encData is the piece encrypted by the crs.
@@ -146,7 +146,7 @@ key [DVAL,HVAL:TYPE+] : THEORY
     %% Sealed Data - contains confidential info related to sealed data	(9.3)
     tpmSealedData(authData:(tpmAuthData?),
 		  tpmProof:(tpmSecret?),
-		  storedDigest:(tpmDigest?),
+		  storedDigest:TPM_COMPOSITE_HASH,
 		  data:tpmData) : tpmSealedData?
     
     %% Session keys are simply symetric keys				(9.4)
@@ -159,11 +159,11 @@ key [DVAL,HVAL:TYPE+] : THEORY
     tpmKey(key:KVAL,
 	   keyUsage:KEY_USAGE,
 	   keyFlags:KEY_FLAGS,
-	   PCRInfo:PCRS,%list[PCR],
+	   PCRInfo:PCR_INFO_LONG,
 	   wrappingKey:KVAL,
 	   crs:CRYPTOSTATUS) : tpmKey?
     %  tpmKey subsumes all asymmetric keys used by the TPM
-    %  wrapped key: tpmKey(child,wrapped(public(parent),clear,pcrs))
+    %  wrapped key: tpmKey(child,wrapped(public(parent),clear))
     %  clear child wrapped by parent bound to PCRs
     %  unwrapped asymmetric key: tpmKey(k,clear)
     %  clear key
@@ -189,8 +189,11 @@ key [DVAL,HVAL:TYPE+] : THEORY
 		partPrivKey:(tpmKey?)):tpmMigrateAsymkey?
 
     %%  Quote including a PCR digest and nonce.				(11.3)
-    tpmQuote(digest:list[PCR],nonce:(tpmNonce?),crs:CRYPTOSTATUS) : tpmQuote?
+    tpmQuote(digest:TPM_COMPOSITE_HASH,externalData:(tpmNonce?),crs:CRYPTOSTATUS) : tpmQuote?
     %  PCRs are not current TPM data, so the digest is over PCR values.
+    
+    %% Quote the current values of a list of PCRs			(11.4)
+    tpmQuote2(infoShort:PCR_INFO_SHORT,externalData:(tpmNonce?),crs:CRYPTOSTATUS) : tpmQuote2?
     
     %% Provides wrapper to each type of structure that will be in use when(12.1)
     %% EK is in use
@@ -221,14 +224,14 @@ key [DVAL,HVAL:TYPE+] : THEORY
   ENDCASES
 
   %% Reserved Key Handles - Should be moved to tpm.pvs
-  TPM_KH_SRK : (tpmKey?) = tpmKey(2,storage,keyFlagsF,pcrsPower,1,clear)
+  TPM_KH_SRK : (tpmKey?) = tpmKey(2,storage,keyFlagsF,pcrInfoLongDefault,1,clear)
   TPM_KH_OWNER : (tpmKey?)
   TPM_KH_REVOKE : (tpmKey?)
   TPM_KH_TRANSPORT : (tpmKey?)
   TPM_KH_OPERATOR : (tpmKey?)
   TPM_KH_ADMIN : (tpmKey?)
   %% Not sure if EK is an indentity key or not
-  TPM_KH_EK : (tpmKey?) = tpmKey(1,identity,keyFlagsF,pcrsPower,1,clear)
+  TPM_KH_EK : (tpmKey?) = tpmKey(1,identity,keyFlagsF,pcrInfoLongDefault,1,clear)
 
 
   %% Any tpmKey? with key value 0 is invalid.
@@ -482,7 +485,7 @@ key [DVAL,HVAL:TYPE+] : THEORY
     % ELSE ks
     % ENDIF;
 
-  loadKey(k:(tpmKey?),wk:(tpmKey?),ks:KEYSET,d:PCRS):KEYSET =  %d:list[PCR]
+  loadKey(k:(tpmKey?),wk:(tpmKey?),ks:KEYSET,d:PCR_INFO_LONG):KEYSET =  %d:list[PCR]
     IF storage?(keyUsage(wk)) AND wrappingKey(k)=key(wk) AND d=PCRInfo(k)
        AND installedOrSRK?(wk,ks)
     THEN addKey(k,ks)
@@ -492,7 +495,7 @@ key [DVAL,HVAL:TYPE+] : THEORY
   %% Remove a key - this is not currently
   revokeKey(k:(tpmKey?),ks:KEYSET):KEYSET = remove(key(k),ks);
 
-  child_if_parent: THEOREM FORALL (k,wk:(tpmKey?),srk:KVAL,ks:KEYSET,d:PCRS) : %d:list[PCR]
+  child_if_parent: THEOREM FORALL (k,wk:(tpmKey?),srk:KVAL,ks:KEYSET,d:PCR_INFO_LONG) : %d:list[PCR]
     wrappingKey(k)=key(wk) AND storage?(keyUsage(wk)) AND d=PCRInfo(k)
     AND (member(wrappingKey(k),ks) OR wrappingKey(k)=key(TPM_KH_SRK))
        => member(key(k),loadKey(k,wk,ks,d))
