@@ -37,7 +37,15 @@ tpm [ B:TYPE+ % BLOB
   ENDASSUMING
 
   K : TYPE = nat;
-
+  
+  cpuReturn : DATATYPE
+  BEGIN
+    CPU_ERROR : CPU_ERROR? 
+    CPU_SUCCESS : CPU_SUCCESS?
+    CPU_DECRYPT_ERROR : CPU_DECRYPT_ERROR? 
+    CPU_QUOTE_ERROR : CPU_QUOTE_ERROR?
+  END cpuReturn;
+  
   IMPORTING pcr[HV];
   IMPORTING key[B,HV];
   IMPORTING ReturnCodes;
@@ -45,15 +53,16 @@ tpm [ B:TYPE+ % BLOB
   IMPORTING PermanentFlags;
   IMPORTING PermanentData[B,K,HV];
 
-  SML : TYPE = list[HV];
-
   %% State monad output type
   tpmAbsOutput : DATATYPE
   BEGIN
     OUT_Nothing : OUT_Nothing?
     OUT_Error(m:ReturnCode) : OUT_Error?
-    OUT_Data_Bind(outData:(tpmBoundData?)) : OUT_Data_Bind?
-    OUT_Certify(data:(tpmAsymCAContents?)) : OUT_Certify?
+    OUT_CPUError(m:cpuReturn) : OUT_CPUError?
+    OUT_Data_Bind(outData:(tpmBoundData?),m:cpuReturn) : OUT_Data_Bind?
+    OUT_Certify(data:(tpmAsymCAContents?),m:cpuReturn) : OUT_Certify?
+    OUT_FullQuote(quote:(tpmQuote?),idBind:(tpmIdContents?),m:cpuReturn) 
+    	: OUT_FullQuote?
   %% Admin Startup and State (3)
     OUT_Init(m:ReturnCode) : OUT_Init?
     OUT_SaveState(m:ReturnCode) : OUT_SaveState?
@@ -310,9 +319,12 @@ tpm [ B:TYPE+ % BLOB
 		      		, permFlags(s)
 		      		, permData(s)
 		      		)];
+  takeOwnership?(s:tpmAbsState,ownerAuth,srkAuth:(tpmAuthData?),srkParams:(tpmKey?)) : bool =
+    ownership(permFlags(s)) AND goodkey?(key(ek(s)))
+      AND storage?(keyUsage(srkParams)) AND not(migratable(keyFlags(srkParams)))
 
   takeOwnershipState(s:tpmAbsState,ownerAuth,srkAuth:(tpmAuthData?),srkParams:(tpmKey?)) : tpmAbsState =
-   IF ownership(permFlags(s)) AND key(ek(s)) /= badkey 
+   IF ownership(permFlags(s)) AND goodkey?(key(ek(s))) 
       AND storage?(keyUsage(srkParams)) AND not(migratable(keyFlags(srkParams)))
    THEN s WITH [`srk:=srkParams
    	       ,`permFlags(readPubek):=FALSE]
@@ -324,7 +336,7 @@ tpm [ B:TYPE+ % BLOB
   takeOwnershipOut(s:tpmAbsState,ownerA,srkA:(tpmAuthData?),srkParams:(tpmKey?)) : tpmAbsOutput =
   %% TODO: Lots of flags for this one.
     IF ownership(permFlags(s))
-      THEN IF key(ek(s)) /= badkey
+      THEN IF goodkey?(key(ek(s)))
       	     THEN IF storage?(keyUsage(srkParams)) AND migratable(keyFlags(srkParams))=FALSE
 	     	  THEN OUT_TakeOwnership(srkParams,TPM_SUCCESS)
 		  ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
@@ -375,6 +387,9 @@ tpm [ B:TYPE+ % BLOB
   disableForceClearOut(s:tpmAbsState) : tpmAbsOutput = 
     OUT_DisableForceClear(TPM_SUCCESS)
 
+  seal?(s:tpmAbsState,k:(tpmKey?),enc:(tpmAuthData?),pcr:(tpmPCRInfo?),data:tpmData) : bool =
+    storage?(keyUsage(k)) AND not(migratable(keyFlags(k))) %AND DECRYPTED
+    
   % Output secret sealed with asymmetric key 
   sealOut(s:tpmAbsState,k:(tpmKey?),enc:(tpmAuthData?),pcr:(tpmPCRInfo?),data:tpmData) : tpmAbsOutput = 
     IF storage?(keyUsage(k)) AND not(migratable(keyFlags(k)))
@@ -386,6 +401,9 @@ tpm [ B:TYPE+ % BLOB
     	     IN OUT_Seal(S1,TPM_SUCCESS)
     ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
     ENDIF
+
+  unseal?(s:tpmAbsState,parent:(tpmKey?),inData:(tpmStoredData?)) : bool = 
+    storage?(keyUsage(parent)) and migratable(keyFlags(parent))=FALSE %AND DECRYPTED
 
   % Output secret unsealed with an asymmetric key and PCRs 
   unsealOut(s:tpmAbsState,parent:(tpmKey?),inData:(tpmStoredData?)) : tpmAbsOutput = 
@@ -412,7 +430,7 @@ tpm [ B:TYPE+ % BLOB
     THEN LET d1=decrypt(private(k),d) IN 
     	 IF crs(d1)=clear
  	 THEN OUT_UnBind(payloadData(d1),TPM_SUCCESS)
-	 ELSE OUT_Error(TPM_DECRYPT_ERROR)
+	 ELSE OUT_CPUError(CPU_DECRYPT_ERROR) % TODO: May be incorrect
 	 ENDIF
     ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
     ENDIF  	    
@@ -490,7 +508,7 @@ tpm [ B:TYPE+ % BLOB
 	      authChange: OUT_Error(TPM_INVALID_KEYUSAGE)
 	      ELSE OUT_LoadKey2(inKey,TPM_SUCCESS)
 	      ENDCASES
-    	 ELSE OUT_Error(TPM_DECRYPT_ERROR) %% TODO: Might not be right.
+    	 ELSE OUT_CPUError(CPU_DECRYPT_ERROR) %% TODO: Might not be right.
 	 ENDIF
     ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
     ENDIF;
@@ -505,7 +523,7 @@ tpm [ B:TYPE+ % BLOB
       tpmKey(k,ku,kf,pcr,wk,crs) : 
 	   key(p)=k AND checkMigKeyAuth?(s,a) AND
 	   	CASES m OF
-      	   	  migrate : FALSE, %TODO : not correct
+      	   	  migrate : FALSE, %TODO : not correct!
 		  rewrap  : TRUE
 		ENDCASES	
       ELSE FALSE
@@ -527,7 +545,7 @@ tpm [ B:TYPE+ % BLOB
 		     ENDCASES	
 	      	ELSE OUT_Error(TPM_RESOURCES) % TODO: not at all correct.
 	      	ENDIF
-    	   ELSE OUT_Error(TPM_DECRYPT_ERROR) % TODO: not correct?
+    	   ELSE OUT_CPUError(CPU_DECRYPT_ERROR) % TODO: not correct?
 	   ENDIF
 	 ELSE OUT_Error(TPM_WRONG_ENTITYTYPE) % TODO: not correct?
     	 ENDCASES
@@ -574,6 +592,9 @@ tpm [ B:TYPE+ % BLOB
       ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
     ENDIF
 
+  sign?(s:tpmAbsState,key:(tpmKey?),areaToSign:tpmData) : bool = 
+    signing?(keyUsage(key)) OR legacy?(keyUsage(key))
+
   % Sign a blob if signing key isn't aik
   % TODO: add signature scheme (makes this more complicated)
   signOut(s:tpmAbsState,key:(tpmKey?),areaToSign:tpmData) : tpmAbsOutput=
@@ -583,7 +604,7 @@ tpm [ B:TYPE+ % BLOB
     ENDIF
 
   createEndorsementKeyPairState(s:tpmAbsState,antiReplay:(tpmNonce?),keyInfo:(tpmKey?)) : tpmAbsState = 
-    IF (key(ek(s))/=badkey)
+    IF goodkey?(key(ek(s)))
     THEN s
     ELSE s WITH [`ek := privateKey(keyInfo)
     	   	,`permFlags(CEKPUsed) := TRUE
@@ -592,14 +613,14 @@ tpm [ B:TYPE+ % BLOB
 
   % If ek doesn't exist, create a new ek from keyInfo
   createEndorsementKeyPairOut(s:tpmAbsState,antiReplay:(tpmNonce?),keyInfo:(tpmKey?)) : tpmAbsOutput = 
-    IF (key(ek(s)) /= badkey)
+    IF goodkey?(key(ek(s)))
       THEN OUT_Error(TPM_DISABLED_CMD) 
       ELSE OUT_CreateEndorsementKeyPair(keyInfo,tpmDigest(cons(keyInfo,cons(antiReplay,null)),clear),TPM_SUCCESS)
     ENDIF;
 
   createRevEKState(s:tpmAbsState,antiReplay:(tpmNonce?),keyInfo:(tpmKey?),
 	generateReset:bool,inputEKreset:(tpmNonce?)) : tpmAbsState =
-    IF key(ek(s)) /= badkey
+    IF goodkey?(key(ek(s)))
     THEN s
     ELSE LET s1=createEndorsementKeyPairState(s,antiReplay,keyInfo) IN
     	 s1 WITH [`permFlags(enableRevokeEK):=TRUE,
@@ -614,7 +635,7 @@ tpm [ B:TYPE+ % BLOB
     
   createRevEKOut(s:tpmAbsState,antiReplay:(tpmNonce?),keyInfo:(tpmKey?),
 	generateReset:bool,inputEKreset:(tpmNonce?)) : tpmAbsOutput = 
-    IF key(ek(s)) /= badkey
+    IF goodkey?(key(ek(s)))
     THEN OUT_Error(TPM_DISABLED_CMD) 
     ELSE LET checksum=tpmDigest(cons(keyInfo,cons(antiReplay,null)),clear),
     	     pubEK=tpmPubkey(tpmStorePubkey(key(keyInfo))) IN 
@@ -624,6 +645,9 @@ tpm [ B:TYPE+ % BLOB
 			       inputEKreset,
 			       TPM_SUCCESS)
     ENDIF;
+
+  revokeTrust?(s:tpmAbsState,ekReset:(tpmNonce?)) : bool =
+    enableRevokeEK(permFlags(s)) AND ekReset(permData(s))=ekReset
 
   revokeTrustState(s:tpmAbsState,ekReset:(tpmNonce?)) : tpmAbsState = 
     IF enableRevokeEK(permFlags(s)) AND ekReset(permData(s)) = ekReset
@@ -648,9 +672,12 @@ tpm [ B:TYPE+ % BLOB
     ELSE OUT_Error(TPM_PERMANENTEK) 
     ENDIF;
 
+  readPubek?(s:tpmAbsState,n:(tpmNonce?)) : bool = 
+    readPubek(permFlags(s)) AND goodkey?(key(ek(s)))
+
   readPubekOut(s:tpmAbsState,n:(tpmNonce?)) : tpmAbsOutput =
     IF readPubek(permFlags(s))
-      THEN IF key(ek(s)) /= badkey
+      THEN IF goodkey?(key(ek(s)))
       	     THEN LET pubEK=publicKey(ek(s)) IN
 	     	  OUT_ReadPubek(pubEK,
 				tpmDigest(cons(pubEK,cons(n,null)),clear),
@@ -659,6 +686,9 @@ tpm [ B:TYPE+ % BLOB
 	   ENDIF
       ELSE OUT_Error(TPM_DISABLED_CMD)
     ENDIF
+
+  makeIdentity?(s:tpmAbsState,CADigest:(tpmDigest?),idKeyParams:(tpmKey?)) : bool =
+	identity?(keyUsage(idKeyParams)) AND migratable(keyFlags(idKeyParams))=FALSE
 
   makeIdentityState(s:tpmAbsState,CADigest:(tpmDigest?),idKeyParams:(tpmKey?)) : tpmAbsState = 
     IF identity?(keyUsage(idKeyParams)) AND migratable(keyFlags(idKeyParams))=FALSE
@@ -751,8 +781,9 @@ tpm [ B:TYPE+ % BLOB
 %      ENDIF
 
   dataBindOut(s:tpmAbsState,k:(tpmKey?),d:tpmData) : tpmAbsOutput = 
-    OUT_Data_Bind(tpmBoundData(d,encrypted(key(k),clear)));
+    OUT_Data_Bind(tpmBoundData(d,encrypted(key(k),clear)),CPU_SUCCESS);
 
+  %% TODO: should this be able to affect state? i don't think so.
   certState(s:tpmAbsState,aik:(tpmKey?),certReq:(tpmIdContents?)) : tpmAbsState =
     LET d=decrypt(key(aik),certReq) IN
     	IF crs(d)=clear
@@ -767,8 +798,9 @@ tpm [ B:TYPE+ % BLOB
     	IF crs(d)=clear
 	THEN OUT_Certify(tpmAsymCAContents(tpmSessKey(keyGenCnt(s),clear),
 					   digest(certReq),
-					   encrypted(key(ekVal),clear)))
-	ELSE OUT_Error(TPM_DECRYPT_ERROR) %TODO: may be incorrect
+					   encrypted(key(ekVal),clear)),
+			 CPU_SUCCESS)
+	ELSE OUT_CPUError(CPU_DECRYPT_ERROR)
 	ENDIF
   
   % Read a value and output
@@ -937,24 +969,14 @@ tpm [ B:TYPE+ % BLOB
     modify(OUT_Error(TPM_SUCCESS),
            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_sinit)));
  
-  %% Build a quote for the appraiser from the quote, cert, and log
-%   buildQuote(q:(outQuote?),ca:(outIdentActivation?),sml:SML,
-%              sessk:(symKey?)):tpmAbsOutput =
-%     IF sessk=symK(oactc(ca))
-%      THEN outFullQuote(oactc(ca),sml,q,TPM_SUCCESS)
-%      ELSE OUT_Error(TPM_INAPPROPRIATE_SIG) %% TODO: Double check this
-%     ENDIF;
-
-%   CPU_BuildQuoteFromMem(q,ca,sessk:nat,sml:SML):State =
-%     output(OUT_Nothing,
-%             (LAMBDA (s:tpmAbsState) :
-% 	       LET theMem = memory(s) IN
-% 	         IF outIdentActivation?(theMem(sessk))
-% 		    AND outIdentActivation?(theMem(ca))
-% 		    AND outQuote?(theMem(q))
-%                  THEN buildQuote(theMem(q),theMem(ca),sml,symK(oactc(theMem(sessk))))
-% 		 ELSE OUT_Error(TPM_FAIL) %% TODO: Incorrect
-% 		 ENDIF));
+  CPU_BuildQuoteFromMem(q,idcont:nat):State =
+    output(LAMBDA (s:tpmAbsState) :
+	       LET theMem = memory(s) IN
+	         IF OUT_Quote?(theMem(q)) AND tpmQuote?(sig(theMem(q)))
+		    AND OUT_MakeIdentity?(theMem(idcont))
+                 THEN  OUT_FullQuote(sig(theMem(q)),idBinding(theMem(idcont)),CPU_SUCCESS)
+		 ELSE OUT_CPUError(CPU_QUOTE_ERROR) %% TODO: Incorrect?
+		 ENDIF);
 
   %% CA Command Definitions
   %% Invoke the certification authority
@@ -974,9 +996,10 @@ tpm [ B:TYPE+ % BLOB
     	IF crs(d)=clear
 	THEN a=OUT_Certify(tpmAsymCAContents(tpmSessKey(keyGenCnt(state),clear),
 					   digest(id),
-					   encrypted(key(ekVal),clear)))
+					   encrypted(key(ekVal),clear)),
+			   CPU_SUCCESS)
 	     AND s = state WITH [`keyGenCnt := keyGenCnt(state)+1]
-	ELSE a=OUT_Error(TPM_DECRYPT_ERROR) %TODO: may be incorrect
+	ELSE a=OUT_CPUError(CPU_DECRYPT_ERROR) %TODO: may be incorrect
 	     AND s=state
 	ENDIF
 	
@@ -1095,7 +1118,7 @@ tpm [ B:TYPE+ % BLOB
 		 TPM_TakeOwnership(oA,srkA,srk))
 		 (state) IN
     IF ownership(permFlags(s))
-    THEN IF key(ek(s)) /= badkey
+    THEN IF goodkey?(key(ek(s)))
     	 THEN IF storage?(keyUsage(srk)) AND not(migratable(keyFlags(srk)))
 	      THEN a = OUT_TakeOwnership(srk,TPM_SUCCESS) AND 
      	     	  s = state WITH [`srk:=srk,
@@ -1110,7 +1133,20 @@ tpm [ B:TYPE+ % BLOB
     	 s = state
     ENDIF
 		 
+  take_ownership_pred: THEOREM FORALL (state:(afterStartup?),srk:(tpmKey?),oA,srkA:(tpmAuthData?)) : 
+    LET (a,s) = runState(
+		 TPM_TakeOwnership(oA,srkA,srk))
+		 (state) IN
+    IF takeOwnership?(state,oA,srkA,srk)
+    THEN a=OUT_TakeOwnership(srk,TPM_SUCCESS) AND 
+     	 s=state WITH [`srk:=srk,
+		       `permFlags(readPubek):=FALSE]
+    ELSE a=OUT_Error(TPM_INSTALL_DISABLED) OR a=OUT_Error(TPM_INVALID_KEYUSAGE) OR
+    	 a=OUT_Error(TPM_NO_ENDORSEMENT) AND
+	 s=state
+    ENDIF;
           
+
   TPM_OwnerClear : State = 
      modifyOutput(
             (LAMBDA (s:tpmAbsState) : executeCom(s,ABS_OwnerClear)),
@@ -1199,6 +1235,22 @@ tpm [ B:TYPE+ % BLOB
 	  ELSE a = OUT_Error(TPM_INVALID_KEYUSAGE) 
 	ENDIF
 	AND s = state
+ 
+  seal_pred : THEOREM
+    FORALL (state:(afterStartup?),k:(tpmKey?),e:(tpmAuthData?),p:(tpmPCRInfo?),d:tpmData) :
+      LET (a,s) = runState(
+     	 	  TPM_Seal(k,e,p,d))
+ 		  (state) IN
+      IF seal?(state,k,e,p,d)
+	  THEN a=OUT_Seal(tpmStoredData(p,tpmSealedData(e,
+							tpmProof(permData(s)),
+							tpmDigest(cons(p,null),clear),
+							d),
+					encrypted(key(k),clear)),
+			    TPM_SUCCESS)
+	  ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE) 
+	ENDIF
+	AND s=state
 
   %% Unseal and output a blob (should be binary or data)
   TPM_Unseal(p:(tpmKey?),d:(tpmStoredData?)) : State = 
@@ -1210,6 +1262,24 @@ tpm [ B:TYPE+ % BLOB
                     TPM_Unseal(p,d))
 		    (state) IN
       IF storage?(keyUsage(p)) AND not(migratable(keyFlags(p)))
+      THEN IF crs(decrypt(key(p),d))=clear
+      	   THEN IF tpmProof(encData(d))=tpmProof(permData(s)) AND 
+	   	   storedDigest(encData(d))=tpmDigest(cons(sealInfo(d),null),clear)
+		THEN a=OUT_Unseal(data(encData(d)),TPM_SUCCESS)
+		ELSE a=OUT_Error(TPM_NOTSEALED_BLOB)
+		ENDIF
+	   ELSE a=OUT_Error(TPM_DECRYPT_ERROR)
+	   ENDIF
+      ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
+      ENDIF 
+      AND s=state
+  
+  unseal_pred : THEOREM
+    FORALL (state:(afterStartup?),p:(tpmKey?),d:(tpmStoredData?)) :
+      LET (a,s) = runState(
+                    TPM_Unseal(p,d))
+		    (state) IN
+      IF unseal?(state,p,d)
       THEN IF crs(decrypt(key(p),d))=clear
       	   THEN IF tpmProof(encData(d))=tpmProof(permData(s)) AND 
 	   	   storedDigest(encData(d))=tpmDigest(cons(sealInfo(d),null),clear)
@@ -1253,7 +1323,7 @@ tpm [ B:TYPE+ % BLOB
       THEN LET d1=decrypt(private(k),d) IN 
     	 IF crs(d1)=clear
       	   THEN a=OUT_UnBind(payloadData(d),TPM_SUCCESS)
-	   ELSE a=OUT_Error(TPM_DECRYPT_ERROR) %unsure if this is correct
+	   ELSE a=OUT_CPUError(CPU_DECRYPT_ERROR) %TODO: unsure if this is correct
 	   ENDIF
       ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
       ENDIF  	    
@@ -1268,7 +1338,7 @@ tpm [ B:TYPE+ % BLOB
       THEN a=OUT_UnBind(payloadData(d),TPM_SUCCESS)
       ELSE IF not(legacy?(keyUsage(k)) OR bind?(keyUsage(k))) 
       	   THEN a=OUT_Error(TPM_INVALID_KEYUSAGE) 
-      	   ELSE a=OUT_Error(TPM_DECRYPT_ERROR) %TODO: unsure if this is correct
+      	   ELSE a=OUT_CPUError(CPU_DECRYPT_ERROR) %TODO: unsure if this is correct
 	   ENDIF
       ENDIF  	    
       AND s = state
@@ -1283,16 +1353,14 @@ tpm [ B:TYPE+ % BLOB
 		  Tspi_Data_Bind(k,d)
 		  >>= LAMBDA (a:tpmAbsOutput) : 
 		      CASES a OF
-		        OUT_Data_Bind(d) : TPM_UnBind(k,d) 
+		        OUT_Data_Bind(d,m) : TPM_UnBind(k,d) 
 			ELSE TPM_Noop(a) 
 		      ENDCASES)
  		  (state) IN 
 	  tpmBoundData?(d) AND unBind?(k,d) =>
 	  a = OUT_UnBind(d,TPM_SUCCESS) 
 	  AND s = state
-% 	  s = state WITH [`keyGenCnt := keyGenCnt(state)+1]
-	    %`keys := addKey(k,srk(state),keys(state),pcrs(state)),
-	      	    	  
+
 
   %% Wrap new key k with parent key
   TPM_CreateWrapKey(parent,keyInfo:(tpmKey?)) : State = 
@@ -1377,7 +1445,7 @@ tpm [ B:TYPE+ % BLOB
 	      ELSE a=OUT_LoadKey2(inKey,TPM_SUCCESS)
 	      	   AND s=state with [`keys:=loadKey(inKey,srk(state),keys(state),pcrs(state))]
 	      ENDCASES
-	 ELSE a=OUT_Error(TPM_DECRYPT_ERROR) %% Might not be right.
+	 ELSE a=OUT_CPUError(CPU_DECRYPT_ERROR) %% Might not be right.
 	      AND s=state
 	 ENDIF
     ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
@@ -1393,7 +1461,7 @@ tpm [ B:TYPE+ % BLOB
 	THEN a=OUT_LoadKey2(k,TPM_SUCCESS)
 	     AND s=state with [`keys:=loadKey(k,srk(state),keys(state),pcrs(state))]
 	ELSE IF storage?(keyUsage(p)) AND key(p)/=wrappingKey(k) 
-	     THEN a=OUT_Error(TPM_DECRYPT_ERROR)
+	     THEN a=OUT_CPUError(CPU_DECRYPT_ERROR)
 	     ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
 	     ENDIF
 	     AND s=state
@@ -1402,58 +1470,59 @@ tpm [ B:TYPE+ % BLOB
   %% A key is installed if it is wrapped with an installed key
   %% proved - Tue Jun 12 15:38:22 CDT 2012
 %   load_key_post2: THEOREM 
-%     FORALL (j,k:(wrapKey?),p:(asymKey?),state:(afterStartup?)) :
+%     FORALL (p,j,k:(tpmKey?),state:(afterStartup?)) :
 %       LET (out,s) = runState(
 %       	  	  TPM_LoadKey2(p,k)
-% 		  >> TPM_LoadKey2(childKey(k),j))
+% 		  >> TPM_LoadKey2(k,j))
 % 		  (state) IN
-% 	p=srk(state) AND loadKey2?(p,k) AND loadKey2?(childKey(k),j)
-% 		=> member(childKey(j),keys(s));
+% 	p=srk(state) AND loadKey2?(p,k) AND loadKey2?(k,j)
+% 		=> member(key(j),keys(s));
 
 
-%   load_key_prev_post: THEOREM 
-%     FORALL (k,p:(asymKey?),state:(afterStartup?)) :
-%       LET (out,s) = runState(
-%       	  	    TPM_CreateWrapKey(p,k)
-% 		    >>= CPU_saveOutput(0)
-% 		    >>= (LAMBDA (a:tpmAbsOutput) :
-% 		    	 CASES a OF
-% 		           OUT_CreateWrapKey(wk,m) : TPM_LoadKey2(p,wk)
-% 			   ELSE TPM_Noop(a)
-% 			 ENDCASES))
-% 		    (state) IN 
-%       checkKey(p,srk(state),keys(state)) AND loadKey2?(p,wrappedKey(memory(s)(0))) =>
-%      		%member(asymKey(keyGenCnt(state),keyUsage(k),keyFlags(k)),keys(s))
-%       out = OUT_LoadKey2(wrappedKey(memory(s)(0)),TPM_SUCCESS) 
+  load_key_prev_post: THEOREM 
+    FORALL (state:(afterStartup?),k,p:(tpmKey?),i:nat) :
+      LET (out,s) = runState(
+      	  	    TPM_CreateWrapKey(p,k)
+		    >>= CPU_saveOutput(i)
+		    >>= (LAMBDA (a:tpmAbsOutput) :
+		    	 CASES a OF
+		           OUT_CreateWrapKey(wk,m) : TPM_LoadKey2(p,wk)
+			   ELSE TPM_Noop(a)
+			 ENDCASES))
+		    (state) IN 
+      OUT_CreateWrapKey?(memory(s)(i)) => 
+      createWrapKey?(p,k) AND loadKey2?(p,wrappedKey(memory(s)(i))) =>
+     		%member(asymKey(keyGenCnt(state),keyUsage(k),keyFlags(k)),keys(s))
+      out = OUT_LoadKey2(wrappedKey(memory(s)(i)),TPM_SUCCESS) 
      
 
-%   %%install nested wrapped keys? - IS THIS PROOF WORTH DOING?
-% %   nested_wrapped_keys_post: THEOREM 
-% %     FORALL (p,kInfo1,kInfo2:(asymKey?),state:(afterStartup?)) :
-% %       LET (a,s) = runState(
-% % 		  TPM_CreateWrapKey(p,kInfo1)
-% % 		  >>= CPU_saveOutput(0)
-% % 		  >>= (LAMBDA (a:tpmAbsOutput) : 
-% % 		       CASES a OF 
-% % 		         outWrapKey(wk,m) : TPM_LoadKey2(p,wk) 
-% % 			 ELSE TPM_Noop(a) 
-% % 		       ENDCASES)
-% % 		  >>= (LAMBDA (a:tpmAbsOutput) :
-% % 		       CASES a OF
-% % 		         outWrapKey(wk,m) : TPM_CreateWrapKey(childKey(wk),kInfo2)
-% % 			 ELSE TPM_Noop(a)
-% % 		       ENDCASES)
-% % 		  >>= CPU_saveOutput(1)
-% % 		  >>= (LAMBDA (a:tpmAbsOutput) : 
-% % 		       CASES a OF
-% % 		         outWrapKey(wk2,m) : TPM_LoadKey2(p,wk2) 
-% % 			 ELSE TPM_Noop(a) 
-% % 		       ENDCASES))
-% % 		  (state) IN
-% % 	checkKey(p,srk(s),keys(s)) AND outWrapKey?(memory(s)(1)) =>
-% % 		 member(childKey(owk(memory(s)(1))),keys(s)) 
-% % % 	AND member(k,keys(s))
-% % 	AND a = OUT_Nothing
+%   %%install nested wrapped keys?
+%   nested_wrapped_keys_post: THEOREM 
+%     FORALL (state:(afterStartup?),p,k1,k2:(tpmKey?)) :
+%       LET (a,s) = runState(
+% 		  TPM_CreateWrapKey(p,k1)
+% 		  >>= CPU_saveOutput(0)
+% 		  >>= (LAMBDA (a:tpmAbsOutput) : 
+% 		       CASES a OF 
+% 		         OUT_CreateWrapKey(wk,m) : TPM_LoadKey2(p,wk) 
+% 			 ELSE TPM_Noop(a) 
+% 		       ENDCASES)
+% 		  >>= (LAMBDA (a:CASES) :
+% 		       tpmAbsOutput a OF
+% 		         OUT_LoadKey2(wk,m) : TPM_CreateWrapKey(wk,k2)
+% 			 ELSE TPM_Noop(a)
+% 		       ENDCASES)
+% 		  >>= CPU_saveOutput(1)
+% 		  >>= (LAMBDA (a:tpmAbsOutput) : 
+% 		       CASES a OF
+% 		         OUT_CreateWrapKey(wk2,m) : TPM_LoadKey2(k1,wk2) 
+% 			 ELSE TPM_Noop(a) 
+% 		       ENDCASES))
+% 		  (state) IN
+% 	OUT_CreateWrapKey?(memory(s)(0)) AND OUT_CreateWrapKey?(memory(s)(1)) AND
+% 	createWrapKey?(p,k1) AND createWrapKey?(k1,k2) AND 
+% 	loadKey2?(p,wrappedKey(memory(s)(0))) AND loadKey2?(k1,wrappedKey(memory(s)(1)))=>
+% 	a=OUT_LoadKey2(wrappedKey(memory(s)(1)),TPM_SUCCESS)
 
 
   TPM_CreateMigrationBlob(pk:(tpmKey?),m:migrateScheme,mka:(tpmMigKeyAuth?),
@@ -1481,13 +1550,28 @@ tpm [ B:TYPE+ % BLOB
 		     ENDCASES	
 	        ELSE a=OUT_Error(TPM_RESOURCES) % TODO: not at all correct.
 	        ENDIF 
-      	   ELSE a=OUT_Error(TPM_DECRYPT_ERROR) % TODO: not correct?
+      	   ELSE a=OUT_CPUError(CPU_DECRYPT_ERROR) % TODO: not correct?
 	   ENDIF
 	ELSE a=OUT_Error(TPM_WRONG_ENTITYTYPE) % TODO: not correct?
 	ENDCASES
       ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
       ENDIF
       AND s=state 
+
+  create_mig_blob_pred_test: THEOREM 
+   FORALL (state:(afterStartup?),pk:(tpmKey?),m:migrateScheme,
+		mka:(tpmMigKeyAuth?),d:(tpmKey?)) : 
+    LET(a,s) = runState(
+    	       TPM_CreateMigrationBlob(pk,m,mka,d))
+	       (state) IN
+    IF createMigBlob?(state,pk,m,mka,d)
+    THEN a=OUT_CreateMigrationBlob(0,
+				   tpmKey(key(d),keyUsage(d),keyFlags(d),PCRInfo(d),key(key(mka)),clear),
+		     		   TPM_SUCCESS)
+    ELSE a=OUT_Error(TPM_INSTALL_DISABLED) OR a=OUT_CPUError(CPU_DECRYPT_ERROR) OR 
+    	 a=OUT_Error(TPM_RESOURCES) OR a=OUT_Error(TPM_WRONG_ENTITYTYPE) OR  
+	 a=OUT_Error(TPM_INVALID_KEYUSAGE)
+    ENDIF
 
 
   TPM_ConvertMigrationBlob(k:(tpmKey?),inData:tpmData,rand:int) : State =
@@ -1541,6 +1625,18 @@ tpm [ B:TYPE+ % BLOB
 	ELSE a = OUT_Error(TPM_INVALID_KEYUSAGE)
 	ENDIF
 	AND s = state;
+
+  sign_pred_test : THEOREM
+    FORALL (state:(afterStartup?),k:(tpmKey?),b:tpmData) :
+      LET(a,s) = runState(
+     		  TPM_Sign(k,b))
+		  (state) IN
+	IF sign?(state,k,b)
+	THEN a = OUT_Sign(sign(key(k),b),TPM_SUCCESS)
+	ELSE a = OUT_Error(TPM_INVALID_KEYUSAGE)
+	ENDIF
+	AND s = state;
+
 
   TPM_CreateEndorsementKeyPair(n:(tpmNonce?),k:(tpmKey?)) : State =
      %% TODO: Perm Data stuff with RNG
@@ -1617,6 +1713,22 @@ tpm [ B:TYPE+ % BLOB
       	   s=state
       ENDIF;
 
+  revoke_trust_pred_test : THEOREM
+    FORALL (state:(afterStartup?),EKReset:(tpmNonce?)) : 
+      LET (a,s) = runState(
+      	  	  TPM_RevokeTrust(EKReset))
+		  (state) IN
+      IF revokeTrust?(state,EKReset)
+      THEN a=OUT_RevokeTrust(TPM_SUCCESS) AND
+	   LET s1=clear(state) IN
+	       s=s1 WITH [`permFlags(nvLocked):=FALSE,
+		    	  `ek:=tpmKey(badkey,storage,keyFlagsF,
+					pcrsPower,badkey,clear)]
+      ELSE a=OUT_Error(TPM_AUTHFAIL) OR a=OUT_Error(TPM_PERMANENTEK) AND
+	   s=state
+      ENDIF;
+
+
 
   TPM_ReadPubek(n:(tpmNonce?)) : State =
      output(LAMBDA (s:tpmAbsState) : outputCom(s,ABS_ReadPubek(n)));
@@ -1627,7 +1739,7 @@ tpm [ B:TYPE+ % BLOB
       	  	  TPM_ReadPubek(n))
 		  (state) IN
     a = IF readPubek(permFlags(state))
-        THEN IF key(ek(state)) /= badkey
+        THEN IF goodkey?(key(ek(state)))
 	     THEN LET pubEndoK=ek(state) IN
 	     	  OUT_ReadPubek(pubEndoK,
 				tpmDigest(cons(pubEndoK,cons(n,null)),clear),
@@ -1664,7 +1776,26 @@ tpm [ B:TYPE+ % BLOB
 	ELSE a = OUT_Error(TPM_INVALID_KEYUSAGE)
 	     AND s = state
       ENDIF;
-   
+
+  make_identity_pred_test: THEOREM 
+    FORALL (state:(afterStartup?),CADigest:(tpmDigest?),idKeyParams:(tpmKey?)) :
+      LET (a,s) = runState(
+     	 	   TPM_MakeIdentity(CADigest,idKeyParams))
+		 (state) IN
+        LET waik:(tpmKey?) = tpmKey(keyGenCnt(state),
+				    keyUsage(idKeyParams),
+				    keyFlags(idKeyParams),
+				    pcrs(state),
+				    wrappingKey(srk(state)),
+				    clear) IN
+	LET idBind = tpmIdContents(CADigest,waik,signed(private(waik),clear)) IN
+      IF makeIdentity?(s,CADigest,idKeyParams)
+        THEN a = OUT_MakeIdentity(waik,idBind,TPM_SUCCESS)
+	     AND s = state WITH [`keyGenCnt := keyGenCnt(state)+1]
+	ELSE a = OUT_Error(TPM_INVALID_KEYUSAGE)
+	     AND s = state
+      ENDIF;
+      
 
   %% Use an AIK
   TPM_ActivateIdentity(a:(tpmKey?),b:(activateIdentityBlob?)) : State =
@@ -1711,7 +1842,7 @@ tpm [ B:TYPE+ % BLOB
 		  >>= CPU_saveOutput(0)
 		  >>= (LAMBDA (a:tpmAbsOutput) :
 		       CASES a OF
-		       OUT_Certify(data) : TPM_ActivateIdentity(aik,data)
+		       OUT_Certify(data,m) : TPM_ActivateIdentity(aik,data)
 		       ELSE TPM_Noop(a)	
 		       ENDCASES))
 		  (state) IN
@@ -1721,7 +1852,6 @@ tpm [ B:TYPE+ % BLOB
 	a=OUT_ActivateIdentity(sessK(data(memory(s)(0))),TPM_SUCCESS)
 
 
-  % need to get oiaik to TPM_ActivateIdentity somehow... using mem?
   %% REALLY LONG PROOF!
   make_and_activate_identity: THEOREM 
     FORALL (state:(afterStartup?),caDigest:(tpmDigest?),idKeyParams:(tpmKey?)) :
@@ -1736,15 +1866,15 @@ tpm [ B:TYPE+ % BLOB
 		   >>= CPU_saveOutput(1)
 		   >>= (LAMBDA (a:tpmAbsOutput) : 
 		       	CASES a OF
-		          OUT_Certify(data) : TPM_ActivateIdentity(idKeyParams,data)
+		          OUT_Certify(data,m) : TPM_ActivateIdentity(idKeyParams,data)
 			  ELSE TPM_Noop(a)
 			ENDCASES))
 		  (state) IN
-	
-	identity?(keyUsage(idKeyParams)) AND not(migratable(keyFlags(idKeyParams))) 
+	makeIdentity?(state,caDigest,idKeyParams)
 	AND private(idKeyParams)=key(idKey(memory(s)(0)))
 	AND caDigest=idBinding(memory(s)(0)) =>
-	a=OUT_ActivateIdentity(sessK(data(memory(s)(1))),TPM_SUCCESS)
+	a=OUT_ActivateIdentity(sessK(data(memory(s)(1))),TPM_SUCCESS) AND 
+	s=state WITH [`keyGenCnt:=keyGenCnt(state)+2]
 
 
 
@@ -2035,58 +2165,43 @@ tpm [ B:TYPE+ % BLOB
    %% Note that the identity is not used in building the final
    %% appraiser's quote
    %% proved Sat Jul 14 11:19:56 CDT 2012
-%    cert_and_quote_with_prev_key: THEOREM
-%      FORALL (state:tpmAbsState,
-% 	     n:BLOB,
-% 	     pm:PCRMASK,
-% 	     idKeyParams:(asymKey?),
-% 	     sml:SML) :
-%        LET (out,s) = runState(
-%                    TPM_Init
-%  		   >> TPM_Startup(TPM_ST_CLEAR)
-%  		   >> CPU_senter
-%  		   >> CPU_sinit
-%  		   >> TPM_MakeIdentity(idKeyParams) % identity is output
-% 		   >>= CPU_saveOutput(0)
-% 		   >>= (LAMBDA (a:tpmAbsOutput) :
-% 		         CASES a OF
-% 			   outIdentity(ik,rc) : CA_certify(outCertReq(ik,ek(state),k,TPM_SUCCESS))
-% 			   ELSE TPM_Noop(a)
-% 			 ENDCASES)
-% 	           >>= CPU_saveOutput(1)
-% 	           >>= (LAMBDA (a:tpmAbsOutput) :
-% 		         CASES a OF
-% 			   outIdentActivation(actc,sk,actek,rc) : TPM_ActivateIdentity(wkey(actc),sk)
-% % =======
-% % 			   outIdentActivation(oiacb,oiawk,rc) : TPM_ActivateIdentity(oiawk,oiacb)
-% % >>>>>>> Stashed changes
-% 			   ELSE TPM_Noop(a)
-% 			 ENDCASES)
-% 		   >> CPU_read(0)
-% 		   >>= (LAMBDA (a:tpmAbsOutput) :
-% 		         CASES a OF 
-% 			   outIdentity(aik,rc) : TPM_Quote(aik,n,pm)
-% 			   ELSE TPM_Noop(a)
-% 			 ENDCASES)
-% 		   >>= CPU_saveOutput(2) % Quote is saved in 2
-% 		   >> CPU_BuildQuoteFromMem(2,1,1,sml) % Build the quote
-% 		   )
-%  		   (state) IN
-% 		   LET wk:(wrapKey?) = (# parentKey:= private(srkVal),
-%                                        childKey := asymKey(100,keyUsage(idKeyParams),keyFlags(idKeyParams)) #)
-% 				       IN
-%          out = outFullQuote(certBlob(private(caVal),wk),
-%                                sml,
-%                                outQuote(private(asymKey(100,keyUsage(idKeyParams),keyFlags(idKeyParams))),
-%                                         n,
-%                                         map
-%                                         ((pcrsSenter(pcrsReset(pcrAttrib(permData(s))),pcrAttrib(permData(s)))
-%                                           WITH [(0)
-%                                                 := extend
-%                                                    (extend
-%                                                     (reset, hash(sinit)),
-%                                                     hash(mle))]),
-%                                          pm),
-% 					 TPM_SUCCESS),
-% 				TPM_SUCCESS)	    
+   cert_and_quote_with_prev_key : THEOREM
+   FORALL (state:(afterStartup?)
+   	  ,n:(tpmNonce?)
+	  ,pm:PCRMASK
+	  ,idKey:(tpmKey?)
+	  ,caDig:(tpmDigest?)) :
+    LET (a,s) = runState(
+    	      	TPM_MakeIdentity(caDig,idKey)
+		>>= CPU_saveOutput(0)
+		>>= (LAMBDA (a:tpmAbsOutput) : 
+		     CASES a OF
+		     OUT_MakeIdentity(aik,idBind,m) : CA_certify(aik,idBind)
+		     ELSE TPM_Noop(a)
+		     ENDCASES)
+% 		>>= CPU_saveOutput(1)
+		>>= (LAMBDA (a:tpmAbsOutput) : 
+		     CASES a OF
+		     OUT_Certify(data,m) : TPM_ActivateIdentity(idKey,data)
+		     ELSE TPM_Noop(a)
+		     ENDCASES)
+		>> CPU_read(0)
+		>>= (LAMBDA (a:tpmAbsOutput) : 
+		     CASES a OF
+		     OUT_MakeIdentity(aik,idBind,m) : TPM_Quote(aik,n,pm)
+		     ELSE TPM_Noop(a)
+		     ENDCASES)
+		>>= CPU_saveOutput(2)
+		>> CPU_BuildQuoteFromMem(2,0))
+		(state) IN
+	makeIdentity?(state,caDig,idKey)
+	AND OUT_MakeIdentity?(memory(s)(0)) 
+	AND OUT_Quote?(memory(s)(2))
+	AND private(idKey)=key(idKey(memory(s)(0)))
+	AND caDig=idBinding(memory(s)(0)) =>
+	LET pcrs = getPCRs(s`pcrs,pm) IN
+	a=OUT_FullQuote(tpmQuote(pcrs,n,signed(private(idKey),clear)),
+			tpmIdContents(caDig,idKey,signed(private(idKey),clear)),
+			CPU_SUCCESS)
+	   
 END tpm

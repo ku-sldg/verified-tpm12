@@ -18,5 +18,7 @@ source/pvsbin/tpm.bin
 /docs/tpm-spec-design/tpm-spec-design.blg
 /docs/tpm-spec-design/tpm-spec-design.bbl
 /source/pvsbin/PermanentFlags.bin
+/source/pvsbin/PermanentData.bin
+/source/pvsbin/startupData.bin
 /source/pvsbin/returnCodes.bin
 /docs/attestation/attestation.blg
