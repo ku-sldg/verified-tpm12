@@ -2,25 +2,21 @@
  (unique_hash 0
   (unique_hash-1 nil 3559055101 ("" (postpone) nil nil) nil shostak))
  (IMP_StateMonad_TCC1 0
-  (IMP_StateMonad_TCC1-1 nil 3562244222
-   ("" (existence-tcc)
-    ((""
-      (inst 1 "(#
-                         pcrs:=pcrsPower
-			 , postInit:=true
-                         , locality:=4
-			 , keys:=emptyset
-			 , srk:=privateKey(srkVal)
-			 , ek:=privateKey(ekVal)
-		         , keyGenCnt:=initKeyVal
-			 , memory:=empty
-			 , restore:=initSaveData
-			 , permFlags:=permFlagsInit
-			 , permData:=permDataInit
-			 , disableForceClear:=FALSE
-			 #)")
-      nil nil))
-    nil)
+  (IMP_StateMonad_TCC1-1 nil 3564837985
+   (""
+    (inst 1 "(# pcrs := pcrsPower,
+    postInit := TRUE,
+    locality := 4,
+    keys := emptyset,
+    srk := privateKey(srkVal),
+    ek := privateKey(ekVal),
+    keyGenCnt := initKeyVal,
+    memory := empty,
+    restore := initSaveData,
+    permFlags := permFlagsInit,
+    permData := permDataInit,
+    disableForceClear := FALSE #)")
+    nil nil)
    ((FALSE const-decl "bool" booleans nil)
     (permDataInit const-decl "PermData" PermanentData nil)
     (tpmSecret? adt-recognizer-decl "[AUTHDATA -> boolean]" key nil)
@@ -2937,11 +2933,7 @@
     (TPM_PcrRead const-decl "State" tpm nil))
    shostak))
  (bad_nonce 0
-  (bad_nonce-1 nil 3559055017
-   ("" (grind)
-    (("" (decompose-equality -8) (("" (decompose-equality) nil nil))
-      nil))
-    nil)
+  (bad_nonce-1 nil 3559055017 ("" (grind) nil nil)
    ((afterInit? const-decl "bool" tpm nil)
     (outputComPostInit const-decl "tpmAbsOutput" tpm nil)
     (HV formal-nonempty-type-decl nil tpm nil)
@@ -3412,7 +3404,7 @@
     (executeCom const-decl "tpmAbsState" tpm nil))
    shostak))
  (pcrs_unchanged 0
-  (pcrs_unchanged-1 nil 3559055018 ("" (grind))
+  (pcrs_unchanged-1 nil 3559055018 ("" (grind) nil nil)
    ((saveToMemState const-decl "tpmAbsState" tpm nil)
     (certState const-decl "tpmAbsState" tpm nil)
     (decrypt const-decl "tpmData" key nil)
@@ -3884,6 +3876,56 @@
     (createWrapKeyState const-decl "tpmAbsState" tpm nil)
     (genKeyState const-decl "tpmAbsState" tpm nil)
     (createWrapKey? const-decl "bool" tpm nil)
+    (disableForceClearState const-decl "tpmAbsState" tpm nil)
+    (disableOwnerClearState const-decl "tpmAbsState" tpm nil)
+    (forceClearState const-decl "tpmAbsState" tpm nil)
+    (ownerClearState const-decl "tpmAbsState" tpm nil)
+    (clear const-decl "tpmAbsState" tpm nil)
+    (takeOwnershipState const-decl "tpmAbsState" tpm nil)
+    (goodkey? const-decl "bool" key nil)
+    (badkey const-decl "KVAL" key nil)
+    (saveState const-decl "tpmAbsState" tpm nil)
+    (saveState const-decl "(wellFormedRestore?)" startupData nil)
+    (B formal-nonempty-type-decl nil tpm nil)
+    (number nonempty-type-decl nil numbers nil)
+    (boolean nonempty-type-decl nil booleans nil)
+    (number_field_pred const-decl "[number -> boolean]" number_fields
+     nil)
+    (number_field nonempty-type-from-decl nil number_fields nil)
+    (real_pred const-decl "[number_field -> boolean]" reals nil)
+    (real nonempty-type-from-decl nil reals nil)
+    (rational_pred const-decl "[real -> boolean]" rationals nil)
+    (rational nonempty-type-from-decl nil rationals nil)
+    (integer_pred const-decl "[rational -> boolean]" integers nil)
+    (int nonempty-type-eq-decl nil integers nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (>= const-decl "bool" reals nil) (K type-eq-decl nil tpm nil)
+    (HV formal-nonempty-type-decl nil tpm nil)
+    (loadKey const-decl "KEYSET" key nil)
+    (addKey const-decl "KEYSET" key nil)
+    (installedOrSRK? const-decl "bool" key nil)
+    (TPM_KH_SRK const-decl "(tpmKey?)" key nil)
+    (member const-decl "bool" sets nil)
+    (afterInit? const-decl "bool" tpm nil)
+    (executeComPostInit const-decl "tpmAbsState" tpm nil)
+    (executeComStartup const-decl "tpmAbsState" tpm nil)
+    (executeCom const-decl "tpmAbsState" tpm nil))
+   shostak))
+ (keyGenCnt_unchanged 0
+  (keyGenCnt_unchanged-1 nil 3564422404 ("" (grind) nil nil)
+   ((saveToMemState const-decl "tpmAbsState" tpm nil)
+    (changeLocalityState const-decl "tpmAbsState" tpm nil)
+    (pcrsSenter const-decl "PCRS" pcr nil)
+    (pcrsResetSenterState const-decl "tpmAbsState" tpm nil)
+    (extendState const-decl "tpmAbsState" tpm nil)
+    (pcrsExtend const-decl "PCRS" pcr nil)
+    (revokeTrustState const-decl "tpmAbsState" tpm nil)
+    (keyFlagsF const-decl "KEY_FLAGS" key nil)
+    (createRevEKState const-decl "tpmAbsState" tpm nil)
+    (createEndorsementKeyPairState const-decl "tpmAbsState" tpm nil)
+    (privateKey const-decl "(tpmKey?)" key nil)
+    (inverse const-decl "KVAL" key nil)
+    (loadKey2State const-decl "tpmAbsState" tpm nil)
     (disableForceClearState const-decl "tpmAbsState" tpm nil)
     (disableOwnerClearState const-decl "tpmAbsState" tpm nil)
     (forceClearState const-decl "tpmAbsState" tpm nil)

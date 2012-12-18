@@ -144,7 +144,7 @@ tpm [ B:TYPE+ % BLOB
     ABS_ReadPubek(n:(tpmNonce?)) : ABS_ReadPubek?
   %% Identity Creation and Activation (15)
     ABS_MakeIdentity(CADigest:(tpmDigest?),idKeyParams:(tpmKey?)) : ABS_MakeIdentity?
-    ABS_ActivateIdentity(idKey:(tpmKey?),blob:(activateIdentityBlob?)) : ABS_ActivateIdentity?
+    ABS_ActivateIdentity(aik:(tpmKey?),blob:(activateIdentityBlob?)) : ABS_ActivateIdentity?
   %% Integrity Collection and Reporting (16)
 %     ABS_Extend(pcrNum:PCRINDEX,inDigest:(tpmDigest?)) : ABS_Extend?
     ABS_Extend(pcrNum:PCRINDEX,d:HV) : ABS_Extend?
@@ -1780,24 +1780,24 @@ tpm [ B:TYPE+ % BLOB
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_MakeIdentity(CADigest,idKeyParams)))
 	    );
 
-%   make_identity_post: THEOREM 
-%     FORALL (state:(afterStartup?),CADigest:(tpmDigest?),idKeyParams:(tpmKey?)) :
-%       LET (a,s) = runState(
-%      	 	   TPM_MakeIdentity(CADigest,idKeyParams))
-% 		 (state) IN
-%         LET waik:(tpmKey?) = tpmKey(keyGenCnt(state),
-% 				    keyUsage(idKeyParams),
-% 				    keyFlags(idKeyParams),
-% 				    pcrs(state),
-% 				    wrappingKey(srk(state)),
-% 				    clear) IN
-% 	LET idBind = tpmIdContents(CADigest,waik,signed(private(waik),clear)) IN
-%       IF identity?(keyUsage(idKeyParams)) AND not(migratable(keyFlags(idKeyParams)))
-%         THEN a = OUT_MakeIdentity(waik,idBind,TPM_SUCCESS)
-% 	     AND s = state WITH [`keyGenCnt := keyGenCnt(state)+1]
-% 	ELSE a = OUT_Error(TPM_INVALID_KEYUSAGE)
-% 	     AND s = state
-%       ENDIF;
+  make_identity_post: THEOREM 
+    FORALL (state:(afterStartup?),CADigest:(tpmDigest?),idKeyParams:(tpmKey?)) :
+      LET (a,s)=runState(
+     	 	   TPM_MakeIdentity(CADigest,idKeyParams))
+		 (state) IN
+        LET waik=tpmKey(keyGenCnt(state),
+			keyUsage(idKeyParams),
+			keyFlags(idKeyParams),
+			pcrs(state),
+			wrappingKey(srk(state)),
+			clear) IN
+	LET idBind=tpmIdContents(CADigest,waik,signed(private(waik),clear)) IN
+      IF identity?(keyUsage(idKeyParams)) AND not(migratable(keyFlags(idKeyParams)))
+        THEN a=OUT_MakeIdentity(waik,idBind,TPM_SUCCESS)
+	 AND s=state WITH [`keyGenCnt := keyGenCnt(state)+1]
+	ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
+	 AND s=state
+      ENDIF;
 
 %   make_identity_pred_test: THEOREM 
 %     FORALL (state:(afterStartup?),CADigest:(tpmDigest?),idKeyParams:(tpmKey?)) :
@@ -1997,6 +1997,20 @@ tpm [ B:TYPE+ % BLOB
 %        runState(
 % 	 TPM_Quote(k,n2,pm))
 % 	 (s);
+  %% If nonces don't match, quotes don't match.  We don't care about this
+  %% if the a quote cannot be produced.
+  %% proved - Fri Jun 22 16:55:16 CDT 2012
+  bad_nonce: THEOREM
+    FORALL (s:tpmAbsState,k:(tpmKey?), n1,n2:(tpmNonce?), pm:PCRMASK) :
+      n1/=n2 %AND checkKeyRoot(k,srk(s)) 
+      =>
+       runState(
+         TPM_Quote(k,n1,pm))
+	 (s)
+       /=
+       runState(
+	 TPM_Quote(k,n2,pm))
+	 (s);
   
 %   %% Bad Signing Key - Man in the Middle Attack - we don't care about this
 %   %% if either key won't produce a quote.
@@ -2010,6 +2024,18 @@ tpm [ B:TYPE+ % BLOB
 % % 	  AND checkKeyRoot(k1,srk(s))
 %           =>
 % 	  a0 /= a1;
+  %% Bad Signing Key - Man in the Middle Attack - we don't care about this
+  %% if either key won't produce a quote.
+  %% proved - Fri Jun 22 16:55:56 CDT 2012
+  bad_signing_key: THEOREM
+    FORALL (s:(afterStartup?),n:(tpmNonce?),pm:PCRMASK,k0,k1:(tpmKey?)) :
+      LET (a0,s0) = runState(TPM_Quote(k0,n,pm))(s),
+        (a1,s1) = runState(TPM_Quote(k1,n,pm))(s) IN
+          private(k0) /= private(k1) 
+% 	  AND checkKeyRoot(k0,srk(s))
+% 	  AND checkKeyRoot(k1,srk(s))
+          =>
+	  a0 /= a1;
      
 %   %% Output after going through tpm commands is same as grabbing pcrs
 %   %% This is one of those theorems where assert must be called before grind
@@ -2076,7 +2102,7 @@ tpm [ B:TYPE+ % BLOB
 
   srk_unchanged: THEOREM 
     FORALL (s:tpmAbsState,c:tpmAbsInput) :
-      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+      not(ABS_Startup?(c) OR ABS_Init?(c) Or
       	  ABS_TakeOwnership?(c)) =>
         srk(s) = srk(executeCom(s,c));
 
@@ -2139,6 +2165,14 @@ tpm [ B:TYPE+ % BLOB
       not(ABS_Startup?(c) or ABS_Init?(c) OR
       	  ABS_CreateRevocableEK?(c)) =>
         permData(s) = permData(executeCom(s,c));
+  
+
+  keyGenCnt_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c) OR
+      	  ABS_CreateWrapKey?(c) OR ABS_certify?(c) OR
+	  ABS_MakeIdentity?(c)) =>
+        keyGenCnt(s) = keyGenCnt(executeCom(s,c));
   
 
   %% Prove that skipping SENTER is detectable by showing the quote following
