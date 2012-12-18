@@ -1,5 +1,7 @@
-StanyFlags : THEORY
+StanyFlags[HV:TYPE+] : THEORY
   BEGIN
+
+  IMPORTING pcr[HV];
 
   % These flags reset on any TPM_Startup command. postInitialize indicates only that TPM_Startup
   % has run, not that it was successful
@@ -12,7 +14,7 @@ StanyFlags : THEORY
 	   % This SHALL indicate for each command the presence of a locality modifier for 
 	   % the command. It MUST be always ensured that the value during usage reflects
 	   % the current active locality.
-	   , localityModifier : int
+	   , localityModifier : LOCALITY
 	   % Defaults to FALSE
 	   % TRUE when there is an exclusive transport session active. Execution of ANY
 	   % command other than TPM_ExecuteTransport targeting the exclusive transport

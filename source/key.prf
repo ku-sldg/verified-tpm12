@@ -1,4 +1,50 @@
 (key
+ (tpmNull_TCC1 0
+  (tpmNull_TCC1-1 nil 3564841647
+   (""
+    (inst 1 "tpmSealedData(tpmAuthData(tpmSecret(1),clear),
+tpmSecret(0),
+tpmDigest(null,clear),tpmSessKey(1,clear))")
+    nil nil)
+   ((tpmSessKey adt-constructor-decl
+     "[[KVAL, CRYPTOSTATUS] -> (tpmSessKey?)]" key nil)
+    (tpmSessKey? adt-recognizer-decl "[tpmData -> boolean]" key nil)
+    (KVAL type-eq-decl nil key nil)
+    (null adt-constructor-decl "(null?)" list_adt nil)
+    (null? adt-recognizer-decl "[list -> boolean]" list_adt nil)
+    (tpmDigest adt-constructor-decl
+     "[[list[tpmData], CRYPTOSTATUS] -> (tpmDigest?)]" key nil)
+    (list type-decl nil list_adt nil)
+    (clear adt-constructor-decl "(clear?)" key nil)
+    (clear? adt-recognizer-decl "[CRYPTOSTATUS -> boolean]" key nil)
+    (tpmSecret adt-constructor-decl "[nat -> (tpmSecret?)]" key nil)
+    (nat nonempty-type-eq-decl nil naturalnumbers nil)
+    (>= const-decl "bool" reals nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (int nonempty-type-eq-decl nil integers nil)
+    (integer_pred const-decl "[rational -> boolean]" integers nil)
+    (rational nonempty-type-from-decl nil rationals nil)
+    (rational_pred const-decl "[real -> boolean]" rationals nil)
+    (real nonempty-type-from-decl nil reals nil)
+    (real_pred const-decl "[number_field -> boolean]" reals nil)
+    (number_field nonempty-type-from-decl nil number_fields nil)
+    (number_field_pred const-decl "[number -> boolean]" number_fields
+     nil)
+    (number nonempty-type-decl nil numbers nil)
+    (tpmAuthData adt-constructor-decl
+     "[[AUTHDATA, CRYPTOSTATUS] -> (tpmAuthData?)]" key nil)
+    (CRYPTOSTATUS type-decl nil key nil)
+    (tpmSealedData adt-constructor-decl
+     "[[(tpmAuthData?), (tpmSecret?), (tpmDigest?), tpmData] -> (tpmSealedData?)]"
+     key nil)
+    (tpmDigest? adt-recognizer-decl "[tpmData -> boolean]" key nil)
+    (tpmSecret? adt-recognizer-decl "[AUTHDATA -> boolean]" key nil)
+    (AUTHDATA type-decl nil key nil)
+    (tpmAuthData? adt-recognizer-decl "[tpmData -> boolean]" key nil)
+    (tpmSealedData? adt-recognizer-decl "[tpmData -> boolean]" key nil)
+    (boolean nonempty-type-decl nil booleans nil)
+    (tpmData type-decl nil key nil))
+   nil))
  (double_inverse 0
   (double_inverse-1 nil 3560197474 ("" (grind) nil nil)
    ((inverse const-decl "KVAL" key nil)

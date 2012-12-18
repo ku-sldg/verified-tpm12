@@ -49,10 +49,13 @@ pcr [HV: TYPE+] : THEORY
   		#];
 
   TPM_COMPOSITE_HASH : TYPE = HV;
-%   compositeHash(select:PCR_SELECTION,vals:PCRVALUES) : (tpmDigest?) = 
-%     LET composite : PCR_COMPOSITE = 
-%     		  (# select:=select,	
-% 		     pcrValue:= vals #) 
+  sha1composite(comp:PCR_COMPOSITE) : TPM_COMPOSITE_HASH
+
+  compositeHash(select:PCR_SELECTION,vals:PCRVALUES) : TPM_COMPOSITE_HASH = 
+    LET composite : PCR_COMPOSITE = 
+    		  (# select:=select,	
+		     pcrValue:= vals #) IN
+    sha1composite(composite)
 
 
   %% (8.3)
@@ -68,10 +71,10 @@ pcr [HV: TYPE+] : THEORY
   %% (8.4)
   PCR_INFO_LONG : TYPE = [#
   		% Locality modifier when blob is created
-  		  localityAtCreation : LOCALITY_SELECTION
+  		  localityAtCreation : LOCALITY
 		% Locality modifier required to reveal sealed data or use a key that was wrapped to PCRs
 		% Value must not be zero (0)
-		, localityAtRelease  : LOCALITY_SELECTION
+		, localityAtRelease  : LOCALITY
 		% Selection of PCRs active when blob is created
 		, creationPCRSelection : PCR_SELECTION
 		% Selection of PCRs to which the key or data is bound

@@ -52,7 +52,7 @@ tpm [ B:TYPE+ % BLOB
   IMPORTING startupData[B,K,HV];
   IMPORTING PermanentFlags;
   IMPORTING PermanentData[B,K,HV];
-  IMPORTING StanyFlags;
+  IMPORTING StanyFlags[HV];
 
   %% State monad output type
   tpmAbsOutput : DATATYPE
@@ -188,7 +188,6 @@ tpm [ B:TYPE+ % BLOB
   tpmAbsState : TYPE = [#
   	      	       restore : restoreStateData,
                        memory : mem,
-%                        postInit : bool,
                        srk : (tpmKey?),
 		       ek : (tpmKey?),
 		       keyGenCnt : K,
@@ -322,6 +321,7 @@ tpm [ B:TYPE+ % BLOB
 		      		, permData(s)
 				, stanyFlags(s)
 		      		)];
+
   takeOwnership?(s:tpmAbsState,ownerAuth,srkAuth:(tpmAuthData?),srkParams:(tpmKey?)) : bool =
     ownership(permFlags(s)) AND goodkey?(key(ek(s)))
       AND storage?(keyUsage(srkParams)) AND not(migratable(keyFlags(srkParams)))
@@ -394,39 +394,48 @@ tpm [ B:TYPE+ % BLOB
     storage?(keyUsage(k)) AND not(migratable(keyFlags(k))) %AND DECRYPTED
     
   % Output secret sealed with asymmetric key 
-  sealOut(s:tpmAbsState,kH:(tpmKey?),enc:(tpmAuthData?),pcr:PCR_INFO_LONG,inData:tpmData) : tpmAbsOutput = 
-    IF storage?(keyUsage(kH)) AND not(migratable(keyFlags(kH)))
-    THEN LET sealInfo:PCR_INFO_LONG = 
-    	     	pcr WITH [`digestAtCreation:=compositeHash(localityAtCreation(pcr),pcrs(s)),
-		    	  `localityAtCreation:=localityModifier(stanyFlags(s))] IN
-    	 LET S1=tpmStoredData(sealInfo,null,clear) IN
-    	 LET S2=tpmSealedData(enc,
+  sealOut(s:tpmAbsState,kH:(tpmKey?),enc:(tpmAuthData?),pcr:PCR_INFO_LONG,
+	inData:tpmData) : tpmAbsOutput = 
+    IF storage?(keyUsage(kH)) AND not(migratable(keyFlags(kH))) % 3,4
+    THEN LET sealInfo:(tpmPCRInfo?) = tpmPCRInfo(
+    	     	pcr WITH [`digestAtCreation:=compositeHash(creationPCRSelection(pcr),pcrs(s)),
+		    	  `localityAtCreation:=localityModifier(stanyFlags(s))]) IN % 11
+    	 LET S1=tpmStoredData(sealInfo,tpmNull,clear) IN % 7,9
+    	 LET S2=tpmSealedData(enc, % TODO : a1?
 			      tpmProof(permData(s)),
-			      tpmDigest(cons(S1,null),clear),%digest of params of S1 excluding encData
-    	     		      inData) IN
-	LET S3=tpmStoredData(sealInfo,S2,encrypted(key(kH),clear))
-    	     IN OUT_Seal(S3,TPM_SUCCESS)
-    ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
+			      tpmDigest(cons(S1,null),clear),% params of S1 excluding encData
+    	     		      inData) IN % 14
+	LET S3=tpmStoredData(sealInfo,S2,encrypted(key(kH),clear)) % 16
+    	     IN OUT_Seal(S3,TPM_SUCCESS) % 20
+    ELSE OUT_Error(TPM_INVALID_KEYUSAGE) % 3,4
     ENDIF
 
   unseal?(s:tpmAbsState,parent:(tpmKey?),inData:(tpmStoredData?)) : bool = 
-    storage?(keyUsage(parent)) and migratable(keyFlags(parent))=FALSE %AND DECRYPTED
+    storage?(keyUsage(parent)) AND migratable(keyFlags(parent))=FALSE %AND DECRYPTED
 
   % Output secret unsealed with an asymmetric key and PCRs 
-%   unsealOut(s:tpmAbsState,parent:(tpmKey?),inData:(tpmStoredData?)) : tpmAbsOutput = 
-%     IF storage?(keyUsage(parent)) and migratable(keyFlags(parent))=FALSE
-%     THEN LET d1 = decrypt(key(parent),inData) IN %encrypted?(crs(inData)) AND key(crs(inData))=key(parent)
-%     	 IF crs(d1)=clear 
-% 	 THEN LET d2 = encData(inData) IN
-% 	      IF tpmProof(d2) = tpmProof(permData(s)) AND 
-% 	      	 tpmDigest(cons(sealInfo(inData),null),clear) = storedDigest(d2)
-% 	      THEN OUT_Unseal(data(d2),TPM_SUCCESS) %% TODO: way more going on here... not sure what.
-% 	      ELSE OUT_Error(TPM_NOTSEALED_BLOB)
-% 	      ENDIF
-% 	 ELSE OUT_Error(TPM_DECRYPT_ERROR)
-% 	 ENDIF
-%     ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
-%     ENDIF
+  unsealOut(s:tpmAbsState,parent:(tpmKey?),inData:(tpmStoredData?)) : tpmAbsOutput = 
+    IF unseal?(s,parent,inData) % 2,3
+    THEN LET d1=decrypt(key(parent),inData) IN % 5
+    	 IF crs(d1)=clear % 5
+	 THEN LET d2=encData(inData),
+	      	  S2=tpmStoredData(sealInfo(inData),tpmNull,clear), %4
+		  h2=compositeHash(releasePCRSelection(pcrs(sealInfo(inData))),pcrs(s)) IN  % 6c,d
+	      IF tpmProof(d2)=tpmProof(permData(s)) AND % 6b
+	      	 tpmDigest(cons(S2,null),clear)=storedDigest(d2) % 6e,f
+	      THEN IF localityAtRelease(pcrs(sealInfo(S2)))=localityModifier(stanyFlags(s)) % 7biii
+		   THEN IF h2=digestAtRelease(pcrs(sealInfo(S2))) % 7c
+		   	THEN OUT_Unseal(data(d2),TPM_SUCCESS) % 10,11,12
+			ELSE OUT_Error(TPM_WRONGPCRVAL) % 7c
+			ENDIF
+		   ELSE OUT_Error(TPM_SUCCESS) % 7biii TODO: INCORRECT!
+		   ENDIF
+	      ELSE OUT_Error(TPM_NOTSEALED_BLOB) % 6h
+	      ENDIF
+	 ELSE OUT_CPUError(CPU_DECRYPT_ERROR) % 5 TODO: correct?
+	 ENDIF
+    ELSE OUT_Error(TPM_INVALID_KEYUSAGE) % 2,3
+    ENDIF
   
   unBind?(k:(tpmKey?),d:(tpmBoundData?)) : bool =
     legacy?(keyUsage(k)) OR bind?(keyUsage(k))
@@ -890,7 +899,7 @@ tpm [ B:TYPE+ % BLOB
   ENDCASES;
   
   %% Execute a command on state generating a new state.  Commands execution
-  %% should be blocked if startup has not run and postInit=true.
+  %% should be blocked if startup has not run and postInitialize=true.
   executeCom(s:tpmAbsState,c:tpmAbsInput) : tpmAbsState =
     IF afterInit?(s)
     THEN executeComPostInit(s,c)
@@ -910,8 +919,8 @@ tpm [ B:TYPE+ % BLOB
       ABS_ForceClear : forceClearOut(s),
       ABS_DisableOwnerClear : disableOwnerClearOut(s),
       ABS_DisableForceClear : disableForceClearOut(s),
-%       ABS_Seal(k,a,p,data) : sealOut(s,k,a,p,data),
-%       ABS_Unseal(d,k) : unsealOut(s,d,k),
+      ABS_Seal(k,a,p,data) : sealOut(s,k,a,p,data),
+      ABS_Unseal(d,k) : unsealOut(s,d,k),
       ABS_UnBind(k,d) : unBindOut(s,k,d),
       ABS_Data_Bind(k,d) : dataBindOut(s,k,d),
       ABS_CreateWrapKey(parent,k) : createWrapKeyOut(s,parent,k),
@@ -937,7 +946,7 @@ tpm [ B:TYPE+ % BLOB
   ENDCASES;
   
   %% Execute a command on state generating a new state.  Commands execution
-  %% should be blocked if startup has not run and postInit=true.
+  %% should be blocked if startup has not run and postInitialize=true.
   outputCom(s:tpmAbsState,c:tpmAbsInput) : tpmAbsOutput =
     IF afterInit?(s)
        THEN outputComPostInit(s,c)
@@ -1227,94 +1236,130 @@ tpm [ B:TYPE+ % BLOB
      output(LAMBDA (s:tpmAbsState): outputCom(s,ABS_Seal(k,encAuth,pcrInfo,inData)));
 
   %% Seal a secret successfully
-%   seal_post: THEOREM
-%     FORALL (state:(afterStartup?),k:(tpmKey?),e:(tpmAuthData?),p:(tpmPCRInfo?),d:tpmData) :
-%       LET (a,s) = runState(
-%      	 	  TPM_Seal(k,e,p,d))
-%  		  (state) IN
-%       IF storage?(keyUsage(k)) AND not(migratable(keyFlags(k)))
-% 	  THEN a = OUT_Seal(tpmStoredData(p,tpmSealedData(e,
-% 							  tpmProof(permData(s)),
-% 							  tpmDigest(cons(p,null),clear),
-% 							  d),
-% 					  encrypted(key(k),clear)),
-% 			    TPM_SUCCESS)
-% 	  ELSE a = OUT_Error(TPM_INVALID_KEYUSAGE) 
-% 	ENDIF
-% 	AND s = state
+  seal_post: THEOREM
+    FORALL (state:(afterStartup?),k:(tpmKey?),e:(tpmAuthData?),p:PCR_INFO_LONG,d:tpmData) :
+      LET (a,s) = runState(
+     	 	  TPM_Seal(k,e,p,d))
+ 		  (state) IN
+      IF storage?(keyUsage(k)) AND not(migratable(keyFlags(k)))
+      THEN LET sealInfo = tpmPCRInfo(
+      	       	p WITH [`digestAtCreation:=compositeHash(creationPCRSelection(p),pcrs(state)),
+		    	`localityAtCreation:=localityModifier(stanyFlags(state))]) IN 
+	   a=OUT_Seal(tpmStoredData(sealInfo,
+			     tpmSealedData(e,
+					   tpmProof(permData(state)),
+					   tpmDigest(cons(tpmStoredData(sealInfo,tpmNull,clear),
+							  null),
+						     clear),
+					   d),
+			     encrypted(key(k),clear)),
+			 TPM_SUCCESS)
+      ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE) 
+      ENDIF
+      AND s=state
  
-%   seal_pred : THEOREM
-%     FORALL (state:(afterStartup?),k:(tpmKey?),e:(tpmAuthData?),p:(tpmPCRInfo?),d:tpmData) :
-%       LET (a,s) = runState(
-%      	 	  TPM_Seal(k,e,p,d))
-%  		  (state) IN
-%       IF seal?(state,k,e,p,d)
-% 	  THEN a=OUT_Seal(tpmStoredData(p,tpmSealedData(e,
-% 							tpmProof(permData(s)),
-% 							tpmDigest(cons(p,null),clear),
-% 							d),
-% 					encrypted(key(k),clear)),
-% 			    TPM_SUCCESS)
-% 	  ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE) 
-% 	ENDIF
-% 	AND s=state
+  seal_pred : THEOREM
+    FORALL (state:(afterStartup?),k:(tpmKey?),e:(tpmAuthData?),p:PCR_INFO_LONG,d:tpmData) :
+      LET (a,s) = runState(
+     	 	  TPM_Seal(k,e,p,d))
+ 		  (state) IN
+      IF seal?(state,k,e,p,d)
+      THEN LET sealInfo = tpmPCRInfo(
+      	       	p WITH [`digestAtCreation:=compositeHash(creationPCRSelection(p),pcrs(state)),
+		    	`localityAtCreation:=localityModifier(stanyFlags(state))]) IN
+	   a=OUT_Seal(tpmStoredData(sealInfo,
+				tpmSealedData(e,
+					tpmProof(permData(state)),
+					tpmDigest(cons(tpmStoredData(sealInfo,tpmNull,clear),
+							null),
+						clear),
+					d),
+				encrypted(key(k),clear)),
+		      TPM_SUCCESS)
+	  ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE) 
+	ENDIF
+	AND s=state
 
-%   %% Unseal and output a blob (should be binary or data)
-%   TPM_Unseal(p:(tpmKey?),d:(tpmStoredData?)) : State = 
-%      output(LAMBDA (s:tpmAbsState): outputCom(s,ABS_Unseal(p,d)));
+  %% Unseal and output a blob (should be binary or data)
+  TPM_Unseal(p:(tpmKey?),d:(tpmStoredData?)) : State = 
+     output(LAMBDA (s:tpmAbsState): outputCom(s,ABS_Unseal(p,d)));
 
-%   unseal_post: THEOREM
-%     FORALL (state:(afterStartup?),p:(tpmKey?),d:(tpmStoredData?)) :
-%       LET (a,s) = runState(
-%                     TPM_Unseal(p,d))
-% 		    (state) IN
-%       IF storage?(keyUsage(p)) AND not(migratable(keyFlags(p)))
-%       THEN IF crs(decrypt(key(p),d))=clear
-%       	   THEN IF tpmProof(encData(d))=tpmProof(permData(s)) AND 
-% 	   	   storedDigest(encData(d))=tpmDigest(cons(sealInfo(d),null),clear)
-% 		THEN a=OUT_Unseal(data(encData(d)),TPM_SUCCESS)
-% 		ELSE a=OUT_Error(TPM_NOTSEALED_BLOB)
-% 		ENDIF
-% 	   ELSE a=OUT_Error(TPM_DECRYPT_ERROR)
-% 	   ENDIF
-%       ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
-%       ENDIF 
-%       AND s=state
+  unseal_post: THEOREM
+    FORALL (state:(afterStartup?),p:(tpmKey?),d:(tpmStoredData?)) :
+      LET (a,s) = runState(
+                    TPM_Unseal(p,d))
+		    (state) IN
+      IF storage?(keyUsage(p)) AND not(migratable(keyFlags(p)))
+      THEN IF crs(decrypt(key(p),d))=clear
+      	   THEN IF tpmProof(encData(d))=tpmProof(permData(s)) 
+	   	   AND storedDigest(encData(d))=
+		       tpmDigest(cons(tpmStoredData(sealInfo(d),tpmNull,clear),null),clear)
+	      	THEN IF localityAtRelease(pcrs(sealInfo(tpmStoredData(sealInfo(d),tpmNull,clear))))=
+		     	localityModifier(stanyFlags(s))
+		     THEN IF compositeHash(releasePCRSelection(pcrs(sealInfo(d))),pcrs(s))=
+		     	     digestAtRelease(pcrs(sealInfo(tpmStoredData(sealInfo(d),tpmNull,clear))))
+		   	  THEN a=OUT_Unseal(data(encData(d)),TPM_SUCCESS)
+			  ELSE a=OUT_Error(TPM_WRONGPCRVAL)
+			  ENDIF
+		     ELSE a=OUT_Error(TPM_SUCCESS) % TODO: INCORRECT!
+		     ENDIF
+	        ELSE a=OUT_Error(TPM_NOTSEALED_BLOB) 
+	      	ENDIF
+	   ELSE a=OUT_CPUError(CPU_DECRYPT_ERROR) %  TODO: correct?
+	   ENDIF
+      ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
+      ENDIF
+      AND s=state
   
-%   unseal_pred : THEOREM
-%     FORALL (state:(afterStartup?),p:(tpmKey?),d:(tpmStoredData?)) :
-%       LET (a,s) = runState(
-%                     TPM_Unseal(p,d))
-% 		    (state) IN
-%       IF unseal?(state,p,d)
-%       THEN IF crs(decrypt(key(p),d))=clear
-%       	   THEN IF tpmProof(encData(d))=tpmProof(permData(s)) AND 
-% 	   	   storedDigest(encData(d))=tpmDigest(cons(sealInfo(d),null),clear)
-% 		THEN a=OUT_Unseal(data(encData(d)),TPM_SUCCESS)
-% 		ELSE a=OUT_Error(TPM_NOTSEALED_BLOB)
-% 		ENDIF
-% 	   ELSE a=OUT_Error(TPM_DECRYPT_ERROR)
-% 	   ENDIF
-%       ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
-%       ENDIF 
-%       AND s=state
+  unseal_pred : THEOREM
+    FORALL (state:(afterStartup?),p:(tpmKey?),d:(tpmStoredData?)) :
+      LET (a,s) = runState(
+                    TPM_Unseal(p,d))
+		    (state) IN
+      IF unseal?(state,p,d)
+      THEN IF crs(decrypt(key(p),d))=clear
+      	   THEN IF tpmProof(encData(d))=tpmProof(permData(s)) 
+	   	   AND storedDigest(encData(d))=
+		       tpmDigest(cons(tpmStoredData(sealInfo(d),tpmNull,clear),null),clear)
+	      	THEN IF localityAtRelease(pcrs(sealInfo(tpmStoredData(sealInfo(d),tpmNull,clear))))=
+		     	localityModifier(stanyFlags(s))
+		     THEN IF compositeHash(releasePCRSelection(pcrs(sealInfo(d))),pcrs(s))=
+		     	     digestAtRelease(pcrs(sealInfo(tpmStoredData(sealInfo(d),tpmNull,clear))))
+		   	  THEN a=OUT_Unseal(data(encData(d)),TPM_SUCCESS)
+			  ELSE a=OUT_Error(TPM_WRONGPCRVAL)
+			  ENDIF
+		     ELSE a=OUT_Error(TPM_SUCCESS) % TODO: INCORRECT!
+		     ENDIF
+	        ELSE a=OUT_Error(TPM_NOTSEALED_BLOB) 
+	      	ENDIF
+	   ELSE a=OUT_CPUError(CPU_DECRYPT_ERROR) %  TODO: correct?
+	   ENDIF
+      ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
+      ENDIF
+      AND s=state
 
-%   unseal_prev_post: THEOREM
-%     FORALL (state:(afterStartup?),j,k:(tpmKey?),e:(tpmAuthData?),p:(tpmPCRInfo?),d:tpmData) :
-%       LET (a,s) = runState(
-%       	  	  TPM_Seal(k,e,p,d)
-% 		  >>= (LAMBDA (a:tpmAbsOutput) : 
-% 		       CASES a OF
-% 		         OUT_Seal(s,m) : TPM_Unseal(j,s) 
-% 			 ELSE TPM_Noop(a)
-% 		       ENDCASES))
-% 		  (state) IN  
-% 	storage?(keyUsage(j)) and not(migratable(keyFlags(j))) AND
-% 	storage?(keyUsage(k)) and not(migratable(keyFlags(k)))
-% 	AND key(j)=private(k)
-% 	   => a = OUT_Unseal(d,TPM_SUCCESS)
-% 	AND s = state
-
+  unseal_prev_post: THEOREM
+    FORALL (state:(afterStartup?),j,k:(tpmKey?),e:(tpmAuthData?),p:PCR_INFO_LONG,d:tpmData) :
+      LET (a,s) = runState(
+      	  	  TPM_Seal(k,e,p,d)
+		  >>= (LAMBDA (a:tpmAbsOutput) : 
+		       CASES a OF
+		         OUT_Seal(sd,m) : TPM_Unseal(j,sd) 
+			 ELSE TPM_Noop(a)
+		       ENDCASES))
+		  (state) IN  
+	storage?(keyUsage(j)) and not(migratable(keyFlags(j))) AND
+	storage?(keyUsage(k)) and not(migratable(keyFlags(k))) AND
+	key(j)=private(k) AND
+	localityAtRelease(p)=localityModifier(stanyFlags(state)) AND
+	digestAtRelease(p)=compositeHash(releasePCRSelection(p),pcrs(state))
+	   => a = OUT_Unseal(d,TPM_SUCCESS)
+	AND s = state
+% localityAtRelease(pcrs(sealInfo(tpmStoredData(sealInfo(inData),tpmNull,clear))))=
+ %localityModifier(stanyFlags(s)) 
+% compositeHash(releasePCRSelection(pcrs(sealInfo(inData))),pcrs(s))=
+ %digestAtRelease(pcrs(sealInfo(tpmStoredData(sealInfo(inData),tpmNull,clear)))) 
+		   
 
   %% UnBind encrypted blob (decrypt)
   TPM_UnBind(keyHandle:(tpmKey?),inData:(tpmBoundData?)) : State = 
@@ -1431,48 +1476,48 @@ tpm [ B:TYPE+ % BLOB
            (LAMBDA (s:tpmAbsState):executeCom(s,ABS_LoadKey2(p,k))),
 	   (LAMBDA (s:tpmAbsState):outputCom(s,ABS_LoadKey2(p,k))));
 
-  % A key is installed if it is wrapped with SRK
-  load_key_post: THEOREM 
-    FORALL (p,inKey:(tpmKey?),state:(afterStartup?)) :
-      LET (a,s) = runState(
-    		    TPM_LoadKey2(p,inKey))
-		    (state) IN
-    IF storage?(keyUsage(p))
-    THEN IF key(p) = wrappingKey(inKey)
-    	 THEN LET usage = keyUsage(inKey) IN
-	      CASES usage OF
-	      identity: IF migratable(keyFlags(inKey))=FALSE
-	      		THEN a=OUT_LoadKey2(inKey,TPM_SUCCESS)
-			     AND s=state with [`keys:=loadKey(inKey,srk(state),keys(state),pcrs(state))]
-			ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
-			     AND s=state
-			ENDIF,
-	      authChange: a=OUT_Error(TPM_INVALID_KEYUSAGE)
-	      		  AND s=state
-	      ELSE a=OUT_LoadKey2(inKey,TPM_SUCCESS)
-	      	   AND s=state with [`keys:=loadKey(inKey,srk(state),keys(state),pcrs(state))]
-	      ENDCASES
-	 ELSE a=OUT_CPUError(CPU_DECRYPT_ERROR) %% Might not be right.
-	      AND s=state
-	 ENDIF
-    ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
-    	 AND s=state
-    ENDIF;
+%   % A key is installed if it is wrapped with SRK
+%   load_key_post: THEOREM 
+%     FORALL (p,inKey:(tpmKey?),state:(afterStartup?)) :
+%       LET (a,s) = runState(
+%     		    TPM_LoadKey2(p,inKey))
+% 		    (state) IN
+%     IF storage?(keyUsage(p))
+%     THEN IF key(p) = wrappingKey(inKey)
+%     	 THEN LET usage = keyUsage(inKey) IN
+% 	      CASES usage OF
+% 	      identity: IF migratable(keyFlags(inKey))=FALSE
+% 	      		THEN a=OUT_LoadKey2(inKey,TPM_SUCCESS)
+% 			     AND s=state with [`keys:=loadKey(inKey,srk(state),keys(state),pcrs(state))]
+% 			ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
+% 			     AND s=state
+% 			ENDIF,
+% 	      authChange: a=OUT_Error(TPM_INVALID_KEYUSAGE)
+% 	      		  AND s=state
+% 	      ELSE a=OUT_LoadKey2(inKey,TPM_SUCCESS)
+% 	      	   AND s=state with [`keys:=loadKey(inKey,srk(state),keys(state),pcrs(state))]
+% 	      ENDCASES
+% 	 ELSE a=OUT_CPUError(CPU_DECRYPT_ERROR) %% Might not be right.
+% 	      AND s=state
+% 	 ENDIF
+%     ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
+%     	 AND s=state
+%     ENDIF;
 
-  load_key_pred_test: THEOREM
-    FORALL (p,k:(tpmKey?),state:(afterStartup?)) :
-      LET (a,s) = runState(
-    		    TPM_LoadKey2(p,k))
-		    (state) IN
-	IF loadKey2?(p,k)
-	THEN a=OUT_LoadKey2(k,TPM_SUCCESS)
-	     AND s=state with [`keys:=loadKey(k,srk(state),keys(state),pcrs(state))]
-	ELSE IF storage?(keyUsage(p)) AND key(p)/=wrappingKey(k) 
-	     THEN a=OUT_CPUError(CPU_DECRYPT_ERROR)
-	     ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
-	     ENDIF
-	     AND s=state
-	ENDIF
+%   load_key_pred_test: THEOREM
+%     FORALL (p,k:(tpmKey?),state:(afterStartup?)) :
+%       LET (a,s) = runState(
+%     		    TPM_LoadKey2(p,k))
+% 		    (state) IN
+% 	IF loadKey2?(p,k)
+% 	THEN a=OUT_LoadKey2(k,TPM_SUCCESS)
+% 	     AND s=state with [`keys:=loadKey(k,srk(state),keys(state),pcrs(state))]
+% 	ELSE IF storage?(keyUsage(p)) AND key(p)/=wrappingKey(k) 
+% 	     THEN a=OUT_CPUError(CPU_DECRYPT_ERROR)
+% 	     ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
+% 	     ENDIF
+% 	     AND s=state
+% 	ENDIF
 
 %   load_key_pred_test: THEOREM
 %     FORALL (p,k:(tpmKey?),state:(afterStartup?)) :
@@ -1780,24 +1825,24 @@ tpm [ B:TYPE+ % BLOB
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_MakeIdentity(CADigest,idKeyParams)))
 	    );
 
-  make_identity_post: THEOREM 
-    FORALL (state:(afterStartup?),CADigest:(tpmDigest?),idKeyParams:(tpmKey?)) :
-      LET (a,s)=runState(
-     	 	   TPM_MakeIdentity(CADigest,idKeyParams))
-		 (state) IN
-        LET waik=tpmKey(keyGenCnt(state),
-			keyUsage(idKeyParams),
-			keyFlags(idKeyParams),
-			pcrs(state),
-			wrappingKey(srk(state)),
-			clear) IN
-	LET idBind=tpmIdContents(CADigest,waik,signed(private(waik),clear)) IN
-      IF identity?(keyUsage(idKeyParams)) AND not(migratable(keyFlags(idKeyParams)))
-        THEN a=OUT_MakeIdentity(waik,idBind,TPM_SUCCESS)
-	 AND s=state WITH [`keyGenCnt := keyGenCnt(state)+1]
-	ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
-	 AND s=state
-      ENDIF;
+%   make_identity_post: THEOREM 
+%     FORALL (state:(afterStartup?),CADigest:(tpmDigest?),idKeyParams:(tpmKey?)) :
+%       LET (a,s)=runState(
+%      	 	   TPM_MakeIdentity(CADigest,idKeyParams))
+% 		 (state) IN
+%         LET waik=tpmKey(keyGenCnt(state),
+% 			keyUsage(idKeyParams),
+% 			keyFlags(idKeyParams),
+% 			pcrs(state),
+% 			wrappingKey(srk(state)),
+% 			clear) IN
+% 	LET idBind=tpmIdContents(CADigest,waik,signed(private(waik),clear)) IN
+%       IF identity?(keyUsage(idKeyParams)) AND not(migratable(keyFlags(idKeyParams)))
+%         THEN a=OUT_MakeIdentity(waik,idBind,TPM_SUCCESS)
+% 	 AND s=state WITH [`keyGenCnt := keyGenCnt(state)+1]
+% 	ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
+% 	 AND s=state
+%       ENDIF;
 
 %   make_identity_pred_test: THEOREM 
 %     FORALL (state:(afterStartup?),CADigest:(tpmDigest?),idKeyParams:(tpmKey?)) :
@@ -1983,9 +2028,9 @@ tpm [ B:TYPE+ % BLOB
   TPM_Quote(k:(tpmKey?),n:(tpmNonce?),pm:PCR_SELECTION) : State = 
      output(LAMBDA (s:tpmAbsState) : outputCom(s,ABS_Quote(k,n,pm)));
 
-%   %% If nonces don't match, quotes don't match.  We don't care about this
-%   %% if the a quote cannot be produced.
-%   %% proved - Fri Jun 22 16:55:16 CDT 2012
+  %% If nonces don't match, quotes don't match.  We don't care about this
+  %% if the a quote cannot be produced.
+  %% proved - Fri Jun 22 16:55:16 CDT 2012
 %   bad_nonce: THEOREM
 %     FORALL (s:(afterStartup?),k:(tpmKey?), n1,n2:(tpmNonce?), pm:PCR_SELECTION) :
 %       n1/=n2 %AND checkKeyRoot(k,srk(s)) 
@@ -1997,45 +2042,20 @@ tpm [ B:TYPE+ % BLOB
 %        runState(
 % 	 TPM_Quote(k,n2,pm))
 % 	 (s);
-  %% If nonces don't match, quotes don't match.  We don't care about this
-  %% if the a quote cannot be produced.
-  %% proved - Fri Jun 22 16:55:16 CDT 2012
-  bad_nonce: THEOREM
-    FORALL (s:tpmAbsState,k:(tpmKey?), n1,n2:(tpmNonce?), pm:PCRMASK) :
-      n1/=n2 %AND checkKeyRoot(k,srk(s)) 
-      =>
-       runState(
-         TPM_Quote(k,n1,pm))
-	 (s)
-       /=
-       runState(
-	 TPM_Quote(k,n2,pm))
-	 (s);
-  
+
+
 %   %% Bad Signing Key - Man in the Middle Attack - we don't care about this
 %   %% if either key won't produce a quote.
 %   %% proved - Fri Jun 22 16:55:56 CDT 2012
 %   bad_signing_key: THEOREM
 %     FORALL (s:(afterStartup?),n:(tpmNonce?),pm:PCR_SELECTION,k0,k1:(tpmKey?)) :
-%       LET (a0,s0) = runState(TPM_Quote(k0,n,pm))(s) IN
-%         LET (a1,s1) = runState(TPM_Quote(k1,n,pm))(s) IN
+%       LET (a0,s0) = runState(TPM_Quote(k0,n,pm))(s),
+%         (a1,s1) = runState(TPM_Quote(k1,n,pm))(s) IN
 %           private(k0) /= private(k1) 
 % % 	  AND checkKeyRoot(k0,srk(s))
 % % 	  AND checkKeyRoot(k1,srk(s))
 %           =>
 % 	  a0 /= a1;
-  %% Bad Signing Key - Man in the Middle Attack - we don't care about this
-  %% if either key won't produce a quote.
-  %% proved - Fri Jun 22 16:55:56 CDT 2012
-  bad_signing_key: THEOREM
-    FORALL (s:(afterStartup?),n:(tpmNonce?),pm:PCRMASK,k0,k1:(tpmKey?)) :
-      LET (a0,s0) = runState(TPM_Quote(k0,n,pm))(s),
-        (a1,s1) = runState(TPM_Quote(k1,n,pm))(s) IN
-          private(k0) /= private(k1) 
-% 	  AND checkKeyRoot(k0,srk(s))
-% 	  AND checkKeyRoot(k1,srk(s))
-          =>
-	  a0 /= a1;
      
 %   %% Output after going through tpm commands is same as grabbing pcrs
 %   %% This is one of those theorems where assert must be called before grind
@@ -2210,55 +2230,55 @@ tpm [ B:TYPE+ % BLOB
 %        %NOT checkKeyRoot(aik,srk(s)) => 
 %        a=OUT_Error(TPM_INVALID_KEYUSAGE);
 
-   %% Simple verification of the quote generation process from init
-   %% through generation of the appraiser's quote.  Yay.  This is what
-   %% I was after!!
-   %%
-   %% Memory map:  
-   %% 0 -> identity
-   %% 1 -> CA cert
-   %% 2 -> TPM quote
-   %%
-   %% Note that the identity is not used in building the final
-   %% appraiser's quote
-   %% proved Sat Jul 14 11:19:56 CDT 2012
-   cert_and_quote_with_prev_key : THEOREM
-   FORALL (state:(afterStartup?)
-   	  ,n:(tpmNonce?)
-	  ,pm:PCRMASK
-	  ,idKey:(tpmKey?)
-	  ,caDig:(tpmDigest?)) :
-    LET (a,s) = runState(
-    	      	TPM_MakeIdentity(caDig,idKey)
-		>>= CPU_saveOutput(0)
-		>>= (LAMBDA (a:tpmAbsOutput) : 
-		     CASES a OF
-		     OUT_MakeIdentity(aik,idBind,m) : CA_certify(aik,idBind)
-		     ELSE TPM_Noop(a)
-		     ENDCASES)
-% 		>>= CPU_saveOutput(1)
-		>>= (LAMBDA (a:tpmAbsOutput) : 
-		     CASES a OF
-		     OUT_Certify(data,m) : TPM_ActivateIdentity(idKey,data)
-		     ELSE TPM_Noop(a)
-		     ENDCASES)
-		>> CPU_read(0)
-		>>= (LAMBDA (a:tpmAbsOutput) : 
-		     CASES a OF
-		     OUT_MakeIdentity(aik,idBind,m) : TPM_Quote(aik,n,pm)
-		     ELSE TPM_Noop(a)
-		     ENDCASES)
-		>>= CPU_saveOutput(2)
-		>> CPU_BuildQuoteFromMem(2,0))
-		(state) IN
-	makeIdentity?(state,caDig,idKey)
-	AND OUT_MakeIdentity?(memory(s)(0)) 
-	AND OUT_Quote?(memory(s)(2))
-	AND private(idKey)=key(idKey(memory(s)(0)))
-	AND caDig=idBinding(memory(s)(0)) =>
-	LET pcrs = getPCRs(s`pcrs,pm) IN
-	a=OUT_FullQuote(tpmQuote(pcrs,n,signed(private(idKey),clear)),
-			tpmIdContents(caDig,idKey,signed(private(idKey),clear)),
-			CPU_SUCCESS)
+%    %% Simple verification of the quote generation process from init
+%    %% through generation of the appraiser's quote.  Yay.  This is what
+%    %% I was after!!
+%    %%
+%    %% Memory map:  
+%    %% 0 -> identity
+%    %% 1 -> CA cert
+%    %% 2 -> TPM quote
+%    %%
+%    %% Note that the identity is not used in building the final
+%    %% appraiser's quote
+%    %% proved Sat Jul 14 11:19:56 CDT 2012
+%    cert_and_quote_with_prev_key : THEOREM
+%    FORALL (state:(afterStartup?)
+%    	  ,n:(tpmNonce?)
+% 	  ,pm:PCR_SELECTION
+% 	  ,idKey:(tpmKey?)
+% 	  ,caDig:(tpmDigest?)) :
+%     LET (a,s) = runState(
+%     	      	TPM_MakeIdentity(caDig,idKey)
+% 		>>= CPU_saveOutput(0)
+% 		>>= (LAMBDA (a:tpmAbsOutput) : 
+% 		     CASES a OF
+% 		     OUT_MakeIdentity(aik,idBind,m) : CA_certify(aik,idBind)
+% 		     ELSE TPM_Noop(a)
+% 		     ENDCASES)
+% % 		>>= CPU_saveOutput(1)
+% 		>>= (LAMBDA (a:tpmAbsOutput) : 
+% 		     CASES a OF
+% 		     OUT_Certify(data,m) : TPM_ActivateIdentity(idKey,data)
+% 		     ELSE TPM_Noop(a)
+% 		     ENDCASES)
+% 		>> CPU_read(0)
+% 		>>= (LAMBDA (a:tpmAbsOutput) : 
+% 		     CASES a OF
+% 		     OUT_MakeIdentity(aik,idBind,m) : TPM_Quote(aik,n,pm)
+% 		     ELSE TPM_Noop(a)
+% 		     ENDCASES)
+% 		>>= CPU_saveOutput(2)
+% 		>> CPU_BuildQuoteFromMem(2,0))
+% 		(state) IN
+% 	makeIdentity?(state,caDig,idKey)
+% 	AND OUT_MakeIdentity?(memory(s)(0)) 
+% 	AND OUT_Quote?(memory(s)(2))
+% 	AND private(idKey)=key(idKey(memory(s)(0)))
+% 	AND caDig=idBinding(memory(s)(0)) =>
+% 	LET pcrs = getPCRs(s`pcrs,pm) IN
+% 	a=OUT_FullQuote(tpmQuote(pcrs,n,signed(private(idKey),clear)),
+% 			tpmIdContents(caDig,idKey,signed(private(idKey),clear)),
+% 			CPU_SUCCESS)
 	   
 END tpm

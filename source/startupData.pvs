@@ -6,7 +6,7 @@ startupData[B,K,HV : TYPE+] : THEORY
   IMPORTING key[B,HV];
   IMPORTING PermanentFlags;
   IMPORTING PermanentData[B,K,HV];
-  IMPORTING StanyFlags;
+  IMPORTING StanyFlags[HV];
 
   %% Flags used by the TPM_Startup command
   TPM_STARTUP_TYPE : DATATYPE
