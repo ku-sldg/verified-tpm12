@@ -7,6 +7,7 @@ startupData[B,K,HV : TYPE+] : THEORY
   IMPORTING PermanentFlags;
   IMPORTING PermanentData[B,K,HV];
   IMPORTING StanyFlags[HV];
+  IMPORTING StanyData[B,HV];
 
   %% Flags used by the TPM_Startup command
   TPM_STARTUP_TYPE : DATATYPE
@@ -32,7 +33,8 @@ startupData[B,K,HV : TYPE+] : THEORY
                           pcrs : PCRVALUES,
 			  permFlags : PermFlags,
 			  permData : PermData,
-			  stanyFlags: StanyFlags
+			  stanyFlags: StanyFlags,
+			  stanyData: StanyData
 			#];
 
   wellFormedRestore?(r:restoreStateData) : bool =
@@ -49,7 +51,8 @@ startupData[B,K,HV : TYPE+] : THEORY
 	    tpmPcrs : PCRVALUES,
 	    tpmPermFlags : PermFlags,
 	    tpmPermData : PermData,
-	    tpmStanyFlags: StanyFlags ) : (wellFormedRestore?) = 
+	    tpmStanyFlags: StanyFlags,
+	    tpmStanyData: StanyData ) : (wellFormedRestore?) = 
     (# valid? := TRUE,
        keys := tpmKeys,
        ek := tpmEK,
@@ -62,7 +65,8 @@ startupData[B,K,HV : TYPE+] : THEORY
                      ENDIF),
        permFlags := tpmPermFlags,
        permData := tpmPermData,
-       stanyFlags := tpmStanyFlags
+       stanyFlags := tpmStanyFlags,
+       stanyData := tpmStanyData
        #);
 
   %% Initial value for saved data.  The only field that matters is the valid?
@@ -81,7 +85,8 @@ startupData[B,K,HV : TYPE+] : THEORY
        pcrs := pcrsPower,
        permFlags := permFlagsInit,
        permData := permDataInit,	
-       stanyFlags:= stanyFlagsInit
+       stanyFlags:= stanyFlagsInit,
+       stanyData := stanyDataInit
     #);
 
   END startupData

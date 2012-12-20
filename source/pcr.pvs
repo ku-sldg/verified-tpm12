@@ -48,55 +48,17 @@ pcr [HV: TYPE+] : THEORY
 		, pcrValue : PCRVALUES
   		#];
 
-  TPM_COMPOSITE_HASH : TYPE = HV;
-  sha1composite(comp:PCR_COMPOSITE) : TPM_COMPOSITE_HASH
 
-  compositeHash(select:PCR_SELECTION,vals:PCRVALUES) : TPM_COMPOSITE_HASH = 
-    LET composite : PCR_COMPOSITE = 
-    		  (# select:=select,	
-		     pcrValue:= vals #) IN
-    sha1composite(composite)
-
-
-  %% (8.3)
-  PCR_INFO : TYPE = [#
-  	   % Selection of PCRs to which the data or key is bound
-  	     pcrSelection : PCR_SELECTION
-	   % Digest of the PCR indices and PCR values to verify when revealing sealed data
-	   % or using a key that was wrapped to PCRs
-	   , digestAtRelease  : TPM_COMPOSITE_HASH
-	   % Composite digest value of the PCR values, at the time when the sealing is performed
-	   , digestAtCreation : TPM_COMPOSITE_HASH
-	   #];
-  %% (8.4)
-  PCR_INFO_LONG : TYPE = [#
-  		% Locality modifier when blob is created
-  		  localityAtCreation : LOCALITY
-		% Locality modifier required to reveal sealed data or use a key that was wrapped to PCRs
-		% Value must not be zero (0)
-		, localityAtRelease  : LOCALITY
-		% Selection of PCRs active when blob is created
-		, creationPCRSelection : PCR_SELECTION
-		% Selection of PCRs to which the key or data is bound
-		, releasePCRSelection  : PCR_SELECTION
-		% Composite digest value of the PCR values, when the blob is created
-  		, digestAtCreation : TPM_COMPOSITE_HASH
-		% Digest of PCR indices and PCR values to verify when revealing sealed data 
-		% or using a key that was wrapped to PCRs
-		, digestAtRelease  : TPM_COMPOSITE_HASH
-  		#];
-
-  %% (8.5)
-  PCR_INFO_SHORT : TYPE = [#
-  		% Selection of PCRs that specifies the digestAtRelease
-		  pcrSelection  : PCR_SELECTION
-		% Locality modifier required to release information
-		% must not be zero (0)
-		, localityAtRelease  : LOCALITY_SELECTION
-		% Digest of PCR indices and PCR values to verify when revealing auth data
-		, digestAtRelease  : TPM_COMPOSITE_HASH
-  		#];
-
+%   %% (8.3)
+%   PCR_INFO : TYPE = [#
+%   	   % Selection of PCRs to which the data or key is bound
+%   	     pcrSelection : PCR_SELECTION
+% 	   % Digest of the PCR indices and PCR values to verify when revealing sealed data
+% 	   % or using a key that was wrapped to PCRs
+% 	   , digestAtRelease  : TPM_COMPOSITE_HASH
+% 	   % Composite digest value of the PCR values, at the time when the sealing is performed
+% 	   , digestAtCreation : TPM_COMPOSITE_HASH
+% 	   #];
 
   %% Information associated with PCR 
   %% (8.8)
@@ -127,7 +89,7 @@ pcr [HV: TYPE+] : THEORY
 
   %% Power on - unknown state
   pcrsPower : PCRVALUES;
-  pcrInfoLongDefault : PCR_INFO_LONG;
+%   pcrInfoLongDefault : PCR_INFO_LONG;
 
   %% Following startup clear.  Nonresettable PCRs to 0 and resettable PCRs
   %% to -1

@@ -45,6 +45,9 @@ tpmDigest(null,clear),tpmSessKey(1,clear))")
     (boolean nonempty-type-decl nil booleans nil)
     (tpmData type-decl nil key nil))
    nil))
+ (pcrInfoLongDefault_TCC1 0
+  (pcrInfoLongDefault_TCC1-1 nil 3565025969
+   ("" (existence-tcc) nil nil) nil nil))
  (double_inverse 0
   (double_inverse-1 nil 3560197474 ("" (grind) nil nil)
    ((inverse const-decl "KVAL" key nil)

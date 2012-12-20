@@ -1,0 +1,47 @@
+StanyData[DV,HV:TYPE+] : THEORY
+  BEGIN
+
+  IMPORTING key[DV,HV];
+
+  % Most of the data in this structure resets on TPM_Startup(ST_STATE). A TPM may implement
+  % rules that provide longer-term persistence for the data. The TPM reflects how it handles
+  % the data in various TPM_GetCapability fields including startup effects.
+  StanyData : TYPE = [#
+	   % This is the nonce in use to properly identify saved session context blobs.
+	   % This MUST be set to all zeros on each TPM_Startup (ST_Clear).
+	   % The nonce MAY be set to all zeros on TPM_Startup(any).
+	   % Flag Name : TPM_AD_CONTEXTNONCESESSION
+	   contextNonceSession : (tpmNonce?)
+	   % This is the extended value that is the audit log.
+	   % This SHALL be set to all zeros at the start of each audit session.
+	   % Flag Name : TPM_AD_AUDITDIGEST
+%	   , auditDigest : (tpmDigest?)
+	   % This is the current tick counter.
+	   % This is reset to 0 according to the rules when the TPM can tick. 
+	   % See Part 1 'Design Section for Time Stamping' for details.
+	   % Flag Name : TPM_AD_CURRENTTICKS
+%	   , currentTicks : TPM_CURRENT_TICKS
+	   % This is the counter to avoid session context blob replay attacks.
+	   % This MUST be set to 0 on each TPM_Startup (ST_Clear). The value MAY be set to 0 on TPM_Startup (any).
+	   % Flag Name : TPM_AD_CONTEXTCOUNT
+	   , contextCount : int
+	   % This is the list of outstanding session blobs.
+	   % All elements of this array MUST be set to 0 on each TPM_Startup (ST_Clear).
+	   % The values MAY be set to 0 on TPM_Startup (any). TPM_MIN_SESSION_LIST MUST be 16 or greater.
+	   % Flag Name : TPM_AD_CONTEXTLIST
+	   , contextList : int
+	   % List of current sessions. Sessions can be OSAP, OIAP, DSAP and Transport
+	   % Flag Name: TPM_AD_SESSIONS
+%	   , sessions : TPM_SESSION_DATA
+  #];
+
+  stanyDataInit : StanyData = 
+  		 (# contextNonceSession:=tpmNonceZero
+  	       	    %, auditDigest:=0
+		    %, currentTicks:=FALSE
+		    , contextCount:=0
+		    , contextList:=0
+		    %, sessions:=
+		  #);
+
+  END StanyData
