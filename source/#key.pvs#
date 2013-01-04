@@ -8,7 +8,7 @@
 %% Description: Basic model of keys, encryption, decryption, and signing
 %% 
 %% Dependencies:
-%%  None
+%%  
 %%
 %% Todo: (key - => pending, + => done)
 %%
