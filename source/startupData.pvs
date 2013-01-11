@@ -61,7 +61,9 @@ startupData[B,K,HV : TYPE+] : THEORY
 			  permFlags : PermFlags,
 			  permData : PermData,
 			  stanyFlags: StanyFlags,
-			  stanyData: StanyData
+			  stanyData: StanyData,
+			  stclearFlags: StclearFlags,
+			  stclearData: StclearData
 			#];
 
   wellFormedRestore?(r:restoreStateData) : bool =
@@ -79,7 +81,9 @@ startupData[B,K,HV : TYPE+] : THEORY
 	    tpmPermFlags : PermFlags,
 	    tpmPermData : PermData,
 	    tpmStanyFlags: StanyFlags,
-	    tpmStanyData: StanyData ) : (wellFormedRestore?) = 
+	    tpmStanyData: StanyData,
+	    tpmStclearFlags: StclearFlags,
+	    tpmStclearData: StclearData ) : (wellFormedRestore?) = 
     (# valid? := TRUE,
        keys := tpmKeys,
        ek := tpmEK,
@@ -93,7 +97,9 @@ startupData[B,K,HV : TYPE+] : THEORY
        permFlags := tpmPermFlags,
        permData := tpmPermData,
        stanyFlags := tpmStanyFlags,
-       stanyData := tpmStanyData
+       stanyData := tpmStanyData,
+       stclearFlags := tpmStclearFlags,
+       stclearData := tpmStclearData
        #);
 
   %% Initial value for saved data.  The only field that matters is the valid?
@@ -113,7 +119,9 @@ startupData[B,K,HV : TYPE+] : THEORY
        permFlags := permFlagsInit,
        permData := permDataInit,	
        stanyFlags:= stanyFlagsInit,
-       stanyData := stanyDataInit
+       stanyData := stanyDataInit,
+       stclearFlags:= stclearFlagsInit,
+       stclearData := stclearDataInit
     #);
 
   END startupData

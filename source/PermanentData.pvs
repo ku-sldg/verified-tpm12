@@ -108,9 +108,9 @@ PermanentData[DV,KV,HV:TYPE+] : THEORY
   #];
 
   nonce:(tpmNonce?)
-  PROOF:nat
+  INVALIDPROOF:nat
   INVALIDAUTH:nat
-  permDataInit : PermData = (# tpmProof:=tpmSecret(PROOF)
+  permDataInit : PermData = (# tpmProof:=tpmSecret(INVALIDPROOF)
   	       	 	     , ekReset:=nonce
 			     , ownerAuth:=tpmSecret(INVALIDAUTH)
 			     , operatorAuth:=tpmSecret(INVALIDAUTH)

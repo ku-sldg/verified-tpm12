@@ -228,7 +228,9 @@ tpm [ B:TYPE+ % BLOB
 		       permData : PermData,
 		       stanyFlags : StanyFlags,
 		       stanyData : StanyData,
-		       disableForceClear : bool
+		       stclearFlags : StclearFlags,
+		       stclearData : StclearData
+%		       disableForceClear : bool
 		    #];
 
   %% Well formedness condition for abstract states.  Currently unused, but we
@@ -259,7 +261,8 @@ tpm [ B:TYPE+ % BLOB
 			 , stanyFlags:=stanyFlagsInit 
 			   		WITH [`postInitialize:=TRUE]
 			 , stanyData:=stanyDataInit
-			 , disableForceClear:=FALSE
+			 , stclearFlags:=stclearFlagsInit % TODO: check
+			 , stclearData :=stclearDataInit  % TODO: check
 			 #);
 
   %% Standard initial state following startup command with the TPM_ST_CLEAR
@@ -279,7 +282,8 @@ tpm [ B:TYPE+ % BLOB
 			 , stanyFlags:=stanyFlagsInit 
 			   		WITH [`postInitialize:=FALSE]
 			 , stanyData:=stanyDataInit
-			 , disableForceClear:=FALSE
+			 , stclearFlags:=stclearFlagsInit % TODO: check
+			 , stclearData :=stclearDataInit  % TODO: check
 			 #);
 
   %% Generate a new state from restore data.  Basically this is a clear
@@ -299,7 +303,8 @@ tpm [ B:TYPE+ % BLOB
 			 , permData:=permData(rd)
 			 , stanyFlags:=stanyFlags(rd)
 			 , stanyData:=stanyData(rd)
-			 , disableForceClear:=FALSE
+			 , stclearFlags:=stclearFlagsInit % TODO: check
+			 , stclearData :=stclearDataInit  % TODO: check
                          #)
 
   %% Predicate to determine if startup has occured.  Used as types
@@ -340,6 +345,8 @@ tpm [ B:TYPE+ % BLOB
 		      		, permData(s)
 				, stanyFlags(s)
 				, stanyData(s)
+				, stclearFlags(s)
+				, stclearData(s)
 		      		)];
 
   takeOwnership?(s:tpmAbsState,encOwnerA,encSrkA:(tpmAuthData?),srkParams:(tpmKey?),a:authIn) : bool =
@@ -353,12 +360,12 @@ tpm [ B:TYPE+ % BLOB
       %not command, params using A1, ownerAuth -> FALSE,		% 7b
       not storage?(keyUsage(srkParams)) -> FALSE,   			% 8a
       migratable(keyFlags(srkParams)) -> FALSE,				% 8b
-      %not RSA?(algoID(algoParms(srkParams))) -> FALSE,			% 8c
+      not RSA?(algoId(algoParms(srkParams))) -> FALSE,			% 8c
       %not SHA1_MGF1?(encScheme(algoParms(srkParams))) -> FALSE,	% 8d    
       %not SS_NONE?(sigScheme(algoParms(srkParams))) -> FALSE,		% 8e
       %length(parms(algoParms(srkParams)))<2048 -> FALSE,		% 8f
       %expSize(parms(algoParms(srkParams)))/=0 -> FALSE,		% 8g
-      %FIPS(permFlags(s)) AND never?(authDataUsage(srkParams))-> FALSE,	% 8h
+      s`permFlags`FIPS AND never?(authDataUsage(srkParams))-> FALSE,	% 8h
       ELSE -> TRUE
     ENDCOND;
 
@@ -387,8 +394,6 @@ tpm [ B:TYPE+ % BLOB
 		    	 ,`permFlags(readPubek):=FALSE]			% 17
     ENDCOND;
 
-  % NEED TO ENSURE NEW, RANDOM SRK KEY PAIR
-  % srkParams should = srkVal
   takeOwnershipOut(s:tpmAbsState,encOwnerA,encSrkA:(tpmAuthData?),
 	srkParms:(tpmKey?),a:authIn) : tpmAbsOutput =
     IF NOT takeOwnership?(s,encOwnerA,encSrkA,srkParms,a)
@@ -397,7 +402,7 @@ tpm [ B:TYPE+ % BLOB
      	 ELSIF not s`permFlags`ownership 
       	    THEN OUT_Error(TPM_INSTALL_DISABLED)			% 2
      	 ELSIF not goodkey?(key(s`ek)) 
-      	    THEN OUT_Error(TPM_NO_ENDORSEMENT)			% 3
+      	    THEN OUT_Error(TPM_NO_ENDORSEMENT)				% 3
      	 ELSIF not storage?(keyUsage(srkParms)) 
 	    THEN OUT_Error(TPM_INVALID_KEYUSAGE)			% 8a
      	 ELSIF migratable(keyFlags(srkParms)) 
@@ -405,7 +410,25 @@ tpm [ B:TYPE+ % BLOB
      	 ELSIF not RSA?(algoId(algoParms(srkParms))) 
 	    THEN OUT_Error(TPM_BAD_KEY_PROPERTY)			% 8c
      	 ELSIF s`permFlags`FIPS AND never?(authDataUsage(srkParms))
-	    THEN OUT_Error(TPM_NOTFIPS)				% 8h
+	    THEN OUT_Error(TPM_NOTFIPS)					% 8h
+	 % TODO: implemented?
+%   	 ELSIF not OIAP?(a`authHandle) 
+% 	    THEN OUT_Error(TPM_AUTHFAIL)				% 4
+%   	 ELSIF not protocolID = TPM_PID_OWNER 
+% 	    THEN OUT_Error(TPM_BAD_PARAMETER)				% 5
+% 	 ELSIF LET A1:(tpmSecret?)=decrypt(encOwnerA,PRIVEK) IN		
+%   	   not length(A1)=20bytes 
+% 	    THEN OUT_Error(TPM_BAD_KEY_PROPERTY)			% 6
+%   	 ELSIF not command, params using A1, ownerAuth 
+% 	    THEN OUT_Error(TPM_AUTHFAIL)				% 7b
+%   	 ELSIF not SHA1_MGF1?(encScheme(algoParms(srkParms))) 
+% 	    THEN OUT_Error(TPM_BAD_KEY_PROPERTY)			% 8d    
+%   	 ELSIF not SS_NONE?(sigScheme(algoParms(srkParms))) 
+% 	    THEN OUT_Error(TPM_BAD_KEY_PROPERTY)			% 8e
+%   	 ELSIF length(parms(algoParms(srkParms)))<2048 
+% 	    THEN OUT_Error(TPM_BAD_KEY_PROPERTY)			% 8f
+%   	 ELSIF expSize(parms(algoParms(srkParms)))/=0
+% 	    THEN OUT_Error(TPM_BAD_KEY_PROPERTY)			% 8g
      	 ELSE OUT_Error(TPM_SUCCESS) % should never reach here
     	 ENDIF 
     ELSE
@@ -426,18 +449,6 @@ tpm [ B:TYPE+ % BLOB
     	 OUT_TakeOwnership(K1,aOut,TPM_SUCCESS)				% 16
     ENDIF;
 
-% TODO: Part of TakeOwnership COND not yet implemented.
-% not OIAP?(a`authHandle) -> OUT_Error(TPM_AUTHFAIL),		% 4
-% not protocolID = TPM_PID_OWNER -> OUT_Error(TPM_BAD_PARAMETER),	% 5
-% LET A1:(tpmSecret?)=decrypt(encOwnerA,PRIVEK) IN			% 6
-% not length(A1)=20bytes -> OUT_Error(TPM_BAD_KEY_PROPERTY),	% 6
-% not command, params using A1, ownerAuth -> OUT_Error(TPM_AUTHFAIL),% 7b
-% not SHA1_MGF1?(encScheme(algoParms(srkParms))) -> OUT_Error(TPM_BAD_KEY_PROPERTY),% 8d    
-% not SS_NONE?(sigScheme(algoParms(srkParms))) -> OUT_Error(TPM_BAD_KEY_PROPERTY),% 8e
-% length(parms(algoParms(srkParms)))<2048 -> OUT_Error(TPM_BAD_KEY_PROPERTY),% 8f
-% expSize(parms(algoParms(srkParms)))/=0 -> OUT_Error(TPM_BAD_KEY_PROPERTY),% 8g
-
-
 
   clear(s:tpmAbsState) : tpmAbsState = %not fully implemented
     s WITH [`keys:=emptyset
@@ -449,14 +460,15 @@ tpm [ B:TYPE+ % BLOB
 	   %,`permData(delegateKey):=badkey				% 5c
 	   %,`permData(delegateTable):=invalid				% 5d
 	   %,`permData(contextKey):=badkey				% 5e
-	   %,`permData(tpmProof):=invalid				% 5f
+	   ,`permData(tpmProof):=tpmSecret(INVALIDPROOF)		% 5f
 	   ,`permData(operatorAuth):=tpmSecret(INVALIDAUTH)		% 5g
 	   %,`permData(noOwnerNVWrite):=0				% 6a
 	   %,`permData(ordinalAuditStatus):=default			% 6b
 	   %,`permData(restrictDelegate):=default			% 6c
-	   ,`stanyData:=stanyDataInit %nonces shall be reset, lists invalidated% 7
-	   %,`stclearData=stclearDataInit WITH [`pcrs:=pcrs(stclearData(s))]% 8
-	   	%nonces shall be reset, lists invalidated, deferredPhysPresence=0
+	   ,`stanyData:=stanyDataInit					% 7
+	   %TODO : nonces shall be reset, lists invalidated
+	   ,`stclearData:=stclearDataInit WITH [`PCR:=PCR(stclearData(s))]% 8
+	   %TODO: nonces shall be reset, lists invalidated, deferredPhysPresence=0
 	   ,`permFlags(disable):=TRUE %default value			% 9a
 	   ,`permFlags(deactivated):=TRUE %default value		% 9b
 	   ,`permFlags(readPubek):=TRUE %default value			% 9c
@@ -475,7 +487,7 @@ tpm [ B:TYPE+ % BLOB
     COND
     % Verify that the TPM Owner authorizes the command and all of the input,% 1
     %    else -> s,
-      disableOwnerClear(permFlags(s)) -> s,				% 2
+      s`permFlags`disableOwnerClear -> s,				% 2
       ELSE -> clear(s)		      	 				% 3-14
     ENDCOND;
 
@@ -489,15 +501,15 @@ tpm [ B:TYPE+ % BLOB
 
   forceClearState(s:tpmAbsState) : tpmAbsState = 
     % check for the assertion of physical presence -> else TPM_Error(TPM_BAD_PRESENCE)	% 1
-    IF s`disableForceClear						% 2
-    THEN s
+    IF s`stclearFlags`disableForceClear
+    THEN s								% 2
     ELSE clear(s)							% 3
     ENDIF
   
   forceClearOut(s:tpmAbsState) : tpmAbsOutput =
     % check for the assertion of physical presence -> else TPM_Error(TPM_BAD_PRESENCE)	% 1
-    IF disableForceClear(s)   	 	  	      	   		% 2
-    THEN OUT_Error(TPM_CLEAR_DISABLED)
+    IF s`stclearFlags`disableForceClear
+    THEN OUT_Error(TPM_CLEAR_DISABLED)   	 	  	      	% 2
     ELSE OUT_ForceClear(TPM_SUCCESS)					% 3
     ENDIF
 
@@ -508,7 +520,7 @@ tpm [ B:TYPE+ % BLOB
     OUT_DisableOwnerClear(TPM_SUCCESS)
 
   disableForceClearState(s:tpmAbsState) : tpmAbsState = 
-    s WITH [`disableForceClear:=TRUE];
+    s WITH [`stclearFlags(disableForceClear):=TRUE];
 
   disableForceClearOut(s:tpmAbsState) : tpmAbsOutput = 
     OUT_DisableForceClear(TPM_SUCCESS)
@@ -1016,7 +1028,8 @@ tpm [ B:TYPE+ % BLOB
 	      , permData := permData(rs)
 	      , stanyFlags := stanyFlags(rs)
 	      , stanyData := stanyData(rs)
-	      , disableForceClear := FALSE
+	      , stclearFlags := stclearFlags(rs)
+	      , stclearData := stclearData(rs)
             #)
        ELSE s
     ENDIF;
@@ -1302,7 +1315,7 @@ tpm [ B:TYPE+ % BLOB
             (LAMBDA (s:tpmAbsState) : executeCom(s,ABS_TakeOwnership(ownerA,srkA,srk,a))),
             (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_TakeOwnership(ownerA,srkA,srk,a))));
 	 
-  take_ownership_post: THEOREM FORALL (state:(afterStartup?),srk:(tpmKey?),
+  Take_ownership_post: THEOREM FORALL (state:(afterStartup?),srk:(tpmKey?),
   	eOA,eSA:(tpmAuthData?),aIn:authIn) : 
     LET (a,s) = runState(
 		 TPM_TakeOwnership(eOA,eSA,srk,aIn))
@@ -1366,6 +1379,43 @@ tpm [ B:TYPE+ % BLOB
 %     ELSE a=OUT_Error(TPM_AUTHFAIL) AND keys(s)=keys(state)
 %     ENDIF
 
+  % 4. The TPM MUST NOT modify the following TPM_PERMANENT_DATA items
+  owner_clear_4 : THEOREM FORALL (state:(afterStartup?)) : 
+    LET(a,s) = runState(
+	       TPM_OwnerClear)
+	       (state) IN   
+    %s`permData`endorsementKey = state`permData`endorsementKey AND	% 4a
+    %s`permData`revMajor = state`permData`revMajor AND	       		% 4b
+    %s`permData`revMinor = state`permData`revMinor AND			% 4c
+    %s`permData`manuMaintPub = state`permData`manuMaintPub AND		% 4d
+    %s`permData`auditMonotonicCounter = state`permData`auditMonotonicCounter AND
+    %s`permData`monotonicCounter = state`permData`monotonicCounter AND	% 4f
+    s`permData`pcrAttrib = state`permData`pcrAttrib AND		   	% 4g
+    %s`permData`rngState = state`permData`rngState AND			% 4h
+    s`permData`ekReset = state`permData`ekReset	   			% 4i
+    %s`permData`lastFamilyID = state`permData`lastFamilyID AND		% 4j
+    %s`permData`tpmDAASeed = state`permData`tpmDAASeed AND 		% 4k
+    %s`permData`authDIR[0] = state`permData`authDIR[0] AND		% 4l
+    %s`permData`daaProof = state`permData`daaProof AND 			% 4m
+    %s`permData`daaBlobKey = state`permData`daaBlobKEY;			% 4n
+
+  % 5. The TPM MUST invalidate the following TPM_PERMANENT_DATA items and any 
+  %    internal resources associated with these items
+  owner_clear_5 : THEOREM FORALL (state:(afterStartup?)) : 
+    LET(a,s) = runState(
+	       TPM_OwnerClear)
+	       (state) IN  
+    not s`permFlags`disableOwnerClear => 
+    s`permData`ownerAuth = tpmSecret(INVALIDAUTH) AND			% 5a
+    %s`permData`srk =  AND 			  			% 5b
+    %s`permData`delegateKey =  AND					% 5c
+    %s`permData`delegateTable =  AND					% 5d
+    %s`permData`contextKey =  AND					% 5e
+    s`permData`tpmProof = tpmSecret(INVALIDPROOF) AND			% 5f
+    s`permData`operatorAuth = tpmSecret(INVALIDAUTH);			% 5g
+
+    % TODO: 6-14
+
 
   TPM_ForceClear : State = 
      modifyOutput(
@@ -1376,7 +1426,7 @@ tpm [ B:TYPE+ % BLOB
     LET(a,s) = runState(
 	       TPM_ForceClear)
 	       (state) IN
-	IF disableForceClear(state)
+	IF state`stclearFlags`disableForceClear
       	  THEN a=OUT_Error(TPM_CLEAR_DISABLED) AND keys(s)=keys(state)
 	    ELSE a=OUT_ForceClear(TPM_SUCCESS) AND keys(s) = emptyset AND 
 	         ownership(permFlags(s)) = TRUE AND 
@@ -1407,7 +1457,7 @@ tpm [ B:TYPE+ % BLOB
     LET(a,s) = runState(
     	       TPM_DisableForceClear)
 	       (state) IN
-      disableForceClear(s) = TRUE
+      s`stclearFlags`disableForceClear = TRUE
       AND a = OUT_DisableForceClear(TPM_SUCCESS);
 
 
@@ -2324,104 +2374,6 @@ tpm [ B:TYPE+ % BLOB
 			     signed(private(key),clear)),
 		    TPM_SUCCESS)
 	
-
-  %% Monotonicity of locality
-  %% Assuming that we're not resetting or powering on, locality goes down
-  %% or remains the same
-  %% proved - Fri Sep 21 15:07:30 CDT 2012
-  monotonic_locality: THEOREM 
-    FORALL (s:tpmAbsState,c:tpmAbsInput) :
-      not(ABS_Startup?(c) or ABS_Init?(c)) =>
-        locality(s) >= locality(executeCom(s,c));
-
-  pcrs_unchanged: THEOREM 
-    FORALL (s:tpmAbsState,c:tpmAbsInput) :
-      not(ABS_Startup?(c) OR ABS_Init?(c) OR
-	  ABS_sinit?(c) OR 
-	  ABS_senter?(c) OR 
-	  ABS_Extend?(c)) =>
-      pcrs(s) = pcrs(executeCom(s,c));
-
-  srk_unchanged: THEOREM 
-    FORALL (s:tpmAbsState,c:tpmAbsInput) :
-      not(ABS_Startup?(c) OR ABS_Init?(c) OR
-      	  ABS_TakeOwnership?(c) OR
-	  ABS_OwnerClear?(c) OR
-	  ABS_ForceClear?(c) OR
-	  ABS_RevokeTrust?(c)) =>
-        srk(s) = srk(executeCom(s,c));
-
-  ek_unchanged: THEOREM 
-    FORALL (s:tpmAbsState,c:tpmAbsInput) :
-      not(ABS_Startup?(c) OR ABS_Init?(c) OR
-          ABS_CreateEndorsementKeyPair?(c) OR
-	  ABS_CreateRevocableEK?(c) OR
-	  ABS_RevokeTrust?(c) ) =>
-        ek(s) = ek(executeCom(s,c));
-
-  keys_unchanged: THEOREM 
-    FORALL (s:tpmAbsState,c:tpmAbsInput) :
-      not(ABS_Startup?(c) OR ABS_Init?(c) OR 
-    	  ABS_LoadKey2?(c) OR
-	  ABS_ActivateIdentity?(c) OR
-	  ABS_OwnerClear?(c) OR
-	  ABS_ForceClear?(c) OR
-	  ABS_RevokeTrust?(c)) =>
-      keys(s) = keys(executeCom(s,c));
-
-  postInit_unchanged: THEOREM 
-    FORALL (s:tpmAbsState,c:tpmAbsInput) :
-      not(ABS_Startup?(c) OR ABS_Init?(c)) =>
-        postInitialize(stanyFlags(s)) = 
-		postInitialize(stanyFlags(executeCom(s,c)));
-
-  disableForceClear_unchanged: THEOREM
-    FORALL (s:tpmAbsState,c:tpmAbsInput) :
-      not(ABS_Startup?(c) OR ABS_Init?(c) OR
-      	  ABS_DisableForceClear?(c)) =>
-        disableForceClear(s) = disableForceClear(executeCom(s,c));
-
-  restore_unchanged: THEOREM
-    FORALL (s:tpmAbsState,c:tpmAbsInput) :
-      not(ABS_Startup?(c) OR ABS_Init?(c) OR
-      	  ABS_SaveState?(c)) =>
-        restore(s) = restore(executeCom(s,c));
-
-  memory_unchanged: THEOREM
-    FORALL (s:tpmAbsState,c:tpmAbsInput) :
-      not(ABS_Startup?(c) OR ABS_Init?(c) OR
-      	  ABS_save?(c)) =>
-        memory(s) = memory(executeCom(s,c));
-
-  permFlags_unchanged: THEOREM
-    FORALL (s:tpmAbsState,c:tpmAbsInput) :
-      not(ABS_Startup?(c) or ABS_Init?(c) OR
-          ABS_DisableOwnerClear?(c) OR 
-	  ABS_ForceClear?(c) OR
-	  ABS_OwnerClear?(c) OR 
-	  ABS_TakeOwnership?(c) OR
-	  ABS_CreateEndorsementKeyPair?(c) OR
-	  ABS_CreateRevocableEK?(c) OR
-	  ABS_RevokeTrust?(c)) =>
-        permFlags(s) = permFlags(executeCom(s,c));
-
-  permData_unchanged: THEOREM
-    FORALL (s:tpmAbsState,c:tpmAbsInput) :
-      not(ABS_Startup?(c) or ABS_Init?(c) OR
-      	  ABS_CreateRevocableEK?(c) OR
-	  ABS_TakeOwnership?(c) OR 
-	  ABS_RevokeTrust?(c) OR
-	  ABS_ForceClear?(c) OR
-	  ABS_OwnerClear?(c)) =>
-        permData(s) = permData(executeCom(s,c));
-
-  keyGenCnt_unchanged: THEOREM
-    FORALL (s:tpmAbsState,c:tpmAbsInput) :
-      not(ABS_Startup?(c) or ABS_Init?(c) OR
-      	  ABS_CreateWrapKey?(c) OR ABS_certify?(c) OR
-	  ABS_MakeIdentity?(c)) =>
-        keyGenCnt(s) = keyGenCnt(executeCom(s,c));
-  
 
   %% Prove that skipping SENTER is detectable by showing the quote following
   %% a command differs when SENTER is excluded.

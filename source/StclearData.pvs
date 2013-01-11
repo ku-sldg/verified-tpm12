@@ -46,7 +46,7 @@ StclearData[DV,HV:TYPE+] : THEORY
 	   %  this flag is TPM vendor specific.
 	   , disableResetLock : bool
 	   % Platform configuration registers
-% 	   , PCR : PCRVALUES
+	   , PCR : PCRVALUES
 	   % The value can save the assertion of physicalPresence. Individual 
 	   %  bits indicate to its ordinal that physicalPresence was previously
 	   %  asserted when the software state is such that it can no longer be
@@ -60,7 +60,7 @@ StclearData[DV,HV:TYPE+] : THEORY
 	   %, countId : TPM_COUNT_ID
 	   , ownerReference:=key(TPM_KH_OWNER)
 	   , disableResetLock:=FALSE
-	   %, PCR:= % TODO: ?
+	   , PCR:= pcrsPower% TODO: check
 	   , deferredPhysicalPresence:=0
 	 #);
   
