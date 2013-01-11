@@ -1,0 +1,67 @@
+%% ----
+%%
+%% STCLEAR Data Theory
+%%
+%% Author: Brigid Halling
+%% Date: Mon Jan 7 11:30:01 CST 2013
+%%
+%% Description:  
+%%  Most of the data in this structure resets on TPM_Startup(ST_CLEAR). A TPM
+%%   may implement rules that provide longer-term persistence for the data. The
+%%   TPM reflects how it handles the data in various TPM_GetCapablity fields
+%%   including startup effects.
+%% 
+%% Dependencies:
+%%  key.pvs
+%%  data.pvs
+%%  keyData.pvs
+%%  authdata.pvs
+%%  pcr.pvs
+%%
+%% Todo: (key - => pending, + => done)
+%%
+%% ----
+
+StclearData[DV,HV:TYPE+] : THEORY
+  BEGIN
+
+  IMPORTING key[DV,HV];
+
+    StclearData : TYPE = [#
+	   % This is the nonce in use to properly identify saved key context 
+	   %  blobs. 
+	   % This SHALL be set to all zeros on each TPM_Startup (ST_Clear).
+	   contextNonceKey : (tpmNonce?)
+	   % This is the handle for the current monotonic counter.
+	   % This SHALL be set to zero on each TPM_Startup(ST_Clear).
+% 	   , countId : TPM_COUNT_ID
+	   % Points to where to obtain the owner secret in OIAP and OSAP 
+	   %  commands. This allows a TSS to manage 1.1 applications on a 1.2 
+	   %  TPM where delegation is in operation.
+	   % Default value is TPM_KH_OWNER.
+	   , ownerReference : int
+	   % Disables TPM_ResetLockValue upon authorization failure. The value 
+	   %  remains TRUE for the timeout period. Default  FALSE.
+	   % The value is in the STCLEAR_DATA structure as the implementation of
+	   %  this flag is TPM vendor specific.
+	   , disableResetLock : bool
+	   % Platform configuration registers
+% 	   , PCR : PCRVALUES
+	   % The value can save the assertion of physicalPresence. Individual 
+	   %  bits indicate to its ordinal that physicalPresence was previously
+	   %  asserted when the software state is such that it can no longer be
+	   %  asserted.
+	   % Set to zero on each TPM_Startup(ST_Clear).
+	   , deferredPhysicalPresence : int
+  #];
+
+  stclearDataInit : StclearData = 
+  	(# contextNonceKey:=tpmNonceZero
+	   %, countId : TPM_COUNT_ID
+	   , ownerReference:=key(TPM_KH_OWNER)
+	   , disableResetLock:=FALSE
+	   %, PCR:= % TODO: ?
+	   , deferredPhysicalPresence:=0
+	 #);
+  
+END StclearData

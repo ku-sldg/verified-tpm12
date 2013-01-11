@@ -6,22 +6,24 @@
 %% Date: 
 %%
 %% Description:  
-%%  These flags maintain state information for the TPM. The values are not affected by
-%%   any TPM_Startup command.
-%%  The TPM_SetCapability command indicating TPM_PF_READPUBEK can set readPubek either 
-%%   TRUE or FALSE. It has more capability than the deprecated TPM_DisablePubekRead, which 
-%%   can only set readPubek to FALSE.
-%%  If the optional TSC_PhysicalPresence command is not implemented, physicalPresenceHWEnable 
-%%   should be set by the TPM vendor.
-%%  If the TSC_PhysicalPresence command is implemented, physicalPresenceHWEnable and/or 
-%%   physicalPresenceCMDEnable should be set and physicalPresenceLifetimeLock should be set 
-%%   before the TPM platform is delivered to the user.
-%%  The FIPS indicator can be set by the manufacturer to indicate restrictions on TPM 
-%%   operation. It cannot be changed using a command.
-%%  The rationale for setting allowMaintenace to FALSE if a TPM_FieldUpgrade implements 
-%%   the maintenance commands is that the current owner might not realize that maintenance 
-%%   commands have appeared. Further, the TPM may have certified to a remote entity that 
-%%   maintenance is disabled, the TPM_FieldUpgrade should not change that security property.
+%%  These flags maintain state information for the TPM. The values are not 
+%%   affected by any TPM_Startup command.
+%%  The TPM_SetCapability command indicating TPM_PF_READPUBEK can set readPubek
+%%   either TRUE or FALSE. It has more capability than the deprecated 
+%%   TPM_DisablePubekRead, which can only set readPubek to FALSE.
+%%  If the optional TSC_PhysicalPresence command is not implemented, 
+%%   physicalPresenceHWEnable should be set by the TPM vendor.
+%%  If the TSC_PhysicalPresence command is implemented, physicalPresenceHWEnable
+%%   and/or physicalPresenceCMDEnable should be set and 
+%%   physicalPresenceLifetimeLock should be set before the TPM platform is 
+%%   delivered to the user.
+%%  The FIPS indicator can be set by the manufacturer to indicate restrictions 
+%%   on TPM operation. It cannot be changed using a command.
+%%  The rationale for setting allowMaintenace to FALSE if a TPM_FieldUpgrade 
+%%   implements the maintenance commands is that the current owner might not 
+%%   realize that maintenance commands have appeared. Further, the TPM may have 
+%%   certified to a remote entity that maintenance is disabled, the 
+%%   TPM_FieldUpgrade should not change that security property.
 %% 
 %% Dependencies:
 %%  none
@@ -40,19 +42,20 @@ PermanentFlags : THEORY
     , ownership : bool
     % The state of the inactive flag. The default state is TRUE
     , deactivated : bool
-    % The ability to read the PUBEK without owner AuthData. The default state is TRUE.
+    % The ability to read the PUBEK without owner AuthData. default TRUE.
     , readPubek : bool
-    % Whether the owner authorized clear commands are active. The default state is FALSE.
+    % Whether the owner authorized clear commands are active. default FALSE.
     , disableOwnerClear : bool
-    % Whether the TPM Owner may create a maintenance archive. The default state is TRUE 
-    % if maintenance is implemented, vendor specific if maintenance is not implemented.
+    % Whether the TPM Owner may create a maintenance archive. default TRUE if 
+    %  maintenance is implemented, vendor specific if maintenance is not 
+    %  implemented.
     , allowMaintenance : bool
-    % This bit can only be set to TRUE; it cannot be set to FALSE except during the 
-    % manufacturing process.
-    % FALSE: The state of either physicalPresenceHWEnable or physicalPresenceCMDEnable MAY 
-    % be changed. (DEFAULT)
-    % TRUE: The state of either physicalPresenceHWEnable or physicalPresenceCMDEnable MUST 
-    % NOT be changed for the life of the TPM.
+    % This bit can only be set to TRUE; it cannot be set to FALSE except during
+    %  the manufacturing process.
+    % FALSE: The state of either physicalPresenceHWEnable or 
+    %  physicalPresenceCMDEnable MAY be changed. (DEFAULT)
+    % TRUE: The state of either physicalPresenceHWEnable or 
+    %  physicalPresenceCMDEnable MUST NOT be changed for the life of the TPM.
     , physicalPresenceLifetimeLock : bool
     % FALSE: Disable the hardware signal indicating physical presence. (DEFAULT)
     % TRUE: Enables the hardware signal indicating physical presence.
@@ -60,23 +63,22 @@ PermanentFlags : THEORY
     % FALSE: Disable the command indicating physical presence. (DEFAULT)
     % TRUE: Enables the command indicating physical presence.
     , physicalPresenceCMDEnable : bool
-    % TRUE: The PRIVEK and PUBEK were created using TPM_CreateEndorsementKeyPair.
+    % TRUE: The PRIVEK and PUBEK were created using TPM_CreateEndorsementKeyPair
     % FALSE: The PRIVEK and PUBEK were created using a manufacturer’s process.
-    % NOTE: This flag has no default value as the key pair MUST be created by one or the 
-    % other mechanism.
+    % NOTE: This flag has no default value as the key pair MUST be created by 
+    %  one or the other mechanism.
     , CEKPUsed : bool
-    % The meaning of this bit clarified in rev87. While actual use does not match the name, 
-    % for backwards compatibility there is no change to the name.
-    % TRUE: After TPM_Startup, if there is a call to TPM_ContinueSelfTest the TPM MUST 
-    % execute the actions of TPM_SelfTestFull
-    % FALSE: After TPM_Startup, if there is a call to TPM_ContinueSelfTest the TPM MUST 
-    % execute the actions of TPM_ContinueSelfTest
-    % If the TPM supports the implicit invocation of TPM_ContinueSelftTest upon the use of 
-    % an untested resource, the TPM MUST use the TPMPost flag to execute the actions of 
-    % either TPM_ContinueSelfTest or TPM_SelfTestFull
-    % The TPM manufacturer sets this bit during TPM manufacturing and the bit is 
+    % The meaning of this bit clarified in rev87. While actual use does not 
+    % match the name, for backwards compatibility there is no change to the name
+    % TRUE: After TPM_Startup, if there is a call to TPM_ContinueSelfTest the 
+    %  TPM MUST execute the actions of TPM_SelfTestFull
+    % FALSE: After TPM_Startup, if there is a call to TPM_ContinueSelfTest the 
+    %  TPM MUST execute the actions of TPM_ContinueSelfTest (DEFAULT)
+    % If the TPM supports the implicit invocation of TPM_ContinueSelftTest upon 
+    %  the use of an untested resource, the TPM MUST use the TPMPost flag to 
+    %  execute the actions of either TPM_ContinueSelfTest or TPM_SelfTestFull
+    % The TPM manufacturer sets this bit during TPM manufacturing and the bit is
     % unchangeable after shipping the TPM
-    % The default state is FALSE
     , TPMpost : bool
     % With the clarification of TPMPost TPMpostLock is now unnecessary.
     % This flag is now deprecated
@@ -103,10 +105,10 @@ PermanentFlags : THEORY
     , tpmEstablished : bool
     % TRUE: A maintenance archive has been created for the current SRK
     , maintenanceDone : bool
-    % TRUE: The full dictionary attack TPM_GetCapability info is deactivated. The returned 
-    % structure is TPM_DA_INFO_LIMITED.
-    % FALSE: The full dictionary attack TPM_GetCapability info is activated. The returned 
-    % structure is TPM_DA_INFO. (DEFAULT)
+    % TRUE: The full dictionary attack TPM_GetCapability info is deactivated. 
+    %  The returned structure is TPM_DA_INFO_LIMITED.
+    % FALSE: The full dictionary attack TPM_GetCapability info is activated. 
+    %  The returned structure is TPM_DA_INFO. (DEFAULT)
     , disableFullDALogicInfo : bool
   #];
 

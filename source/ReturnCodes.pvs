@@ -8,7 +8,7 @@
 %% Description: Datatype for Return Codes of TPM 
 %% 
 %% Dependencies:
-%% 
+%%  none
 %%
 %% Todo: (key - => pending, + => done)
 %%

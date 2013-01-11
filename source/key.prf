@@ -1,157 +1,12 @@
 (key
- (tpmNull_TCC1 0
-  (tpmNull_TCC1-1 nil 3564841647
-   (""
-    (inst 1 "tpmSealedData(tpmAuthData(tpmSecret(1),clear),
-tpmSecret(0),
-tpmDigest(null,clear),tpmSessKey(1,clear))")
-    nil nil)
-   ((tpmSessKey adt-constructor-decl
-     "[[KVAL, CRYPTOSTATUS] -> (tpmSessKey?)]" key nil)
-    (tpmSessKey? adt-recognizer-decl "[tpmData -> boolean]" key nil)
-    (KVAL type-eq-decl nil key nil)
-    (null adt-constructor-decl "(null?)" list_adt nil)
-    (null? adt-recognizer-decl "[list -> boolean]" list_adt nil)
-    (tpmDigest adt-constructor-decl
-     "[[list[tpmData], CRYPTOSTATUS] -> (tpmDigest?)]" key nil)
-    (list type-decl nil list_adt nil)
-    (clear adt-constructor-decl "(clear?)" key nil)
-    (clear? adt-recognizer-decl "[CRYPTOSTATUS -> boolean]" key nil)
-    (tpmSecret adt-constructor-decl "[nat -> (tpmSecret?)]" authdata
-     nil)
-    (nat nonempty-type-eq-decl nil naturalnumbers nil)
-    (>= const-decl "bool" reals nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (int nonempty-type-eq-decl nil integers nil)
-    (integer_pred const-decl "[rational -> boolean]" integers nil)
-    (rational nonempty-type-from-decl nil rationals nil)
-    (rational_pred const-decl "[real -> boolean]" rationals nil)
-    (real nonempty-type-from-decl nil reals nil)
-    (real_pred const-decl "[number_field -> boolean]" reals nil)
-    (number_field nonempty-type-from-decl nil number_fields nil)
-    (number_field_pred const-decl "[number -> boolean]" number_fields
-     nil)
-    (number nonempty-type-decl nil numbers nil)
-    (tpmAuthData adt-constructor-decl
-     "[[AUTHDATA, CRYPTOSTATUS] -> (tpmAuthData?)]" key nil)
-    (CRYPTOSTATUS type-decl nil key nil)
-    (tpmSealedData adt-constructor-decl
-     "[[(tpmAuthData?), (tpmSecret?), (tpmDigest?), tpmData] -> (tpmSealedData?)]"
-     key nil)
-    (tpmDigest? adt-recognizer-decl "[tpmData -> boolean]" key nil)
-    (tpmSecret? adt-recognizer-decl "[AUTHDATA -> boolean]" authdata
-     nil)
-    (AUTHDATA type-decl nil authdata nil)
-    (tpmAuthData? adt-recognizer-decl "[tpmData -> boolean]" key nil)
-    (tpmSealedData? adt-recognizer-decl "[tpmData -> boolean]" key nil)
-    (boolean nonempty-type-decl nil booleans nil)
-    (tpmData type-decl nil key nil))
-   nil))
- (pcrInfoLongDefault_TCC1 0
-  (pcrInfoLongDefault_TCC1-1 nil 3565025969
-   (""
-    (inst 1 "tpmPCRInfoLong(
-  		0
-		,0
-		,null
-		, null
-  		, tpmCompositeHash((#select:=null,pcrValue:=pcrsPower#))
-		, tpmCompositeHash((#select:=null,pcrValue:=pcrsPower#))
-  		)")
-    nil nil)
-   ((pcrsPower const-decl "PCRVALUES" pcr nil)
-    (PCR type-decl nil pcr nil)
-    (tpmCompositeHash adt-constructor-decl
-     "[PCR_COMPOSITE -> (tpmCompositeHash?)]" key nil)
-    (PCR_COMPOSITE type-eq-decl nil pcr nil)
-    (PCRVALUES type-eq-decl nil pcr nil)
-    (null adt-constructor-decl "(null?)" list_adt nil)
-    (null? adt-recognizer-decl "[list -> boolean]" list_adt nil)
-    (PCRINDEX type-eq-decl nil pcr nil)
-    (tpmPCRInfoLong adt-constructor-decl
-     "[[LOCALITY, LOCALITY, PCR_SELECTION, PCR_SELECTION, (tpmCompositeHash?),
-  (tpmCompositeHash?)] ->
-   (tpmPCRInfoLong?)]" key nil)
-    (tpmCompositeHash? adt-recognizer-decl "[tpmData -> boolean]" key
-     nil)
-    (PCR_SELECTION type-eq-decl nil pcr nil)
-    (AND const-decl "[bool, bool -> bool]" booleans nil)
-    (every adt-def-decl "boolean" list_adt nil)
-    (PRED type-eq-decl nil defined_types nil)
-    (list type-decl nil list_adt nil)
-    (LOCALITY type-eq-decl nil pcr nil)
-    (HVAL formal-nonempty-type-decl nil key nil)
-    (<= const-decl "bool" reals nil)
-    (nat nonempty-type-eq-decl nil naturalnumbers nil)
-    (>= const-decl "bool" reals nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (int nonempty-type-eq-decl nil integers nil)
-    (integer_pred const-decl "[rational -> boolean]" integers nil)
-    (rational nonempty-type-from-decl nil rationals nil)
-    (rational_pred const-decl "[real -> boolean]" rationals nil)
-    (real nonempty-type-from-decl nil reals nil)
-    (real_pred const-decl "[number_field -> boolean]" reals nil)
-    (number_field nonempty-type-from-decl nil number_fields nil)
-    (number_field_pred const-decl "[number -> boolean]" number_fields
-     nil)
-    (number nonempty-type-decl nil numbers nil)
-    (tpmPCRInfoLong? adt-recognizer-decl "[tpmData -> boolean]" key
-     nil)
-    (boolean nonempty-type-decl nil booleans nil)
-    (tpmData type-decl nil key nil))
-   nil))
- (storeAsymkeyDefault_TCC1 0
-  (storeAsymkeyDefault_TCC1-1 nil 3566828674
-   ("" (existence-tcc)
-    ((""
-      (inst 1
-       "tpmStoreAsymkey(tpmSecret(0),tpmSecret(0),tpmDigest(null,clear),0,clear)")
-      nil nil))
-    nil)
-   ((tpmData type-decl nil key nil)
-    (boolean nonempty-type-decl nil booleans nil)
-    (tpmStoreAsymkey? adt-recognizer-decl "[tpmData -> boolean]" key
-     nil)
-    (AUTHDATA type-decl nil authdata nil)
-    (tpmSecret? adt-recognizer-decl "[AUTHDATA -> boolean]" authdata
-     nil)
-    (tpmDigest? adt-recognizer-decl "[tpmData -> boolean]" key nil)
-    (number nonempty-type-decl nil numbers nil)
-    (number_field_pred const-decl "[number -> boolean]" number_fields
-     nil)
-    (number_field nonempty-type-from-decl nil number_fields nil)
-    (real_pred const-decl "[number_field -> boolean]" reals nil)
-    (real nonempty-type-from-decl nil reals nil)
-    (rational_pred const-decl "[real -> boolean]" rationals nil)
-    (rational nonempty-type-from-decl nil rationals nil)
-    (integer_pred const-decl "[rational -> boolean]" integers nil)
-    (KVAL type-eq-decl nil key nil)
-    (CRYPTOSTATUS type-decl nil key nil)
-    (tpmStoreAsymkey adt-constructor-decl
-     "[[(tpmSecret?), (tpmSecret?), (tpmDigest?), KVAL, CRYPTOSTATUS] ->
-   (tpmStoreAsymkey?)]" key nil)
-    (int nonempty-type-eq-decl nil integers nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (>= const-decl "bool" reals nil)
-    (nat nonempty-type-eq-decl nil naturalnumbers nil)
-    (tpmSecret adt-constructor-decl "[nat -> (tpmSecret?)]" authdata
-     nil)
-    (list type-decl nil list_adt nil)
-    (tpmDigest adt-constructor-decl
-     "[[list[tpmData], CRYPTOSTATUS] -> (tpmDigest?)]" key nil)
-    (null? adt-recognizer-decl "[list -> boolean]" list_adt nil)
-    (null adt-constructor-decl "(null?)" list_adt nil)
-    (clear? adt-recognizer-decl "[CRYPTOSTATUS -> boolean]" key nil)
-    (clear adt-constructor-decl "(clear?)" key nil))
-   nil))
  (double_inverse 0
   (double_inverse-1 nil 3560197474 ("" (grind) nil nil)
-   ((inverse const-decl "KVAL" key nil)
+   ((inverse const-decl "KVAL" keydata nil)
     (minus_int_is_int application-judgement "int" integers nil))
    shostak))
  (inverse_private 0
   (inverse_private-1 nil 3560197084 ("" (grind) nil nil)
-   ((inverse const-decl "KVAL" key nil)
+   ((inverse const-decl "KVAL" keydata nil)
     (private const-decl "KVAL" key nil)
     (public const-decl "KVAL" key nil)
     (minus_int_is_int application-judgement "int" integers nil))
@@ -159,7 +14,7 @@ tpmDigest(null,clear),tpmSessKey(1,clear))")
  (inverse_public 0
   (inverse_public-1 nil 3560281095 ("" (grind) nil nil)
    ((public const-decl "KVAL" key nil)
-    (inverse const-decl "KVAL" key nil)
+    (inverse const-decl "KVAL" keydata nil)
     (private const-decl "KVAL" key nil))
    shostak))
  (equal_inverse 0
@@ -176,13 +31,13 @@ tpmDigest(null,clear),tpmSessKey(1,clear))")
     (rational_pred const-decl "[real -> boolean]" rationals nil)
     (rational nonempty-type-from-decl nil rationals nil)
     (integer_pred const-decl "[rational -> boolean]" integers nil)
-    (KVAL type-eq-decl nil key nil)
+    (KVAL type-eq-decl nil keydata nil)
     (minus_int_is_int application-judgement "int" integers nil)
-    (inverse const-decl "KVAL" key nil))
+    (inverse const-decl "KVAL" keydata nil))
    shostak))
  (decrypt_encrypt 0
   (decrypt_encrypt-1 nil 3560012031 ("" (grind) nil nil)
-   ((inverse const-decl "KVAL" key nil)
+   ((inverse const-decl "KVAL" keydata nil)
     (encryptStatus const-decl "(encrypted?)" key nil)
     (decryptStatus const-decl "CRYPTOSTATUS" key nil))
    shostak))
@@ -200,7 +55,8 @@ tpmDigest(null,clear),tpmSessKey(1,clear))")
     (rational_pred const-decl "[real -> boolean]" rationals nil)
     (rational nonempty-type-from-decl nil rationals nil)
     (integer_pred const-decl "[rational -> boolean]" integers nil)
-    (KVAL type-eq-decl nil key nil) (inverse const-decl "KVAL" key nil)
+    (KVAL type-eq-decl nil keydata nil)
+    (inverse const-decl "KVAL" keydata nil)
     (encryptStatus const-decl "(encrypted?)" key nil)
     (decryptStatus const-decl "CRYPTOSTATUS" key nil))
    shostak))
@@ -218,10 +74,10 @@ tpmDigest(null,clear),tpmSessKey(1,clear))")
     (rational_pred const-decl "[real -> boolean]" rationals nil)
     (rational nonempty-type-from-decl nil rationals nil)
     (integer_pred const-decl "[rational -> boolean]" integers nil)
-    (KVAL type-eq-decl nil key nil)
+    (KVAL type-eq-decl nil keydata nil)
     (minus_int_is_int application-judgement "int" integers nil)
     (/= const-decl "boolean" notequal nil)
-    (inverse const-decl "KVAL" key nil)
+    (inverse const-decl "KVAL" keydata nil)
     (encryptStatus const-decl "(encrypted?)" key nil)
     (decryptStatus const-decl "CRYPTOSTATUS" key nil))
    shostak))
@@ -239,8 +95,8 @@ tpmDigest(null,clear),tpmSessKey(1,clear))")
     (("" (prop) (("1" (grind) nil nil) ("2" (grind) nil nil)) nil))
     nil)
    ((member const-decl "bool" sets nil)
-    (keyFlagsF const-decl "KEY_FLAGS" key nil)
-    (keyParmsDef const-decl "KEY_PARMS" key nil)
+    (keyFlagsF const-decl "KEY_FLAGS" keydata nil)
+    (keyParmsDef const-decl "KEY_PARMS" keydata nil)
     (TPM_KH_SRK const-decl "(tpmKey?)" key nil)
     (installedOrSRK? const-decl "bool" key nil)
     (addKey const-decl "KEYSET" key nil)

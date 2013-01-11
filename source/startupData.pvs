@@ -1,13 +1,40 @@
+%% ----
+%%
+%% startupData Theory
+%%
+%% Author: Perry Alexander, Brigid Halling
+%% Date: 
+%%
+%% Description: 
+%% 
+%% Dependencies:
+%%  PermanentData.pvs
+%%  PermanentFlags.pvs
+%%  StanyData.pvs
+%%  StanyFlags.pvs
+%%  StclearData.pvs
+%%  StclearFlags.pvs
+%%  key.pvs
+%%  data.pvs
+%%  keyData.pvs
+%%  pcr.pvs
+%%  authdata.pvs
+%%
+%% Todo: (key - => pending, + => done)
+%% ----
+
 startupData[B,K,HV : TYPE+] : THEORY
 
   BEGIN
 
-  IMPORTING pcr[HV];
   IMPORTING key[B,HV];
   IMPORTING PermanentFlags;
   IMPORTING PermanentData[B,K,HV];
   IMPORTING StanyFlags[HV];
   IMPORTING StanyData[B,HV];
+  IMPORTING StclearFlags;
+  IMPORTING StclearData[B,HV];
+
 
   %% Flags used by the TPM_Startup command
   TPM_STARTUP_TYPE : DATATYPE

@@ -8,16 +8,7 @@
 %% Description: 
 %% 
 %% Dependencies:
-%%  StateMonad.pvs
-%%  key.pvs
-%%  pcr.pvs
-%%  ReturnCodes.pvs
-%%  startupData.pvs
-%%  PermanentFlags.pvs
-%%  PermanentData.pvs
-%%  StanyFlags.pvs
-%%  StanyData.pvs
-%%  memory.pvs 
+%%  none 	
 %%
 %% Todo: (key - => pending, + => done)
 %% ----
@@ -38,4 +29,4 @@ authdata : THEORY
     never : never?
   END AUTH_DATA_USAGE;
   
-  END authdata
+END authdata

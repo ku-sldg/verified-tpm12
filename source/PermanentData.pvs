@@ -6,12 +6,14 @@
 %% Date: 
 %%
 %% Description:  
-%%  This structure contains the data fields that are permanently held in the TPM and not
-%%  affected by TPM_Startup(any)
+%%  This structure contains the data fields that are permanently held in the TPM
+%%   and not affected by TPM_Startup(any)
 %% 
 %% Dependencies:
+%%  data.pvs
 %%  pcr.pvs
-%%  key.pvs
+%%  keyData.pvs
+%%  authdata.pvs
 %%
 %% Todo: (key - => pending, + => done)
 %%
@@ -20,70 +22,70 @@
 PermanentData[DV,KV,HV:TYPE+] : THEORY
   BEGIN
 
-  IMPORTING pcr[HV];
-  IMPORTING key[DV,HV];
-  IMPORTING authdata;
+  IMPORTING data[DV,HV];
   
   PermData : TYPE = [#
     %% TPM_TAG_PERMANENT_DATA
 %     tag : TPM_STRUCTURE_TAG
-    %% This is the TPM major revision indicator. This SHALL be set by the TPME, only. The 
-    %% default value is manufacturer-specific.
+    %% This is the TPM major revision indicator. This SHALL be set by the TPME,
+    %%  only. The default value is manufacturer-specific.
 %   , revMajor : BYTE
-    %% This is the TPM minor revision indicator. This SHALL be set by the TPME, only. The 
-    %% default value is manufacturer-specific.
+    %% This is the TPM minor revision indicator. This SHALL be set by the TPME,
+    %%  only. The default value is manufacturer-specific.
 %   , revMinor : BYTE
-    %% This is a random number that each TPM maintains to validate blobs in the SEAL and 
-    %% other processes. THe default value is manufacturer specific.
+    %% This is a random number that each TPM maintains to validate blobs in the
+    %%  SEAL and other processes. THe default value is manufacturer specific.
       tpmProof : (tpmSecret?)
     %% 
     , ekReset : (tpmNonce?)
-    %% This is the TPM-Owner’s AuthData data. The default value is manufacturer-specific.
+    %% This is the TPM-Owner’s AuthData data. default is manufacturer-specific.
     , ownerAuth : (tpmSecret?)
     %% The value that allows the execution of the TPM_SetTempDeactivated command
     , operatorAuth : (tpmSecret?)
     %% 
 %   , authDIR[1] : TPM_DIRVALUE
-    %% This is the manufacturer’s public key to use in the maintenance operations. The
-    %% default value is manufacturer-specific.
+    %% This is the manufacturer’s pub key to use in the maintenance operations. 
+    %%  The default value is manufacturer-specific.
 %   , manuMaintPub : TPM_PUBKEY
     %% This is the TPM’s endorsement key pair.
 %   , endorsementKey : (tpmKey?)
     %% This is the TPM’s StorageRootKey.
 %   , srk : (tpmKey?)
-    %% This is the key in use to perform context saves. The key may be symmetric or 
-    %% asymmetric. The key size is predicated by the algorithm in use.
-    %% This value MUST be reset when the TPM Owner changes. This key MUST NOT be a copy of 
-    %% the EK or SRK.
+    %% This is the key in use to perform context saves. The key may be symmetric
+    %%  or asymmetric. The key size is predicated by the algorithm in use.
+    %% This value MUST be reset when the TPM Owner changes. This key MUST NOT be
+    %%  a copy of the EK or SRK.
     %% The contextKey and delegateKey MAY be the same value.
 %   , contextKey : (tpmKey?)
     %% This key encrypts delegate rows that are stored outside the TPM.
-    %% The key MAY be symmetric or asymmetric. The key size for the algorithm SHOULD be 
-    %% equivalent to 128-bit AES key. The TPM MAY set this value once or allow for changes 
-    %% to this value.
+    %% The key MAY be symmetric or asymmetric. The key size for the algorithm 
+    %%  SHOULD be equivalent to 128-bit AES key. The TPM MAY set this value once
+    %%  or allow for changes to this value.
     %% This key MUST NOT be the EK or SRK
-    %% To save space this key MAY be the same key that performs context blob encryption.
-    %% If an asymmetric algorithm is in use for this key the public portion of the key MUST 
-    %% never be revealed by the TPM.
-    %% This value MUST be reset when the TPM Owner changes. The value MUST be invalidated 
-    %% with the actions of TPM_OwnerClear. The value MUST be set on TPM_TakeOwnership.
+    %% To save space this key MAY be the same key that performs context blob 
+    %%  encryption.
+    %% If an asymmetric algorithm is in use for this key the public portion of 
+    %%  the key MUST never be revealed by the TPM.
+    %% This value MUST be reset when the TPM Owner changes. The value MUST be
+    %%  invalidated with the actions of TPM_OwnerClear. The value MUST be set 
+    %%  on TPM_TakeOwnership.
     %% The contextKey and delegateKey MAY be the same value.
 %   , delegateKey : (tpmKey?)
-    %% This SHALL be the audit monotonic counter for the TPM. This value starts at 0 and 
-    %% increments according to the rules of auditing. The label SHALL be fixed at 4 bytes 
-    %% of 0x00.
+    %% This SHALL be the audit monotonic counter for the TPM. This value starts 
+    %%  at 0 and increments according to the rules of auditing. The label SHALL 
+    %%  be fixed at 4 bytes of 0x00.
 %   , auditMonotonicCounter : TPM_COUNTER_VALUE
-    %% This SHALL be the monotonic counters for the TPM. The individual counters start and 
-    %% increment according to the rules of monotonic counters.
+    %% This SHALL be the monotonic counters for the TPM. The individual counters
+    %%  start and increment according to the rules of monotonic counters.
 %   , monotonicCounter[TPM_MIN_COUNTERS] : TPM_COUNTER_VALUE
-    %% PCR attributes set during manufacturing
-    %% for specific register, the attributes must match requirements of the TCG platform
-    %% specific specification that describes the platform.
+    %% PCR attributes set during manufacturing for specific register, the 
+    %%  attributes must match requirements of the TCG platform specific 
+    %%  specification that describes the platform.
     , pcrAttrib : PCR_ATTRIBUTES
     %% Table indicating which ordinals are being audited.
 %   , ordinalAuditStatus[] : BYTE[]
-    %% The array of TPM Owner authorized DIR. Points to the same location as the NV index 
-    %% value.
+    %% The array of TPM Owner authorized DIR. Points to the same location as the
+    %%  NV index value.
 %   , authDIR : TPM_DIRVALUE
     %% State information describing the random number generator.
 %   , rngState : BYTE[]

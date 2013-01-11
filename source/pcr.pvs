@@ -8,7 +8,7 @@
 %% Description: Basic model of a TPM register file
 %% 
 %% Dependencies:
-%%  StateMonad.pvs
+%%  None
 %%
 %% Todo: (key - => pending, + => done)
 %%
@@ -27,7 +27,7 @@ pcr [HV: TYPE+] : THEORY
 
   %% (8.1) 
   %% Should be bit map that indicates if a PCR is active or not.
-  PCR_SELECTION : TYPE = list[PCRINDEX]; % TODO: Should we make this into an array?
+  PCR_SELECTION : TYPE = list[PCRINDEX]; % TODO: Should we make this into array?
 
   PCR : datatype
   begin
@@ -43,8 +43,8 @@ pcr [HV: TYPE+] : THEORY
   		% The indication of which PCR values are active
   		  select : PCR_SELECTION 
 		% Array of PCRVALUE structures. 
-		% The values come in the order specified by the select parameter and 
-		% are concatenated into a single blob.
+		% The values come in the order specified by the select parameter
+		%  and are concatenated into a single blob.
 		, pcrValue : PCRVALUES
   		#];
 
@@ -53,10 +53,11 @@ pcr [HV: TYPE+] : THEORY
 %   PCR_INFO : TYPE = [#
 %   	   % Selection of PCRs to which the data or key is bound
 %   	     pcrSelection : PCR_SELECTION
-% 	   % Digest of the PCR indices and PCR values to verify when revealing sealed data
-% 	   % or using a key that was wrapped to PCRs
+% 	   % Digest of the PCR indices and PCR values to verify when revealing 
+% 	   % sealed data or using a key that was wrapped to PCRs
 % 	   , digestAtRelease  : TPM_COMPOSITE_HASH
-% 	   % Composite digest value of the PCR values, at the time when the sealing is performed
+% 	   % Composite digest value of the PCR values, at the time when the 
+%	   % sealing is performed
 % 	   , digestAtCreation : TPM_COMPOSITE_HASH
 % 	   #];
 
@@ -76,7 +77,8 @@ pcr [HV: TYPE+] : THEORY
   pcrDebug : PCR_ATTRIBUTES
   pcrInit : PCR_ATTRIBUTES
 
-  % Pcr attributes are available on a per PCR basis. Differs by platform configuration
+  % Pcr attributes are available on a per PCR basis. Differs by platform 
+  % configuration
   allResetAccess : PCR_ATTRIBUTES =
     (LAMBDA (i:PCRINDEX) :
       (# 
@@ -112,7 +114,8 @@ pcr [HV: TYPE+] : THEORY
   getPCRs(pcrs:PCRVALUES,pcrMask:PCR_SELECTION) : list[PCR] =
      map(pcrs,pcrMask);
   
-  getPCRsCorrectness: THEOREM (FORALL (pm:PCR_SELECTION, i:PCRINDEX, pcrs:PCRVALUES) :
+  getPCRsCorrectness: THEOREM 
+  (FORALL (pm:PCR_SELECTION, i:PCRINDEX, pcrs:PCRVALUES) :
      member(i,pm)
      =>
      member(pcrs(i),getPCRs(pcrs,pm)));

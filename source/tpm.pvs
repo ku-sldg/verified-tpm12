@@ -9,15 +9,19 @@
 %% 
 %% Dependencies:
 %%  StateMonad.pvs
-%%  key.pvs
-%%  pcr.pvs
 %%  ReturnCodes.pvs
-%%  startupData.pvs
-%%  PermanentFlags.pvs
-%%  PermanentData.pvs
-%%  StanyFlags.pvs
-%%  StanyData.pvs
 %%  memory.pvs 
+%%  StclearFlags.pvs
+%%  startupData.pvs
+%%  PermanentData.pvs
+%%  StanyData.pvs
+%%  StanyFlags.pvs
+%%  key.pvs
+%%  data.pvs
+%%  keyData.pvs
+%%  pcr.pvs
+%%  authdata.pvs
+%%  PermanentFlags.pvs
 %%
 %% Todo: (key - => pending, + => done)
 %% ----
@@ -53,14 +57,8 @@ tpm [ B:TYPE+ % BLOB
     CPU_QUOTE_ERROR : CPU_QUOTE_ERROR?
   END cpuReturn;
   
-  IMPORTING pcr[HV];
-  IMPORTING key[B,HV];
   IMPORTING ReturnCodes;
   IMPORTING startupData[B,K,HV];
-  IMPORTING PermanentFlags;
-  IMPORTING PermanentData[B,K,HV];
-  IMPORTING StanyFlags[HV];
-  IMPORTING StanyData[B,HV];
 
 
   %% State monad output type
