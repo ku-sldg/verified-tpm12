@@ -1,0 +1,51 @@
+%% ----
+%%
+%% STCLEAR Flags Theory
+%%
+%% Author: Brigid Halling
+%% Date: Mon Jan 7 11:30:01 CST 2013
+%%
+%% Description:  
+%%  These flags maintain state that is reset on teach TPM_Startup(ST_CLEAR) command. The values
+%%  are not affected by TPM_Startup(ST_STATE) commands.
+%% 
+%% Dependencies:
+%%  none
+%%
+%% Todo: (key - => pending, + => done)
+%%
+%% ----
+
+StclearFlags : THEORY
+  BEGIN
+
+  StclearFlags : TYPE = [#
+  	   % Prevents the operation of most capabilities. There is no default state. It is
+	   % initialized by TPM_Startup to the same value as TPM_PERMANENT_FLAGS->deactivated or a 
+	   % set value depending on the type of TPM_Startup. TPM_SetTempDeactivated sets it to TRUE.
+ 	     deactivated : bool 
+	   % Prevents the operation of TPM_ForceClear when TRUE. The default state is FALSE.
+	   % TPM_DisableForceClear sets it to TRUE. 
+	   , disableForceClear : bool
+	   % Command assertion of physical presence. The default state is FALSE. This flag is 
+	   % affected by the TSC_PhysicalPresence command but not by the hardware signal.
+	   , physicalPresence : bool
+	   % Indicates whether changes to the TPM_STCLEAR_FLAGS->physicalPresence flag are permitted.
+	   % TPM_Startup(ST_CLEAR) sets PhysicalPresenceLock to its default state of FALSE (allow
+	   % changes to the physicalPresence flag). When TRUE, the physicalPresence flag is FALSE. 
+	   % TSC_PhysicalPresence can change the state of physicalPresenceLock. 
+	   , physicalPresenceLock : bool
+	   % Set to FALSE on each TPM_Startup(ST_CLEAR). Set to TRUE when a write to NV_Index=0 
+	   % is successful.
+	   , bGlobablLock : bool
+  #];
+
+  stclearFlagsInit : StclearFlags = 
+  		 (# deactivated:=
+		  , disableForceClear:=
+	   	  , physicalPresence:=FALSE
+	   	  , physicalPresenceLock:=FALSE
+	   	  , bGlobablLock:=FALSE % TODO: Correct?
+		  #);
+
+  END StclearFlags

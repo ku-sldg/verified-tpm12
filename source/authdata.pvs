@@ -1,0 +1,41 @@
+%% ----
+%%
+%% Authdata Theory
+%%
+%% Author: Brigid Halling
+%% Date: Tue Jan 8 11:22:39 CST 2013
+%%
+%% Description: 
+%% 
+%% Dependencies:
+%%  StateMonad.pvs
+%%  key.pvs
+%%  pcr.pvs
+%%  ReturnCodes.pvs
+%%  startupData.pvs
+%%  PermanentFlags.pvs
+%%  PermanentData.pvs
+%%  StanyFlags.pvs
+%%  StanyData.pvs
+%%  memory.pvs 
+%%
+%% Todo: (key - => pending, + => done)
+%% ----
+
+authdata : THEORY
+  BEGIN
+  
+  %%	(5.6)
+  AUTHDATA : DATATYPE
+  BEGIN
+    tpmSecret(i:nat) : tpmSecret?
+    tpmEncAuth(i:nat) : tpmEncAuth?
+  END AUTHDATA;
+  
+  AUTH_DATA_USAGE : DATATYPE
+  BEGIN
+    always : always?
+    never : never?
+  END AUTH_DATA_USAGE;
+  
+  END authdata
