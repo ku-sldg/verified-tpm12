@@ -91,11 +91,13 @@ key [DVAL,HVAL:TYPE+] : THEORY
       tpmID(id0,crs0) : tpmID(id0,encryptStatus(k,crs0)),
       tpmDigest(digest0,crs0) :
         tpmDigest(digest0,encryptStatus(k,crs0)),
-      tpmAuthData(authdata0,crs0) :
-        tpmAuthData(authdata0,encryptStatus(k,crs0)),
+      tpmEncAuth(authdata0,crs0) :
+        tpmEncAuth(authdata0,encryptStatus(k,crs0)),
       tpmMigKeyAuth(k0,s0,d0,crs0) : 
         tpmMigKeyAuth(k0,s0,d0,encryptStatus(k,crs0)),
       tpmStoredData(s0,e0,crs0) : tpmStoredData(s0,e0,encryptStatus(k,crs0)),
+      tpmSealedData(a0,p0,s0,d0,crs0) : 
+      	tpmSealedData(a0,p0,s0,d0,encryptStatus(k,crs0)),
       tpmSessKey(k0,crs0) : tpmSessKey(k0,encryptStatus(k,crs0)),
       tpmBoundData(p0,crs0) : tpmBoundData(p0,encryptStatus(k,crs0)),
       tpmKey(k0,u0,f0,a0,ap0,p0,wk0,e0,crs0) :
@@ -117,8 +119,8 @@ key [DVAL,HVAL:TYPE+] : THEORY
       tpmEKBlobActivate(k0,i0,p0) : TRUE,
       tpmEKBlobAuth(a0) : TRUE,
       tpmNonce : TRUE,
+      tpmSecret(i0) : TRUE,
       tpmPCRInfoLong(lc0,lr0,sc0,sr0,dc0,dr0) : TRUE,
-      tpmSealedData(a0,p0,s0,d0) : TRUE,
       tpmPubkey(k0) : TRUE,
       tpmMigrateAsymkey(u0,d0,p0) : TRUE
       ELSE FALSE
@@ -140,9 +142,9 @@ key [DVAL,HVAL:TYPE+] : THEORY
         THEN tpmDigest(digest0,decryptStatus(k,crs0))
 	ELSE d
 	ENDIF,
-      tpmAuthData(authdata0,crs0) :
+      tpmEncAuth(authdata0,crs0) :
         IF encrypted?(crs0)
-        THEN tpmAuthData(authdata0,decryptStatus(k,crs0))
+        THEN tpmSecret(authdata0)%,decryptStatus(k,crs0)) TODO?
 	ELSE d
 	ENDIF,
       tpmMigKeyAuth(k0,s0,d0,crs0) :
@@ -153,6 +155,11 @@ key [DVAL,HVAL:TYPE+] : THEORY
       tpmStoredData(s0,e0,crs0) : 
         IF encrypted?(crs0)
         THEN tpmStoredData(s0,e0,decryptStatus(k,crs0))
+	ELSE d
+	ENDIF,
+      tpmSealedData(a0,p0,s0,d0,crs0) :
+        IF encrypted?(crs0)
+        THEN tpmSealedData(a0,p0,s0,d0,decryptStatus(k,crs0))
 	ELSE d
 	ENDIF,
       tpmSessKey(k0,crs0) : 
@@ -219,12 +226,14 @@ key [DVAL,HVAL:TYPE+] : THEORY
       tpmID(id0,crs0) : tpmID(id0,signStatus(k,crs0)),
       tpmDigest(digest0,crs0) :
         tpmDigest(digest0,signStatus(k,crs0)),
-      tpmAuthData(authdata0,crs0) :
-        tpmAuthData(authdata0,signStatus(k,crs0)),
+      tpmEncAuth(authdata0,crs0) :
+        tpmEncAuth(authdata0,signStatus(k,crs0)),
       tpmMigKeyAuth(k0,s0,d0,crs0) :
         tpmMigKeyAuth(k0,s0,d0,signStatus(k,crs0)),
       tpmStoredData(s0,e0,crs0) : 
       	tpmStoredData(s0,e0,signStatus(k,crs0)),
+      tpmSealedData(a0,p0,s0,d0,crs0) :
+      	tpmSealedData(a0,p0,s0,d0,signStatus(k,crs0)),
       tpmSessKey(k0,crs0) :
         tpmSessKey(k0,signStatus(k,crs0)),
       tpmBoundData(p0,crs0) : 
@@ -257,9 +266,9 @@ key [DVAL,HVAL:TYPE+] : THEORY
       tpmEKBlobAuth(a0) : FALSE,
       tpmCompositeHash(d0) : FALSE,
       tpmNonce : FALSE,
+      tpmSecret(i0) : FALSE,
       tpmPCRInfoLong(lc0,lr0,sc0,sr0,dc0,dr0) : FALSE,
       tpmPCRInfoShort(ps0,l0,d0) : FALSE,
-      tpmSealedData(a0,p0,s0,d0) : FALSE,
       tpmPubkey(k0) : FALSE,
       tpmMigrateAsymkey(u0,d0,p0) : FALSE
       ELSE 

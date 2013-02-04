@@ -60,7 +60,6 @@ tpm [ B:TYPE+ % BLOB
   IMPORTING ReturnCodes;
   IMPORTING startupData[B,K,HV];
 
-
   %% State monad output type
   tpmAbsOutput : DATATYPE
   BEGIN
@@ -78,15 +77,17 @@ tpm [ B:TYPE+ % BLOB
   %% Admin Ownership (6)
     OUT_TakeOwnership(srkPub:(tpmKey?),a:authOut,m:ReturnCode) : 
     	OUT_TakeOwnership?
-    OUT_OwnerClear(m:ReturnCode) : OUT_OwnerClear? 
+    OUT_OwnerClear(a:authOut,m:ReturnCode) : OUT_OwnerClear? 
     OUT_ForceClear(m:ReturnCode) : OUT_ForceClear? 
-    OUT_DisableOwnerClear(m:ReturnCode) : OUT_DisableOwnerClear? 
+    OUT_DisableOwnerClear(a:authOut,m:ReturnCode) : OUT_DisableOwnerClear? 
     OUT_DisableForceClear(m:ReturnCode) : OUT_DisableForceClear? 
+    OUT_PhysicalPresence(m:ReturnCode) : OUT_PhysicalPresence?
   %% Storage Functions (10)
-    OUT_Seal(sealedData:(tpmStoredData?),m:ReturnCode) : OUT_Seal?
-    OUT_Unseal(secret:tpmData,m:ReturnCode) : OUT_Unseal?
-    OUT_UnBind(outData:tpmData,m:ReturnCode) : OUT_UnBind?
-    OUT_CreateWrapKey(wrappedKey:(tpmKey?),m:ReturnCode) : OUT_CreateWrapKey?
+    OUT_Seal(sealedData:(tpmStoredData?),a:authOut,m:ReturnCode) : OUT_Seal?
+    OUT_Unseal(secret:tpmData,a,da:authOut,m:ReturnCode) : OUT_Unseal?
+    OUT_UnBind(outData:tpmData,a:authOut,m:ReturnCode) : OUT_UnBind?
+    OUT_CreateWrapKey(wrappedKey:(tpmKey?),a:authOut,m:ReturnCode) : 
+    	OUT_CreateWrapKey?
     OUT_LoadKey2(inkeyHandle:(tpmKey?),m:ReturnCode) : OUT_LoadKey2?
   %% Migration (11)
     OUT_CreateMigrationBlob(random:int,outData:tpmData,m:ReturnCode) : 
@@ -130,18 +131,21 @@ tpm [ B:TYPE+ % BLOB
     ABS_SaveState : ABS_SaveState?
     ABS_Startup(startupType : TPM_STARTUP_TYPE) : ABS_Startup?
   %% Admin Ownership Commands (6)
-    ABS_TakeOwnership(encOwnerAuth,encSrkAuth:(tpmAuthData?),
-	srkParams:(tpmKey?),a:authIn) : ABS_TakeOwnership?
-    ABS_OwnerClear : ABS_OwnerClear? 
+    ABS_TakeOwnership(oA,sA:(tpmEncAuth?),srk:(tpmKey?),a:authIn) : 
+    	ABS_TakeOwnership? %TODO: oA,sA:(tpmAuthData?)
+    ABS_OwnerClear(a:authIn) : ABS_OwnerClear? 
     ABS_ForceClear : ABS_ForceClear? 
-    ABS_DisableOwnerClear : ABS_DisableOwnerClear? 
+    ABS_DisableOwnerClear(a:authIn) : ABS_DisableOwnerClear? 
     ABS_DisableForceClear : ABS_DisableForceClear? 
+    ABS_PhysicalPresence(p:PHYSPRES) : ABS_PhysicalPresence?
   %% Protected Storage Commands (10)
-    ABS_Seal(k:(tpmKey?),encAuth:(tpmAuthData?),pcrInfo:(tpmPCRInfoLong?),
-	inData:tpmData) : ABS_Seal?
-    ABS_Unseal(parent:(tpmKey?),inData:(tpmStoredData?)) : ABS_Unseal?   
-    ABS_UnBind(key:(tpmKey?),inData:(tpmBoundData?)) : ABS_UnBind?
-    ABS_CreateWrapKey(parentk,keyInfo:(tpmKey?)): ABS_CreateWrapKey?  
+    ABS_Seal(k:(tpmKey?),encAuth:(tpmEncAuth?),pcrInfo:(tpmPCRInfoLong?),
+	inData:tpmData,a:authIn) : ABS_Seal?	%encAuth:(tpmAuthData?)
+    ABS_Unseal(parent:(tpmKey?),inData:(tpmStoredData?),a,da:authIn) : 
+    	ABS_Unseal?   
+    ABS_UnBind(key:(tpmKey?),inData:(tpmBoundData?),a:authIn) : ABS_UnBind?
+    ABS_CreateWrapKey(parentH,keyInfo:(tpmKey?),dUA,dMA:(tpmEncAuth?),a:authIn):
+	ABS_CreateWrapKey?
     ABS_LoadKey2(parent:(tpmKey?),inKey:(tpmKey?)): ABS_LoadKey2? 
   %% Migration Commands (11)
     ABS_CreateMigrationBlob(p:(tpmKey?),m:migrateScheme,
@@ -222,7 +226,7 @@ tpm [ B:TYPE+ % BLOB
 		       ek : (tpmKey?),
 		       keyGenCnt : K,
 		       keys : KEYSET,
-                       pcrs : PCRVALUES,
+                       pcrs : PCRVALUES,	%stcleardata`PCR?
 		       locality : LOCALITY,
 		       permFlags : PermFlags,
 		       permData : PermData,
@@ -230,7 +234,6 @@ tpm [ B:TYPE+ % BLOB
 		       stanyData : StanyData,
 		       stclearFlags : StclearFlags,
 		       stclearData : StclearData
-%		       disableForceClear : bool
 		    #];
 
   %% Well formedness condition for abstract states.  Currently unused, but we
@@ -256,7 +259,7 @@ tpm [ B:TYPE+ % BLOB
 		         , keyGenCnt:=initKeyVal
 			 , memory:=empty
 			 , restore:=initSaveData
-			 , permFlags:=permFlagsInit
+			 , permFlags:=permFlagsDefault
 			 , permData:=permDataInit
 			 , stanyFlags:=stanyFlagsInit 
 			   		WITH [`postInitialize:=TRUE]
@@ -277,7 +280,7 @@ tpm [ B:TYPE+ % BLOB
 		         , keyGenCnt:=initKeyVal
 			 , memory:=empty
 			 , restore:=initSaveData
-			 , permFlags:=permFlagsInit
+			 , permFlags:=permFlagsDefault
 			 , permData:=permDataInit
 			 , stanyFlags:=stanyFlagsInit 
 			   		WITH [`postInitialize:=FALSE]
@@ -349,7 +352,7 @@ tpm [ B:TYPE+ % BLOB
 				, stclearData(s)
 		      		)];
 
-  takeOwnership?(s:tpmAbsState,encOwnerA,encSrkA:(tpmAuthData?),srkParams:(tpmKey?),a:authIn) : bool =
+  takeOwnership?(s:tpmAbsState,k:(tpmKey?)) : bool =
     COND
       i(s`permData`ownerAuth)/=INVALIDAUTH -> FALSE,			% 1
       not s`permFlags`ownership -> FALSE,				% 2
@@ -358,24 +361,23 @@ tpm [ B:TYPE+ % BLOB
       %not protocolID = TPM_PID_OWNER -> FALSE,				% 5
       %  not length(A1)=20bytes -> FALSE,	     			% 6
       %not command, params using A1, ownerAuth -> FALSE,		% 7b
-      not storage?(keyUsage(srkParams)) -> FALSE,   			% 8a
-      migratable(keyFlags(srkParams)) -> FALSE,				% 8b
-      not RSA?(algoId(algoParms(srkParams))) -> FALSE,			% 8c
-      %not SHA1_MGF1?(encScheme(algoParms(srkParams))) -> FALSE,	% 8d    
-      %not SS_NONE?(sigScheme(algoParms(srkParams))) -> FALSE,		% 8e
-      %length(parms(algoParms(srkParams)))<2048 -> FALSE,		% 8f
-      %expSize(parms(algoParms(srkParams)))/=0 -> FALSE,		% 8g
-      s`permFlags`FIPS AND never?(authDataUsage(srkParams))-> FALSE,	% 8h
+      not storage?(keyUsage(k)) -> FALSE,   				% 8a
+      migratable(keyFlags(k)) -> FALSE,					% 8b
+      not RSA?(algoId(algoParms(k))) -> FALSE,				% 8c
+      %not SHA1_MGF1?(encScheme(algoParms(k))) -> FALSE,		% 8d    
+      %not SS_NONE?(sigScheme(algoParms(k))) -> FALSE,			% 8e
+      %length(parms(algoParms(k)))<2048 -> FALSE,			% 8f
+      %expSize(parms(algoParms(k)))/=0 -> FALSE,			% 8g
+      s`permFlags`FIPS AND never?(authDataUsage(k))-> FALSE,		% 8h
       ELSE -> TRUE
     ENDCOND;
 
-  takeOwnershipState(s:tpmAbsState,encOwnerA,encSrkA:(tpmAuthData?),
+  takeOwnershipState(s:tpmAbsState,encOwnerA,encSrkA:(tpmEncAuth?),
 	srkParms:(tpmKey?),a:authIn) : tpmAbsState =
-    LET A:(tpmAuthData?)=decrypt(key(s`ek),encOwnerA) IN
-    LET	A1=tpmSecret(i(authData(A))) IN					% 6
     COND
-      not takeOwnership?(s,encOwnerA,encSrkA,srkParms,a) -> s,		% 1-8
-      ELSE -> LET A2=tpmSecret(i(authData(decrypt(key(s`ek),encSrkA)))) IN% 10
+      NOT takeOwnership?(s,srkParms) -> s,				% 1-8
+      ELSE -> LET A2=decryptADIP(encSrkA,authHandle(a)),		% 10
+      	      	  A1=decryptADIP(encOwnerA,authHandle(a)) IN		% 6
 	      LET asymkey=tpmStoreAsymkey(A2,	 			% 10c
 			migrationAuth(encDat(srkParms)),
 			pubDataDigest(encDat(srkParms)),
@@ -394,9 +396,9 @@ tpm [ B:TYPE+ % BLOB
 		    	 ,`permFlags(readPubek):=FALSE]			% 17
     ENDCOND;
 
-  takeOwnershipOut(s:tpmAbsState,encOwnerA,encSrkA:(tpmAuthData?),
+  takeOwnershipOut(s:tpmAbsState,encOwnerA,encSrkA:(tpmEncAuth?),
 	srkParms:(tpmKey?),a:authIn) : tpmAbsOutput =
-    IF NOT takeOwnership?(s,encOwnerA,encSrkA,srkParms,a)
+    IF NOT takeOwnership?(s,srkParms)
     THEN IF i(s`permData`ownerAuth)/=INVALIDAUTH 
       	    THEN OUT_Error(TPM_OWNER_SET)				% 1
      	 ELSIF not s`permFlags`ownership 
@@ -431,10 +433,9 @@ tpm [ B:TYPE+ % BLOB
 % 	    THEN OUT_Error(TPM_BAD_KEY_PROPERTY)			% 8g
      	 ELSE OUT_Error(TPM_SUCCESS) % should never reach here
     	 ENDIF 
-    ELSE
-        LET A:(tpmAuthData?)=decrypt(key(s`ek),encSrkA),
-	    A1=tpmSecret(i(authData(decrypt(key(s`ek),encOwnerA)))) IN	% 6
-        LET A2=tpmSecret(i(authData(A))) IN				% 10
+    ELSE %takeOwnership?(s,srkParms)
+        LET A2=decryptADIP(encSrkA,authHandle(a)),			% 10
+	    A1=decryptADIP(encOwnerA,authHandle(a)) IN			% 6
 	LET asymkey=tpmStoreAsymkey(A2,	 				% 10c
 			migrationAuth(encDat(srkParms)),
 			pubDataDigest(encDat(srkParms)),
@@ -444,8 +445,8 @@ tpm [ B:TYPE+ % BLOB
 		      authDataUsage(srkParms),algoParms(srkParms),
 		      PCRInfo(srkParms),wrappingKey(srkParms),asymkey,
 		      crs(srkParms)),					% 9
-	     aOut:authOut=(#nonceEven:=evenN,nonceOdd:=oddN,
-			    contAuthSess:=FALSE,resAuth:=A1#) IN	% 18
+	     aOut:authOut=(#nonceEven:=EVEN,nonceOdd:=ODD,
+			    contAuthSess:=TRUE,resAuth:=A1#) IN	% 18
     	 OUT_TakeOwnership(K1,aOut,TPM_SUCCESS)				% 16
     ENDIF;
 
@@ -469,13 +470,13 @@ tpm [ B:TYPE+ % BLOB
 	   %TODO : nonces shall be reset, lists invalidated
 	   ,`stclearData:=stclearDataInit WITH [`PCR:=PCR(stclearData(s))]% 8
 	   %TODO: nonces shall be reset, lists invalidated, deferredPhysPresence=0
-	   ,`permFlags(disable):=TRUE %default value			% 9a
-	   ,`permFlags(deactivated):=TRUE %default value		% 9b
-	   ,`permFlags(readPubek):=TRUE %default value			% 9c
-	   ,`permFlags(disableOwnerClear):=FALSE %default value		% 9d
-	   ,`permFlags(disableFullDALogicInfo):=FALSE %default value	% 9e
-	   ,`permFlags(allowMaintenance):=FALSE %default value		% 9f
-	   ,`permFlags(readSRKPub):=FALSE %default value		% 9g
+	   ,`permFlags(disable):=disableDef				% 9a
+	   ,`permFlags(deactivated):=deactivatedDef			% 9b
+	   ,`permFlags(readPubek):=readPubekDef				% 9c
+	   ,`permFlags(disableOwnerClear):=disableOwnerClearDef		% 9d
+	   ,`permFlags(disableFullDALogicInfo):=disableFullDALogicInfoDef% 9e
+	   ,`permFlags(allowMaintenance):=allowMaintenanceDef		% 9f
+	   ,`permFlags(readSRKPub):=readSRKPubDef			% 9g
       	   ,`permFlags(ownership):=TRUE					% 10a
 	   ,`permFlags(operator):=FALSE					% 10b
 	   ,`permFlags(maintenanceDone):=FALSE				% 10c
@@ -483,142 +484,316 @@ tpm [ B:TYPE+ % BLOB
 	   % TODO: 12-14
       	   ]
 
-  ownerClearState(s:tpmAbsState) : tpmAbsState =
+  ownerClearState(s:tpmAbsState,a:authIn) : tpmAbsState =
     COND
-    % Verify that the TPM Owner authorizes the command and all of the input,% 1
+    % TODO: Verify that the TPM Owner authorizes the command and all of the input,% 1
     %    else -> s,
       s`permFlags`disableOwnerClear -> s,				% 2
       ELSE -> clear(s)		      	 				% 3-14
     ENDCOND;
 
-  ownerClearOut(s:tpmAbsState) : tpmAbsOutput = 
+  ownerClearOut(s:tpmAbsState,a:authIn) : tpmAbsOutput = 
     COND
-    % Verify that the TPM Owner authorizes the command and all of the input,% 1
+    % TODO: Verify that the TPM Owner authorizes the command and all of the input,% 1
     %    else -> TPM_Error(TPM_AUTHFAIL),
       disableOwnerClear(permFlags(s)) -> OUT_Error(TPM_CLEAR_DISABLED),	% 2 
-      ELSE -> OUT_OwnerClear(TPM_SUCCESS)				% 3-14
+      ELSE -> LET a:authOut=(#nonceEven:=EVEN,nonceOdd:=ODD,
+			     contAuthSess:=FALSE,resAuth:=ownerAuth(a)#) IN
+      	      OUT_OwnerClear(a,TPM_SUCCESS)				% 3-14
     ENDCOND;
 
   forceClearState(s:tpmAbsState) : tpmAbsState = 
-    % check for the assertion of physical presence -> else TPM_Error(TPM_BAD_PRESENCE)	% 1
-    IF s`stclearFlags`disableForceClear
-    THEN s								% 2
-    ELSE clear(s)							% 3
+    IF s`stclearFlags`physicalPresence					% 1
+    THEN IF s`stclearFlags`disableForceClear
+    	 THEN s								% 2
+    	 ELSE clear(s)							% 3
+    	 ENDIF
+    ELSE s								% 1
     ENDIF
   
   forceClearOut(s:tpmAbsState) : tpmAbsOutput =
-    % check for the assertion of physical presence -> else TPM_Error(TPM_BAD_PRESENCE)	% 1
-    IF s`stclearFlags`disableForceClear
-    THEN OUT_Error(TPM_CLEAR_DISABLED)   	 	  	      	% 2
-    ELSE OUT_ForceClear(TPM_SUCCESS)					% 3
+    IF s`stclearFlags`physicalPresence					% 1
+    THEN IF s`stclearFlags`disableForceClear
+    	 THEN OUT_Error(TPM_CLEAR_DISABLED)   	 	  	      	% 2
+    	 ELSE OUT_ForceClear(TPM_SUCCESS)				% 3
+    	 ENDIF
+    ELSE OUT_Error(TPM_BAD_PRESENCE)					% 1
     ENDIF
 
-  disableOwnerClearState(s:tpmAbsState) : tpmAbsState = 
-    s WITH [`permFlags(disableOwnerClear):=TRUE];
+  disableOwnerClearState(s:tpmAbsState,a:authIn) : tpmAbsState = 
+  % 1. TPM verifies authHandle properly authorizes owner
+    s WITH [`permFlags(disableOwnerClear):=TRUE];			% 2
 
-  disableOwnerClearOut(s:tpmAbsState) : tpmAbsOutput = 
-    OUT_DisableOwnerClear(TPM_SUCCESS)
+  disableOwnerClearOut(s:tpmAbsState,a:authIn) : tpmAbsOutput = 
+    LET a1:authOut=(#nonceEven:=EVEN,nonceOdd:=ODD,
+			contAuthSess:=TRUE,resAuth:=ownerAuth(a)#) IN
+    OUT_DisableOwnerClear(a1,TPM_SUCCESS)				
+    % TODO: 3. When this flag is TRUE... Prove this?
 
   disableForceClearState(s:tpmAbsState) : tpmAbsState = 
-    s WITH [`stclearFlags(disableForceClear):=TRUE];
+    s WITH [`stclearFlags(disableForceClear):=TRUE];			% 1
 
   disableForceClearOut(s:tpmAbsState) : tpmAbsOutput = 
     OUT_DisableForceClear(TPM_SUCCESS)
 
-  seal?(s:tpmAbsState,k:(tpmKey?),enc:(tpmAuthData?),pcr:(tpmPCRInfoLong?),data:tpmData) : bool =
+  physicalPresenceState(s:tpmAbsState,p:PHYSPRES) : tpmAbsState =
+    IF member(LIFETIME_LOCK,p) OR member(HW_ENABLE,p) OR member(CMD_ENABLE,p)
+       OR member(HW_DISABLE,p) OR member(CMD_DISABLE,p)			% 2
+    THEN IF s`permFlags`physicalPresenceLifetimeLock
+    	 THEN s								% 2a
+	 ELSIF member(LOCK,p) OR member(PRESENT,p) OR member(NOTPRESENT,p)
+	 THEN s								% 2b
+	 ELSIF member(HW_ENABLE,p) AND member(HW_DISABLE,p)
+	 THEN s								% 2c
+	 ELSIF member(CMD_ENABLE,p) AND member(CMD_DISABLE,p)
+	 THEN s								% 2d
+	 ELSE s WITH [`permFlags`physicalPresenceHWEnable:=
+			IF member(HW_ENABLE,p) THEN TRUE		% 2e
+			ELSIF member(HW_DISABLE,p) THEN FALSE		% 2f
+			ELSE s`permFlags`physicalPresenceHWEnable ENDIF,
+		      `permFlags`physicalPresenceCMDEnable:=
+			IF member(CMD_ENABLE,p) THEN TRUE		% 2g
+			ELSIF member(HW_DISABLE,p) THEN FALSE		% 2h
+			ELSE s`permFlags`physicalPresenceCMDEnable ENDIF,
+		      `permFlags`physicalPresenceLifetimeLock:=
+			IF member(LIFETIME_LOCK,p) THEN TRUE		% 2i
+			ELSE s`permFlags`physicalPresenceLifetimeLock ENDIF]
+	 ENDIF
+    ELSIF member(LOCK,p) OR member(PRESENT,p) OR member(NOTPRESENT,p)
+    THEN IF member(LIFETIME_LOCK,p) OR member(HW_ENABLE,p) OR 
+    	    member(CMD_ENABLE,p)OR member(HW_DISABLE,p) OR member(CMD_DISABLE,p)
+	 THEN s								% 3a
+	 ELSIF s`permFlags`physicalPresenceCMDEnable=FALSE		
+	 THEN s								% 3b
+	 ELSIF member(LOCK,p) AND member(PRESENT,p)
+	 THEN s								% 3c
+	 ELSIF member(PRESENT,p) AND member(NOTPRESENT,p)
+	 THEN s								% 3d
+	 ELSIF s`stclearFlags`physicalPresenceLock
+	 THEN s								% 3e
+	 ELSIF member(LOCK,p)						% 3f
+	 THEN s WITH [`stclearFlags`physicalPresence:=FALSE		% 3fi
+	      	     ,`stclearFlags`physicalPresenceLock:=TRUE]		% 3fii
+    	 ELSIF member(PRESENT,p)					% 3g
+	 THEN s WITH [`stclearFlags`physicalPresence:=TRUE]		% 3gi
+	 ELSIF member(NOTPRESENT,p)					% 3h
+	 THEN s WITH [`stclearFlags`physicalPresence:=FALSE]		% 3hi
+	 ELSE s % should never get to this case.
+    	 ENDIF
+    ELSE s								% 4
+    ENDIF
+
+  physicalPresenceOut(s:tpmAbsState,p:PHYSPRES) : tpmAbsOutput =
+    IF member(LIFETIME_LOCK,p) OR member(HW_ENABLE,p) OR member(CMD_ENABLE,p)
+       OR member(HW_DISABLE,p) OR member(CMD_DISABLE,p)			% 2
+    THEN IF s`permFlags`physicalPresenceLifetimeLock
+    	 THEN OUT_Error(TPM_BAD_PARAMETER)				% 2a
+	 ELSIF member(LOCK,p) OR member(PRESENT,p) OR member(NOTPRESENT,p)
+	 THEN OUT_Error(TPM_BAD_PARAMETER)				% 2b
+	 ELSIF member(HW_ENABLE,p) AND member(HW_DISABLE,p)
+	 THEN OUT_Error(TPM_BAD_PARAMETER)				% 2c
+	 ELSIF member(CMD_ENABLE,p) AND member(CMD_DISABLE,p)
+	 THEN OUT_Error(TPM_BAD_PARAMETER)				% 2d
+	 ELSE OUT_PhysicalPresence(TPM_SUCCESS)				% 2j
+	 ENDIF
+    ELSIF member(LOCK,p) OR member(PRESENT,p) OR member(NOTPRESENT,p)	% 3
+    THEN IF member(LIFETIME_LOCK,p) OR member(HW_ENABLE,p) OR 
+    	    member(CMD_ENABLE,p)OR member(HW_DISABLE,p) OR member(CMD_DISABLE,p)
+	 THEN OUT_Error(TPM_BAD_PARAMETER)				% 3a
+	 ELSIF s`permFlags`physicalPresenceCMDEnable=FALSE		
+	 THEN OUT_Error(TPM_BAD_PARAMETER)				% 3b
+	 ELSIF member(LOCK,p) AND member(PRESENT,p)
+	 THEN OUT_Error(TPM_BAD_PARAMETER)				% 3c
+	 ELSIF member(PRESENT,p) AND member(NOTPRESENT,p)
+	 THEN OUT_Error(TPM_BAD_PARAMETER)				% 3d
+	 ELSIF s`stclearFlags`physicalPresenceLock
+	 THEN OUT_Error(TPM_BAD_PARAMETER)				% 3e
+	 ELSIF member(LOCK,p)						% 3f
+	 THEN OUT_PhysicalPresence(TPM_SUCCESS)				% 3fiii
+    	 ELSIF member(PRESENT,p) 					% 3g
+	 THEN OUT_PhysicalPresence(TPM_SUCCESS)				% 3i
+	 ELSIF member(NOTPRESENT,p)					% 3h
+	 THEN OUT_PhysicalPresence(TPM_SUCCESS)				% 3i
+	 ELSE OUT_Error(TPM_BAD_PARAMETER) % should never get here
+    	 ENDIF
+    ELSE OUT_Error(TPM_BAD_PARAMETER)					% 4
+    ENDIF
+
+
+  seal?(k:(tpmKey?)) : bool =
     storage?(keyUsage(k)) AND not(migratable(keyFlags(k))) %AND DECRYPTED
     
   % Output secret sealed with asymmetric key 
-  sealOut(s:tpmAbsState,kH:(tpmKey?),enc:(tpmAuthData?),pcr:(tpmPCRInfoLong?),
-	inData:tpmData) : tpmAbsOutput = 
-    IF storage?(keyUsage(kH)) AND not(migratable(keyFlags(kH))) % 3,4
-    THEN LET sealInfo=tpmPCRInfoLong(localityModifier(stanyFlags(s)),
-				locAtRelease(pcr),
-				creationPCRSelect(pcr),
-				releasePCRSelect(pcr),
-				tpmCompositeHash((#select:=creationPCRSelect(pcr),
-						   pcrValue:=pcrs(s)#)),
-				digAtRelease(pcr)) IN
-    	 LET S1=tpmStoredData(sealInfo,tpmNull,clear) IN % 7,9
-    	 LET S2=tpmSealedData(enc, % TODO : a1?
-			      tpmProof(permData(s)),
-			      tpmDigest(cons(S1,null),clear),% params of S1 excluding encData
-    	     		      inData) IN % 14
-	LET S3=tpmStoredData(sealInfo,S2,encrypted(key(kH),clear)) % 16
-    	     IN OUT_Seal(S3,TPM_SUCCESS) % 20
-    ELSE OUT_Error(TPM_INVALID_KEYUSAGE) % 3,4
+  % crs(S1) encrypts S2
+  sealOut(s:tpmAbsState,kH:(tpmKey?),enc:(tpmEncAuth?),p:(tpmPCRInfoLong?),
+	inData:tpmData,a:authIn) : tpmAbsOutput = 
+    % Validate the authorization to use the key pointed to by kH	% 1
+    % IF inDataSize = 0 THEN OUT_Error(TPM_BAD_PARAMETER)     		% 2
+    IF seal?(kH)      	     						% 3,4
+    % TODO: Determine version of pcrInfo				% 5
+    THEN LET h2=tpmCompositeHash((#select:=creationPCRSelect(p),	% 11bvi 
+				   pcrValue:=s`pcrs#)) IN
+    	 LET s1=tpmStoredData(tpmPCRInfoLong(				% 11
+				s`stanyFlags`localityModifier,		% 11viii
+				locAtRelease(p),			% 11bv
+				creationPCRSelect(p),			% 11bii
+				releasePCRSelect(p),			% 11biii
+				h2,					% 11bvii
+				digAtRelease(p)),			% 11biv
+			      tpmNull,					% 9
+			      clear) IN					% 7
+	     % decrypting encAuth according to the ADIP indicated by authHandle
+	 LET a1=decryptADIP(enc,authHandle(a)), % TODO: incorrect	% 12
+	     h3=tpmDigest(cons(s1,null),clear) IN %TODO: SHA1(s1)	% 14c
+    	 LET S3=tpmSealedData(a1,			 		% 14e
+			      s`permData`tpmProof,			% 14b
+			      h3,					% 14d
+    	     		      inData,					% 14g
+			      encrypted(key(kH),clear)) IN 		% 16
+	% Validate the size(S2) can be encrypted by kH,TPM_BAD_DATASIZE % 15
+	LET S1=tpmStoredData(sealInfo(s1),S3,clear),  	  		% 11,19
+	    A:authOut=(#nonceEven:=EVEN,nonceOdd:=ODD,
+			contAuthSess:=FALSE,				% 17
+			resAuth:=usageAuth(encDat(kH))#)
+    	     IN OUT_Seal(S1,A,TPM_SUCCESS)				% 20
+    ELSE OUT_Error(TPM_INVALID_KEYUSAGE)				% 3,4
     ENDIF
 
-  unseal?(s:tpmAbsState,parent:(tpmKey?),inData:(tpmStoredData?)) : bool = 
-    storage?(keyUsage(parent)) AND migratable(keyFlags(parent))=FALSE %AND DECRYPTED
+  unseal?(p:(tpmKey?)) : bool =	% 2,3
+    storage?(keyUsage(p)) AND not(migratable(keyFlags(p))) %AND DECRYPTED
 
   % Output secret unsealed with an asymmetric key and PCRs 
-  unsealOut(s:tpmAbsState,parent:(tpmKey?),inData:(tpmStoredData?)) : 
-  	tpmAbsOutput = 
-    LET d=decrypt(key(parent),inData),					% 5
-    	d1=encData(inData),						% 5
+  unsealOut(s:tpmAbsState,parent:(tpmKey?),inData:(tpmStoredData?),
+	pa,da:authIn) : tpmAbsOutput = 
+    % Validate that pa authorizes the use of the key in p TPM_AUTHFAIL	% 1
+    LET d=decrypt(key(parent),inData) IN				% 5
+    LET d1:(tpmSealedData?)=encData(d),		      			% 5,6a
 	S2=tpmStoredData(sealInfo(inData),tpmNull,clear),		% 4
 	h2=tpmCompositeHash((#select:=releasePCRSelect(sealInfo(inData)),
-			      pcrValue:=pcrs(s)#)) IN			% 9
-    IF not unseal?(s,parent,inData) 
-       THEN OUT_Error(TPM_INVALID_KEYUSAGE)				% 2,3
-    ELSIF not crs(d)=clear 
-       THEN OUT_CPUError(CPU_DECRYPT_ERROR)				% 5
-    ELSIF not(tpmProof(d1)=tpmProof(permData(s)) AND			% 6b
-       tpmDigest(cons(S2,null),clear)=storedDigest(d1))
-       THEN OUT_Error(TPM_NOTSEALED_BLOB)				% 6e,f
-    ELSIF not locAtRelease(sealInfo(S2))=localityModifier(stanyFlags(s)) % 7biii
-       THEN OUT_Error(TPM_SUCCESS) 			% TODO: INCORRECT
-    ELSIF not h2=digAtRelease(sealInfo(S2))
-       THEN OUT_Error(TPM_WRONGPCRVAL)					% 7c
-    ELSE OUT_Unseal(data(d1),TPM_SUCCESS) 			% 10,11,12
+			      pcrValue:=s`pcrs#)) IN			% 7bii
+    IF not unseal?(parent)						% 2,3
+       THEN OUT_Error(TPM_INVALID_KEYUSAGE)
+    ELSIF not crs(d)=clear						% 5
+       THEN OUT_CPUError(CPU_DECRYPT_ERROR)
+    ELSIF not(tpmProof(d1)=tpmProof(s`permData) AND			% 6b
+       tpmDigest(cons(S2,null),clear)=storedDigest(d1))			% 6e,f
+       % TODO: 6g,
+       THEN OUT_Error(TPM_NOTSEALED_BLOB)				% 6h
+    ELSIF not locAtRelease(sealInfo(S2))=localityModifier(s`stanyFlags) % 7biii
+       THEN OUT_Error(TPM_BAD_LOCALITY)
+    ELSIF not h2=digAtRelease(sealInfo(S2))				% 7c
+       THEN OUT_Error(TPM_WRONGPCRVAL)
+    % validate authorization to use d1 by checking the HMAC calculation using 
+    % authData(d1) as the shared secret matches the ownerAuth(da) TPM_AUTHFAIL 
+    % on mismatch     	  	 		    		  	% 8
+    % TODO: authdata stuff						% 9
+    ELSE let a=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+    	     resAuth:=usageAuth(encDat(parent))#) IN	% TODO: made up
+    	 OUT_Unseal(data(d1),a,a,TPM_SUCCESS) 			% 10,11,12
     ENDIF;
   
-  unBind?(k:(tpmKey?),d:(tpmBoundData?)) : bool =
-    legacy?(keyUsage(k)) OR bind?(keyUsage(k))
+  unBind?(k:(tpmKey?)) : bool =
+    legacy?(keyUsage(k)) OR bind?(keyUsage(k))				% 3
   
   % Output decrypted key
-  unBindOut(s:tpmAbsState,k:(tpmKey?),d:(tpmBoundData?)) : tpmAbsOutput =
-    IF unBind?(k,d)
-    THEN LET d1=decrypt(private(k),d) IN 
-    	 IF crs(d1)=clear
- 	 THEN OUT_UnBind(payloadData(d1),TPM_SUCCESS)
-	 ELSE OUT_CPUError(CPU_DECRYPT_ERROR) % TODO: May be incorrect
-	 ENDIF
-    ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
+  unBindOut(s:tpmAbsState,k:(tpmKey?),d:(tpmBoundData?),a:authIn):tpmAbsOutput=
+    % if inDataSize=0 OUT_Error(TPM_BAD_PARAMETER)			% 1
+    % validate the AuthData to use the key pointed to by k		% 2
+    LET d1:(tpmBoundData?)=decrypt(private(k),d) IN    	 		% 4
+    IF not unBind?(k)							% 3
+       THEN OUT_Error(TPM_INVALID_KEYUSAGE)
+    ELSIF not clear?(crs(d1))						% 4
+       THEN OUT_CPUError(CPU_DECRYPT_ERROR)
+%     ELSIF SHA1_MGF1?(encScheme(algoParms(k))) AND legacy?(keyUsage(k))% 5
+%        THEN outData=payloadData(d1) d1 NOT :(tpmBoundData?)		% 5b
+    ELSE LET a=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+			resAuth:=usageAuth(encDat(k))#)
+	 IN OUT_UnBind(payloadData(d1),a,TPM_SUCCESS)			% 6,7
     ENDIF  	    
 
-  createWrapKey?(parentHandle,keyInfo:(tpmKey?)):bool = 
-    storage?(keyUsage(parentHandle)) AND
-    IF migratable(keyFlags(parentHandle)) AND not(migratable(keyFlags(keyInfo)))
-    THEN FALSE
-    ELSE IF identity?(keyUsage(keyInfo)) OR authChange?(keyUsage(keyInfo))
+  createWrapKey?(p,k:(tpmKey?)):bool = 
+    storage?(keyUsage(p)) AND						% 4
+    IF migratable(keyFlags(p)) AND not(migratable(keyFlags(k)))		% 5
+    THEN FALSE 
+    ELSE IF identity?(keyUsage(k)) OR authChange?(keyUsage(k))		% 6a
     	 THEN FALSE
-	 ELSE not(migrateAuthority(keyFlags(keyInfo)))
+	 ELSE not(migrateAuthority(keyFlags(k)))			% 6b
 	 ENDIF
     ENDIF;
 
-  createWrapKeyState(s:tpmAbsState,p,keyInfo:(tpmKey?)) : tpmAbsState = 
-    IF createWrapKey?(p,keyInfo)
-    THEN genKeyState(s)
-    ELSE s
+  createWrapKeyState(s:tpmAbsState,p,k:(tpmKey?),dUA,dMA:(tpmEncAuth?),
+	a:authIn) : tpmAbsState =
+    %validate the AuthData to use the key pointed to by p. TPM_AUTHFAIL	% 1 
+    %validate the session type for p is OSAP	     	   		% 2
+    IF not createWrapKey?(p,k)				    		% 4,5,6
+       THEN s
+    ELSIF s`permFlags`FIPS AND						% 7
+       	   (%keySize(k) < 1024 OR					% 7a
+    	    never?(authDataUsage(k)) OR 				% 7b
+	    legacy?(keyUsage(k)))	  				% 7c
+       THEN s
+    ELSIF (storage?(keyUsage(k)) or migrate?(keyUsage(k)))		% 8
+    	  AND not RSA?(algoId(algoParms(k)))				% 8i
+%   	  AND not SHA1_MGF1?(encScheme(algoParms(srkParms))) 		% 8ii
+%   	  AND not SS_NONE?(sigScheme(algoParms(srkParms))) 		% 8iii
+%   	  AND length(parms(algoParms(srkParms)))/=2048 			% 8iv
+%   	  AND expSize(parms(algoParms(srkParms)))/=0			% 8v
+       THEN s
+    % Determine version of key						% 9
+    ELSE genKeyState(s)
     ENDIF;
 
   % Generate a NEW RANDOM key pair.
-  createWrapKeyOut(s:tpmAbsState,parentHandle,keyInfo:(tpmKey?)) : tpmAbsOutput = 
-      IF createWrapKey?(parentHandle,keyInfo)
-      THEN OUT_CreateWrapKey(tpmKey(keyGenCnt(s),
-				    keyUsage(keyInfo),
-				    keyFlags(keyInfo),
-				    authDataUsage(keyInfo),
-				    algoParms(keyInfo),
-				    PCRInfo(keyInfo),
-				    key(parentHandle),
-				    encDat(keyInfo),
+  createWrapKeyOut(s:tpmAbsState,p,k:(tpmKey?),dUA,dMA:(tpmEncAuth?),
+	a:authIn) : tpmAbsOutput =
+    %validate the AuthData to use the key pointed to by p. TPM_AUTHFAIL	% 1 
+    %validate the session type for p is OSAP	     	   		% 2
+    IF not createWrapKey?(p,k)				    		% 4,5,6
+       THEN OUT_Error(TPM_INVALID_KEYUSAGE)
+    ELSIF s`permFlags`FIPS AND						% 7
+       	   (%keySize(k) < 1024 OR					% 7a
+    	    never?(authDataUsage(k)) OR 				% 7b
+	    legacy?(keyUsage(k)))	  				% 7c
+       THEN OUT_Error(TPM_NOTFIPS)
+    ELSIF (storage?(keyUsage(k)) or migrate?(keyUsage(k)))		% 8
+    	  AND not RSA?(algoId(algoParms(k)))				% 8i
+%   	  AND not SHA1_MGF1?(encScheme(algoParms(srkParms))) 		% 8ii
+%   	  AND not SS_NONE?(sigScheme(algoParms(srkParms))) 		% 8iii
+%   	  AND length(parms(algoParms(srkParms)))/=2048 			% 8iv
+%   	  AND expSize(parms(algoParms(srkParms)))/=0			% 8v
+       THEN OUT_Error(TPM_BAD_KEY_PROPERTY)
+    % determine version of key						% 9
+    ELSE 
+    	 LET DU1:(tpmSecret?)=decryptADIP(dUA,authHandle(a)),		% 10
+    	     DM1:(tpmSecret?)=decryptADIP(dMA,authHandle(a)),		% 11
+	     b=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=FALSE,	% 12
+			resAuth:=usageAuth(encDat(p))#) IN
+	LET h=tpmCompositeHash((#select:=creationPCRSelect(PCRInfo(k)),
+			      pcrValue:=s`pcrs#)) IN			% 15d
+	LET encData=tpmStoreAsymkey(DU1,				% 14a
+			IF migratable(keyFlags(k)) THEN DM1		% 14b
+			ELSE s`permData`tpmProof ENDIF, 		% 14c
+			%TODO: next line is incorrect?
+			pubDataDigest(encDat(k)),
+			privKey(encDat(k)),
+			clear),
+	    pcrs=tpmPCRInfoLong(s`locality,				% 15e	
+				locAtRelease(PCRInfo(k)),		% 15c
+				creationPCRSelect(PCRInfo(k)),		% 15c
+				releasePCRSelect(PCRInfo(k)),		% 15c
+				h,					% 15d
+				digAtRelease(PCRInfo(k))) IN		% 15c
+      	   OUT_CreateWrapKey(tpmKey(s`keyGenCnt,			% 13,14
+				    keyUsage(k),
+				    keyFlags(k),
+				    authDataUsage(k),
+				    algoParms(k),
+				    pcrs,				% 15c
+				    key(p),
+				    encData,
 				    clear),
-			     TPM_SUCCESS)
-      ELSE OUT_Error(TPM_INVALID_KEYUSAGE)
-      ENDIF
+			     b,TPM_SUCCESS)
+    ENDIF
     
 
   loadKey2?(p,k:(tpmKey?)) : bool = 
@@ -696,8 +871,10 @@ tpm [ B:TYPE+ % BLOB
 
 
   checkMigKeyAuth?(s:tpmAbsState,a:(tpmMigKeyAuth?)):bool =
-    digest(a)=tpmDigest(cons(key(a),cons(scheme(a),cons(tpmAuthData(tpmProof(permData(s)),clear),
-				null))),clear)
+    digest(a)=tpmDigest(cons(key(a),
+			     cons(scheme(a),
+				  cons(s`permData`tpmProof, % TODO: CHECK
+				       null))),clear)
   
   createMigBlob?(s:tpmAbsState,p:(tpmKey?),m:migrateScheme,a:(tpmMigKeyAuth?),e:tpmData) : bool = 
     storage?(keyUsage(p)) AND
@@ -1064,12 +1241,13 @@ tpm [ B:TYPE+ % BLOB
     CASES c OF
       ABS_Init : tpmPostInit,
       ABS_SaveState : saveState(s),
-      ABS_TakeOwnership(oAuth,srkAuth,srk,a) : takeOwnershipState(s,oAuth,srkAuth,srk,a),
-      ABS_OwnerClear: ownerClearState(s),
+      ABS_TakeOwnership(oA,sA,srk,a) : takeOwnershipState(s,oA,sA,srk,a),
+      ABS_OwnerClear(a): ownerClearState(s,a),
       ABS_ForceClear: forceClearState(s),
-      ABS_DisableOwnerClear: disableOwnerClearState(s),
+      ABS_DisableOwnerClear(a): disableOwnerClearState(s,a),
       ABS_DisableForceClear: disableForceClearState(s),
-      ABS_CreateWrapKey(parent,k) : createWrapKeyState(s,parent,k),
+      ABS_PhysicalPresence(p): physicalPresenceState(s,p),
+      ABS_CreateWrapKey(p,k,u,m,a) : createWrapKeyState(s,p,k,u,m,a),
       ABS_LoadKey2(p,k): loadKey2State(s,p,k), 
       ABS_CreateEndorsementKeyPair(n,k) : createEndorsementKeyPairState(s,n,k),
       ABS_CreateRevocableEK(r,k,g,i) : createRevEKState(s,r,k,g,i),
@@ -1101,15 +1279,16 @@ tpm [ B:TYPE+ % BLOB
   outputComStartup(s:(afterStartup?),c:tpmAbsInput) : tpmAbsOutput = 
     CASES c OF
       ABS_TakeOwnership(oAuth,srkAuth,srk,a) : takeOwnershipOut(s,oAuth,srkAuth,srk,a),
-      ABS_OwnerClear : ownerClearOut(s),
+      ABS_OwnerClear(a) : ownerClearOut(s,a),
       ABS_ForceClear : forceClearOut(s),
-      ABS_DisableOwnerClear : disableOwnerClearOut(s),
+      ABS_DisableOwnerClear(a) : disableOwnerClearOut(s,a),
       ABS_DisableForceClear : disableForceClearOut(s),
-      ABS_Seal(k,a,p,data) : sealOut(s,k,a,p,data),
-      ABS_Unseal(d,k) : unsealOut(s,d,k),
-      ABS_UnBind(k,d) : unBindOut(s,k,d),
+      ABS_PhysicalPresence(p) : physicalPresenceOut(s,p),
+      ABS_Seal(k,e,p,data,a) : sealOut(s,k,e,p,data,a),
+      ABS_Unseal(d,k,pa,da) : unsealOut(s,d,k,pa,da),
+      ABS_UnBind(k,d,a) : unBindOut(s,k,d,a),
       ABS_Data_Bind(k,d) : dataBindOut(s,k,d),
-      ABS_CreateWrapKey(parent,k) : createWrapKeyOut(s,parent,k),
+      ABS_CreateWrapKey(parent,k,u,m,a) : createWrapKeyOut(s,parent,k,u,m,a),
       ABS_LoadKey2(p,k) : loadKey2Out(s,p,k),
       ABS_CreateMigrationBlob(pk,m,migKAuth,encData) : 
       				createMigBlobOut(s,pk,m,migKAuth,encData),
@@ -1286,7 +1465,8 @@ tpm [ B:TYPE+ % BLOB
     FORALL (s:tpmAbsState,a:tpmAbsOutput,c:tpmAbsInput) :
       NOT ABS_Startup?(c) =>
         LET (a0,s0) = runState(TPM_Init 
-	    	      	       >> state(LAMBDA (s:tpmAbsState):(a,executeCom(s,c))))(s) IN
+	    	      >> state(LAMBDA (s:tpmAbsState) : 
+		      	 	      	(a,executeCom(s,c))))(s) IN
           LET (a1,s1) = runState(TPM_Init)(s) IN
 	      s0=s1
 
@@ -1305,23 +1485,27 @@ tpm [ B:TYPE+ % BLOB
       IN s = changeLocalityState(
                changeLocalityState(
                  extendState(
-                   extendState(pcrsResetSenterState(tpmStartup),0,hash(sinit)),0,hash(mle))))
+                   extendState(pcrsResetSenterState(tpmStartup),0,hash(sinit)),
+			0,hash(mle))))
       AND a = OUT_Error(TPM_SUCCESS)
 
 
   %% Establish SRK
-  TPM_TakeOwnership(ownerA,srkA:(tpmAuthData?),srk:(tpmKey?),a:authIn) : State =
+  TPM_TakeOwnership(ownerA,srkA:(tpmEncAuth?),srk:(tpmKey?),a:authIn) : State =
      modifyOutput(
-            (LAMBDA (s:tpmAbsState) : executeCom(s,ABS_TakeOwnership(ownerA,srkA,srk,a))),
-            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_TakeOwnership(ownerA,srkA,srk,a))));
+	(LAMBDA (s:tpmAbsState) : 
+			executeCom(s,ABS_TakeOwnership(ownerA,srkA,srk,a))),
+	(LAMBDA (s:tpmAbsState) : 
+			outputCom(s,ABS_TakeOwnership(ownerA,srkA,srk,a))));
 	 
-  Take_ownership_post: THEOREM FORALL (state:(afterStartup?),srk:(tpmKey?),
-  	eOA,eSA:(tpmAuthData?),aIn:authIn) : 
+  take_ownership_post: THEOREM FORALL (state:(afterStartup?),srk:(tpmKey?),
+  	eOA,eSA:(tpmEncAuth?),aIn:authIn) : 
     LET (a,s) = runState(
 		 TPM_TakeOwnership(eOA,eSA,srk,aIn))
 		 (state) IN
-    IF takeOwnership?(state,eOA,eSA,srk,aIn) 
-    THEN LET A2=tpmSecret(i(authData(decrypt(key(s`ek),eSA)))) IN
+    IF takeOwnership?(state,srk) 
+    THEN LET A2=decryptADIP(eSA,authHandle(aIn)),
+    	     A1=decryptADIP(eOA,authHandle(aIn)) IN
     	 LET asymkey=tpmStoreAsymkey(A2,
 			migrationAuth(encDat(srk)),
 			pubDataDigest(encDat(srk)),
@@ -1331,13 +1515,12 @@ tpm [ B:TYPE+ % BLOB
 		      authDataUsage(srk),algoParms(srk),
 		      PCRInfo(srk),wrappingKey(srk),asymkey,
 		      crs(srk)),
-	     aOut=(#nonceEven:=evenN,nonceOdd:=oddN,
-		    contAuthSess:=FALSE,resAuth:=s`permData`ownerAuth#) IN
-    	 a=OUT_TakeOwnership(K1,aOut,TPM_SUCCESS) 
+	     aOut=(#nonceEven:=EVEN,nonceOdd:=ODD,
+		    contAuthSess:=TRUE,resAuth:=A1#) IN
+   	 a=OUT_TakeOwnership(K1,aOut,TPM_SUCCESS)
 	 AND 
      	 s=state WITH [`srk:=K1
-		      ,`permData(ownerAuth):=
-			tpmSecret(i(authData(decrypt(key(ek(state)),eOA))))
+		      ,`permData(ownerAuth):=A1
 		      ,`permFlags(readPubek):=FALSE]
     ELSIF i(state`permData`ownerAuth)/=INVALIDAUTH 
     	  THEN a=OUT_Error(TPM_OWNER_SET) AND s=state
@@ -1356,34 +1539,22 @@ tpm [ B:TYPE+ % BLOB
     ELSE a=OUT_Error(TPM_SUCCESS) AND s=state
     ENDIF;
 
-  TPM_OwnerClear : State = 
-     modifyOutput(
-            (LAMBDA (s:tpmAbsState) : executeCom(s,ABS_OwnerClear)),
-            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_OwnerClear)));
+  unique_error: THEOREM
+    FORALL (b0,b1:ReturnCode) : OUT_Error(b0)=OUT_Error(b1) iff b0=b1;
 
-  owner_clear_post: THEOREM FORALL (state:(afterStartup?)) : 
-    LET(a,s) = runState(
-	       TPM_OwnerClear)
-	       (state) IN   
-%     IF k=private(srk(s))
-%     THEN 
-    	 IF disableOwnerClear(permFlags(s))
-    	 THEN a=OUT_Error(TPM_CLEAR_DISABLED) AND keys(s)=keys(state)
-	 ELSE a=OUT_OwnerClear(TPM_SUCCESS) AND 
-	      keys(s) = emptyset AND 
-	      ownership(permFlags(s)) = TRUE AND 
-	      operator(permFlags(s)) = FALSE AND
-	      maintenanceDone(permFlags(s)) = FALSE
-	      %% TODO: AND LOTS MORE STUFF!
-	 ENDIF
-%     ELSE a=OUT_Error(TPM_AUTHFAIL) AND keys(s)=keys(state)
-%     ENDIF
+  take_ownership_post2: THEOREM FORALL (state:(afterStartup?),srk:(tpmKey?),
+  	eOA,eSA:(tpmEncAuth?),aIn:authIn) : 
+    LET (a,s) = runState(
+		 TPM_TakeOwnership(eOA,eSA,srk,aIn))
+		 (state) IN
+    not (takeOwnership?(state,srk)) =>
+    not (a=OUT_Error(TPM_SUCCESS))
 
-  % 4. The TPM MUST NOT modify the following TPM_PERMANENT_DATA items
-  owner_clear_4 : THEOREM FORALL (state:(afterStartup?)) : 
-    LET(a,s) = runState(
-	       TPM_OwnerClear)
-	       (state) IN   
+
+  % To be used with commands that use clear command: 
+  %  TPM_OwnerClear, TPM_ForceClear, TPM_RevokeTrust
+  clear_post(s,state:(afterStartup?),a,af,at:tpmAbsOutput,p:bool) : bool = 
+        % 4. The TPM MUST NOT modify the following TPM_PERMANENT_DATA items
     %s`permData`endorsementKey = state`permData`endorsementKey AND	% 4a
     %s`permData`revMajor = state`permData`revMajor AND	       		% 4b
     %s`permData`revMinor = state`permData`revMinor AND			% 4c
@@ -1398,23 +1569,52 @@ tpm [ B:TYPE+ % BLOB
     %s`permData`authDIR[0] = state`permData`authDIR[0] AND		% 4l
     %s`permData`daaProof = state`permData`daaProof AND 			% 4m
     %s`permData`daaBlobKey = state`permData`daaBlobKEY;			% 4n
+    AND
+    	 IF p
+    	 THEN a=at AND s=state
+	 ELSE a=af AND 
+	      keys(s) = emptyset AND					% 3
+	      s`permData`ownerAuth = tpmSecret(INVALIDAUTH) AND		% 5a
+    	      %s`permData`srk =  AND 			  		% 5b
+	      %s`permData`delegateKey =  AND				% 5c
+	      %s`permData`delegateTable =  AND				% 5d
+	      %s`permData`contextKey =  AND				% 5e
+	      s`permData`tpmProof = tpmSecret(INVALIDPROOF) AND		% 5f
+	      s`permData`operatorAuth = tpmSecret(INVALIDAUTH) AND	% 5g
+	      s`permFlags = state`permFlags WITH
+    		  [`disable:=disableDef					% 9a
+		  ,`deactivated:=deactivatedDef				% 9b
+		  ,`readPubek:=readPubekDef				% 9c
+		  ,`disableOwnerClear:=disableOwnerClearDef		% 9d
+		  ,`disableFullDALogicInfo:=disableFullDALogicInfoDef	% 9e
+		  ,`allowMaintenance:=allowMaintenanceDef		% 9f
+		  ,`readSRKPub:=readSRKPubDef				% 9g
+		  ,`ownership:=TRUE					% 10a
+		  ,`operator:=FALSE					% 10b
+		  ,`maintenanceDone:=FALSE]				% 10b
+	      %% TODO: AND LOTS MORE STUFF!
+	 ENDIF
+    % TODO: TPM_OwnerClear 3,6-8,11-14
 
-  % 5. The TPM MUST invalidate the following TPM_PERMANENT_DATA items and any 
-  %    internal resources associated with these items
-  owner_clear_5 : THEOREM FORALL (state:(afterStartup?)) : 
+
+  TPM_OwnerClear(a:authIn) : State = 
+     modifyOutput(
+            (LAMBDA (s:tpmAbsState) : executeCom(s,ABS_OwnerClear(a))),
+            (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_OwnerClear(a))));
+
+  owner_clear_post: THEOREM FORALL (state:(afterStartup?),a:authIn) : 
     LET(a,s) = runState(
-	       TPM_OwnerClear)
-	       (state) IN  
-    not s`permFlags`disableOwnerClear => 
-    s`permData`ownerAuth = tpmSecret(INVALIDAUTH) AND			% 5a
-    %s`permData`srk =  AND 			  			% 5b
-    %s`permData`delegateKey =  AND					% 5c
-    %s`permData`delegateTable =  AND					% 5d
-    %s`permData`contextKey =  AND					% 5e
-    s`permData`tpmProof = tpmSecret(INVALIDPROOF) AND			% 5f
-    s`permData`operatorAuth = tpmSecret(INVALIDAUTH);			% 5g
-
-    % TODO: 6-14
+	       TPM_OwnerClear(a))
+	       (state) IN   
+%     IF k=private(srk(s))
+%     THEN 
+      LET a1:authOut=(#nonceEven:=EVEN,nonceOdd:=ODD,
+			contAuthSess:=FALSE,resAuth:=ownerAuth(a)#) IN
+      clear_post(s,state,
+		 a,OUT_OwnerClear(a1,TPM_SUCCESS),OUT_Error(TPM_CLEAR_DISABLED),
+		 state`permFlags`disableOwnerClear);
+%     ELSE a=OUT_Error(TPM_AUTHFAIL) AND keys(s)=keys(state)
+%     ENDIF
 
 
   TPM_ForceClear : State = 
@@ -1426,26 +1626,27 @@ tpm [ B:TYPE+ % BLOB
     LET(a,s) = runState(
 	       TPM_ForceClear)
 	       (state) IN
-	IF state`stclearFlags`disableForceClear
-      	  THEN a=OUT_Error(TPM_CLEAR_DISABLED) AND keys(s)=keys(state)
-	    ELSE a=OUT_ForceClear(TPM_SUCCESS) AND keys(s) = emptyset AND 
-	         ownership(permFlags(s)) = TRUE AND 
-		 operator(permFlags(s)) = FALSE AND
-		 maintenanceDone(permFlags(s)) = FALSE
-    	ENDIF
+    IF s`stclearFlags`physicalPresence
+    THEN clear_post(s,state,
+	       a,OUT_ForceClear(TPM_SUCCESS),OUT_Error(TPM_CLEAR_DISABLED),
+	       state`stclearFlags`disableForceClear)
+    ELSE a=OUT_Error(TPM_BAD_PRESENCE) and s=state
+    ENDIF;
 
 
-  TPM_DisableOwnerClear : State = 
+  TPM_DisableOwnerClear(a:authIn) : State = 
      modifyOutput(
-	(LAMBDA (s:tpmAbsState) : executeCom(s,ABS_DisableOwnerClear)),
-        (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_DisableOwnerClear)));
+	(LAMBDA (s:tpmAbsState) : executeCom(s,ABS_DisableOwnerClear(a))),
+        (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_DisableOwnerClear(a))));
 
-  disable_owner_clear_post: THEOREM FORALL (state:(afterStartup?)) : 
+  disable_owner_clear_post: THEOREM FORALL (state:(afterStartup?),a:authIn) : 
     LET(a,s) = runState(
-    	       TPM_DisableOwnerClear)
+    	       TPM_DisableOwnerClear(a))
 	       (state) IN
-      disableOwnerClear(permFlags(s)) = TRUE
-      AND a = OUT_DisableOwnerClear(TPM_SUCCESS);
+      s=state with [`permFlags`disableOwnerClear:=TRUE] AND
+      LET a1:authOut=(#nonceEven:=EVEN,nonceOdd:=ODD,
+		       contAuthSess:=TRUE,resAuth:=ownerAuth(a)#) IN
+      	  a=OUT_DisableOwnerClear(a1,TPM_SUCCESS);
 
 
   TPM_DisableForceClear : State =
@@ -1461,262 +1662,255 @@ tpm [ B:TYPE+ % BLOB
       AND a = OUT_DisableForceClear(TPM_SUCCESS);
 
 
+  TPM_PhysicalPresence(p:PHYSPRES) : State =
+     modifyOutput(
+	(LAMBDA (s:tpmAbsState) : executeCom(s,ABS_PhysicalPresence(p))),
+	(LAMBDA (s:tpmAbsState) : outputCom(s,ABS_PhysicalPresence(p))));
+
+  physical_presence_post: THEOREM FORALL (state:(afterStartup?),p:PHYSPRES) : 
+    LET(a,s) = runState(
+    	       TPM_PhysicalPresence(p))
+	       (state) IN
+    IF member(LIFETIME_LOCK,p) OR member(HW_ENABLE,p) OR member(CMD_ENABLE,p)
+       OR member(HW_DISABLE,p) OR member(CMD_DISABLE,p)
+    THEN IF state`permFlags`physicalPresenceLifetimeLock
+    	 THEN s=state AND a=OUT_Error(TPM_BAD_PARAMETER)		% 2a
+	 ELSIF member(LOCK,p) OR member(PRESENT,p) OR member(NOTPRESENT,p)
+	 THEN s=state AND a=OUT_Error(TPM_BAD_PARAMETER)		% 2b
+	 ELSIF member(HW_ENABLE,p) AND member(HW_DISABLE,p)
+	 THEN s=state AND a=OUT_Error(TPM_BAD_PARAMETER)		% 2c
+	 ELSIF member(CMD_ENABLE,p) AND member(CMD_DISABLE,p)		
+	 THEN s=state AND a=OUT_Error(TPM_BAD_PARAMETER)		% 2d
+	 ELSE s=state WITH [`permFlags`physicalPresenceHWEnable:=
+			IF member(HW_ENABLE,p) THEN TRUE		% 2e
+			ELSIF member(HW_DISABLE,p) THEN FALSE		% 2f
+			ELSE s`permFlags`physicalPresenceHWEnable ENDIF,
+		      `permFlags`physicalPresenceCMDEnable:=
+			IF member(CMD_ENABLE,p) THEN TRUE		% 2g
+			ELSIF member(HW_DISABLE,p) THEN FALSE		% 2h
+			ELSE s`permFlags`physicalPresenceCMDEnable ENDIF,
+		      `permFlags`physicalPresenceLifetimeLock:=
+			IF member(LIFETIME_LOCK,p) THEN TRUE		% 2i
+			ELSE s`permFlags`physicalPresenceLifetimeLock ENDIF]
+	      AND a=OUT_PhysicalPresence(TPM_SUCCESS)			% 2j
+	 ENDIF
+    ELSIF member(LOCK,p) OR member(PRESENT,p) OR member(NOTPRESENT,p)
+    THEN IF member(LIFETIME_LOCK,p) OR member(HW_ENABLE,p) OR 
+    	    member(CMD_ENABLE,p)OR member(HW_DISABLE,p) OR member(CMD_DISABLE,p)
+	 THEN s=state AND a=OUT_Error(TPM_BAD_PARAMETER)		% 3a
+	 ELSIF state`permFlags`physicalPresenceCMDEnable=FALSE		
+	 THEN s=state AND a=OUT_Error(TPM_BAD_PARAMETER)		% 3b
+	 ELSIF member(LOCK,p) AND member(PRESENT,p)
+	 THEN s=state AND a=OUT_Error(TPM_BAD_PARAMETER)		% 3c
+	 ELSIF member(PRESENT,p) AND member(NOTPRESENT,p)
+	 THEN s=state AND a=OUT_Error(TPM_BAD_PARAMETER)		% 3d
+	 ELSIF state`stclearFlags`physicalPresenceLock
+	 THEN  s=state AND a=OUT_Error(TPM_BAD_PARAMETER)		% 3e
+	 ELSIF member(LOCK,p)						% 3f
+	 THEN s=state WITH [`stclearFlags`physicalPresence:=FALSE	% 3fi
+	      	     ,`stclearFlags`physicalPresenceLock:=TRUE]		% 3fii
+	      AND a=OUT_PhysicalPresence(TPM_SUCCESS)			% 3i
+    	 ELSIF member(PRESENT,p)					% 3g
+	 THEN s=state WITH [`stclearFlags`physicalPresence:=TRUE]	% 3gi
+	      AND a=OUT_PhysicalPresence(TPM_SUCCESS)			% 3i
+	 ELSIF member(NOTPRESENT,p)					% 3h
+	 THEN s=state WITH [`stclearFlags`physicalPresence:=FALSE]	% 3hi
+	      AND a=OUT_PhysicalPresence(TPM_SUCCESS)			% 3i
+	 ELSE s=state AND a=OUT_Error(TPM_BAD_PARAMETER) % should never get here
+    	 ENDIF
+    ELSE s=state AND a=OUT_Error(TPM_BAD_PARAMETER)			% 4
+    ENDIF;
+
+
   %% Seal and output a blob (should be binary or data)
-  TPM_Seal(k:(tpmKey?),encAuth:(tpmAuthData?),pcrInfo:(tpmPCRInfoLong?),inData:tpmData) : State = 
-     output(LAMBDA (s:tpmAbsState): outputCom(s,ABS_Seal(k,encAuth,pcrInfo,inData)));
+  TPM_Seal(k:(tpmKey?),encAuth:(tpmEncAuth?),pcrInfo:(tpmPCRInfoLong?),
+	inData:tpmData,a:authIn) : State = %encAuth:(tpmSecret?)
+     output(LAMBDA (s:tpmAbsState): outputCom(s,ABS_Seal(k,encAuth,pcrInfo,
+						inData,a)));
 
   %% Seal a secret successfully
   seal_post: THEOREM
-    FORALL (state:(afterStartup?),k:(tpmKey?),e:(tpmAuthData?),p:(tpmPCRInfoLong?),d:tpmData) :
+    FORALL (state:(afterStartup?),k:(tpmKey?),e:(tpmEncAuth?),%e:(tpmSecret?),
+    	   p:(tpmPCRInfoLong?),d:tpmData,aIn:authIn) :
       LET (a,s) = runState(
-     	 	  TPM_Seal(k,e,p,d))
+     	 	  TPM_Seal(k,e,p,d,aIn))
  		  (state) IN
-      IF storage?(keyUsage(k)) AND not(migratable(keyFlags(k)))
-      THEN LET sealInfo=tpmPCRInfoLong(localityModifier(stanyFlags(state)),
+      IF not(storage?(keyUsage(k)) AND not(migratable(keyFlags(k))))
+      THEN a=OUT_Error(TPM_INVALID_KEYUSAGE)
+      ELSE LET sealInfo=tpmPCRInfoLong(state`stanyFlags`localityModifier,
 				locAtRelease(p),
 				creationPCRSelect(p),
 				releasePCRSelect(p),
 				tpmCompositeHash((#select:=creationPCRSelect(p),
-						   pcrValue:=pcrs(state)#)),
-				digAtRelease(p)) IN
+						   pcrValue:=state`pcrs#)),
+				digAtRelease(p)),
+	       a1=decryptADIP(e,authHandle(aIn)) IN
 	   a=OUT_Seal(tpmStoredData(sealInfo,
-			     tpmSealedData(e,
-					   tpmProof(permData(state)),
-					   tpmDigest(cons(tpmStoredData(sealInfo,tpmNull,clear),
-							  null),
-						     clear),
-					   d),
-			     encrypted(key(k),clear)),
-			 TPM_SUCCESS)
-      ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE) 
+			tpmSealedData(a1,
+				state`permData`tpmProof,
+				tpmDigest(cons(tpmStoredData(sealInfo,
+							tpmNull,clear),
+						null),clear),
+				d,encrypted(key(k),clear)),
+			clear),
+		(#nonceEven:=EVEN,nonceOdd:=ODD,
+			contAuthSess:=FALSE,resAuth:=usageAuth(encDat(k)) #),
+		TPM_SUCCESS)
       ENDIF
       AND s=state
  
-  seal_pred : THEOREM
-    FORALL (state:(afterStartup?),k:(tpmKey?),e:(tpmAuthData?),p:(tpmPCRInfoLong?),d:tpmData) :
-      LET (a,s) = runState(
-     	 	  TPM_Seal(k,e,p,d))
- 		  (state) IN
-      IF seal?(state,k,e,p,d)
-      THEN LET sealInfo=tpmPCRInfoLong(localityModifier(stanyFlags(state)),
-				locAtRelease(p),
-				creationPCRSelect(p),
-				releasePCRSelect(p),
-				tpmCompositeHash((#select:=creationPCRSelect(p),
-						   pcrValue:=pcrs(state)#)),
-				digAtRelease(p)) IN
-	   a=OUT_Seal(tpmStoredData(sealInfo,
-				tpmSealedData(e,
-					tpmProof(permData(state)),
-					tpmDigest(cons(tpmStoredData(sealInfo,tpmNull,clear),
-							null),
-						clear),
-					d),
-				encrypted(key(k),clear)),
-		      TPM_SUCCESS)
-	  ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE) 
-	ENDIF
-	AND s=state
 
   %% Unseal and output a blob (should be binary or data)
-  TPM_Unseal(p:(tpmKey?),d:(tpmStoredData?)) : State = 
-     output(LAMBDA (s:tpmAbsState): outputCom(s,ABS_Unseal(p,d)));
+  TPM_Unseal(p:(tpmKey?),d:(tpmStoredData?),pa,da:authIn) : State = 
+     output(LAMBDA (s:tpmAbsState): outputCom(s,ABS_Unseal(p,d,pa,da)));
 
   unseal_post: THEOREM
-    FORALL (state:(afterStartup?),p:(tpmKey?),d:(tpmStoredData?)) :
+    FORALL (state:(afterStartup?),p:(tpmKey?),d:(tpmStoredData?),pa,da:authIn) :
       LET (a,s) = runState(
-                    TPM_Unseal(p,d))
-		    (state) IN
-      IF storage?(keyUsage(p)) AND not(migratable(keyFlags(p)))
-      THEN IF crs(decrypt(key(p),d))=clear
-      	   THEN IF tpmProof(encData(d))=tpmProof(permData(s)) 
-	   	   AND storedDigest(encData(d))=
-		       tpmDigest(cons(tpmStoredData(sealInfo(d),tpmNull,clear),null),clear)
-	      	THEN IF locAtRelease(sealInfo(tpmStoredData(sealInfo(d),tpmNull,clear)))=
-		     	localityModifier(stanyFlags(s))
-		     THEN IF tpmCompositeHash((#select:=releasePCRSelect(sealInfo(d)),
-						pcrValue:=pcrs(s)#))=
-		     	     digAtRelease(sealInfo(tpmStoredData(sealInfo(d),tpmNull,clear)))
-		   	  THEN a=OUT_Unseal(data(encData(d)),TPM_SUCCESS)
-			  ELSE a=OUT_Error(TPM_WRONGPCRVAL)
-			  ENDIF
-		     ELSE a=OUT_Error(TPM_SUCCESS) % TODO: INCORRECT!
-		     ENDIF
-	        ELSE a=OUT_Error(TPM_NOTSEALED_BLOB) 
-	      	ENDIF
-	   ELSE a=OUT_CPUError(CPU_DECRYPT_ERROR) %  TODO: correct?
-	   ENDIF
-      ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
-      ENDIF
-      AND s=state
-  
-  unseal_pred : THEOREM
-    FORALL (state:(afterStartup?),p:(tpmKey?),d:(tpmStoredData?)) :
-      LET (a,s) = runState(
-                    TPM_Unseal(p,d))
-		    (state) IN
-      IF unseal?(state,p,d)
-      THEN IF crs(decrypt(key(p),d))=clear
-      	   THEN IF tpmProof(encData(d))=tpmProof(permData(s)) 
-	   	   AND storedDigest(encData(d))=
-		       tpmDigest(cons(tpmStoredData(sealInfo(d),tpmNull,clear),null),clear)
-	      	THEN IF locAtRelease(sealInfo(tpmStoredData(sealInfo(d),tpmNull,clear)))=
-		     	localityModifier(stanyFlags(s))
-		     THEN IF tpmCompositeHash((#select:=releasePCRSelect(sealInfo(d)),
-						pcrValue:=pcrs(s)#))=
-		     	     digAtRelease(sealInfo(tpmStoredData(sealInfo(d),tpmNull,clear)))
-		   	  THEN a=OUT_Unseal(data(encData(d)),TPM_SUCCESS)
-			  ELSE a=OUT_Error(TPM_WRONGPCRVAL)
-			  ENDIF
-		     ELSE a=OUT_Error(TPM_SUCCESS) % TODO: INCORRECT!
-		     ENDIF
-	        ELSE a=OUT_Error(TPM_NOTSEALED_BLOB) 
-	      	ENDIF
-	   ELSE a=OUT_CPUError(CPU_DECRYPT_ERROR) %  TODO: correct?
-	   ENDIF
-      ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
+                  TPM_Unseal(p,d,pa,da))
+		  (state) IN
+      LET S2=tpmStoredData(sealInfo(d),tpmNull,clear),
+      	  H2=tpmCompositeHash((#select:=releasePCRSelect(sealInfo(d)),
+				pcrValue:=s`pcrs#)) IN
+      IF not(storage?(keyUsage(p)) AND not(migratable(keyFlags(p))))
+      	 THEN a=OUT_Error(TPM_INVALID_KEYUSAGE)
+      ELSIF not(clear?(crs(decrypt(key(p),d))))
+      	 THEN a=OUT_CPUError(CPU_DECRYPT_ERROR) %  TODO: correct?
+      ELSIF not(tpmProof(encData(d))=s`permData`tpmProof AND 
+	    storedDigest(encData(d))=tpmDigest(cons(S2,null),clear))
+	 THEN a=OUT_Error(TPM_NOTSEALED_BLOB) 
+      ELSIF not(locAtRelease(sealInfo(S2))=s`stanyFlags`localityModifier)
+	 THEN a=OUT_Error(TPM_BAD_LOCALITY)
+      ELSIF not(H2=digAtRelease(sealInfo(S2)))
+      	 THEN a=OUT_Error(TPM_WRONGPCRVAL)
+      ELSE LET b=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+			resAuth:=usageAuth(encDat(p))#) IN
+    	 a=OUT_Unseal(data(encData(d)),b,b,TPM_SUCCESS)
       ENDIF
       AND s=state
 
   unseal_prev_post: THEOREM
-    FORALL (state:(afterStartup?),j,k:(tpmKey?),e:(tpmAuthData?),p:(tpmPCRInfoLong?),d:tpmData) :
+    FORALL (state:(afterStartup?),j,k:(tpmKey?),e:(tpmEncAuth?),%e:(tpmSecret?),
+    	   p:(tpmPCRInfoLong?),d:tpmData,a,ap,ad:authIn) :
       LET (a,s) = runState(
-      	  	  TPM_Seal(k,e,p,d)
+      	  	  TPM_Seal(k,e,p,d,a)
 		  >>= (LAMBDA (a:tpmAbsOutput) : 
 		       CASES a OF
-		         OUT_Seal(sd,m) : TPM_Unseal(j,sd) 
+		         OUT_Seal(sd,ao,m) : TPM_Unseal(j,sd,ap,ad) 
 			 ELSE TPM_Noop(a)
 		       ENDCASES))
 		  (state) IN  
-	storage?(keyUsage(j)) and not(migratable(keyFlags(j))) AND
-	storage?(keyUsage(k)) and not(migratable(keyFlags(k))) AND
-	key(j)=private(k) AND
+	seal?(k) AND unseal?(j) AND key(j)=private(k) AND
 	locAtRelease(p)=localityModifier(stanyFlags(state)) AND
-	digAtRelease(p)=
-		tpmCompositeHash((#select:=releasePCRSelect(p),pcrValue:=pcrs(state)#))
-	   => a = OUT_Unseal(d,TPM_SUCCESS)
-	AND s = state
-% TODO: ?
-% locAtRelease(pcrs(sealInfo(tpmStoredData(sealInfo(inData),tpmNull,clear))))=
- %localityModifier(stanyFlags(s)) 
-% compositeHash(releasePCRSelect(pcrs(sealInfo(inData))),pcrs(s))=
- %digAtRelease(pcrs(sealInfo(tpmStoredData(sealInfo(inData),tpmNull,clear)))) 
-		   
+	digAtRelease(p)=tpmCompositeHash((#select:=releasePCRSelect(p),
+						pcrValue:=state`pcrs#))
+	   =>  LET b=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+	       	   resAuth:=usageAuth(encDat(j))#) IN 
+	a=OUT_Unseal(d,b,b,TPM_SUCCESS)
+	AND s=state
+
 
   %% UnBind encrypted blob (decrypt)
-  TPM_UnBind(keyHandle:(tpmKey?),inData:(tpmBoundData?)) : State = 
-     output(LAMBDA (s:tpmAbsState): outputCom(s,ABS_UnBind(keyHandle,inData)));
+  TPM_UnBind(keyHandle:(tpmKey?),inData:(tpmBoundData?),a:authIn) : State = 
+     output(LAMBDA (s:tpmAbsState):outputCom(s,ABS_UnBind(keyHandle,inData,a)));
 
   %% UnBind an encrypted blob successfully
   unBind_post: THEOREM
-    FORALL (state:(afterStartup?),k:(tpmKey?),d:(tpmBoundData?)) : 
+    FORALL (state:(afterStartup?),k:(tpmKey?),d:(tpmBoundData?),a:authIn) : 
       LET (a,s) = runState(
-		  TPM_UnBind(k,d))
+		  TPM_UnBind(k,d,a))
 		  (state) IN
-      IF legacy?(keyUsage(k)) OR bind?(keyUsage(k))
-      THEN LET d1=decrypt(private(k),d) IN 
-    	 IF crs(d1)=clear
-      	   THEN a=OUT_UnBind(payloadData(d),TPM_SUCCESS)
-	   ELSE a=OUT_CPUError(CPU_DECRYPT_ERROR) %TODO: unsure if this is correct
-	   ENDIF
-      ELSE a=OUT_Error(TPM_INVALID_KEYUSAGE)
-      ENDIF  	    
-      AND s = state
+      LET d1=decrypt(private(k),d) IN
+      IF not(legacy?(keyUsage(k)) OR bind?(keyUsage(k)))
+      	 THEN a=OUT_Error(TPM_INVALID_KEYUSAGE)
+      ELSIF not(clear?(crs(d1)))
+      	 THEN a=OUT_CPUError(CPU_DECRYPT_ERROR)
+      ELSE LET b=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+			resAuth:=usageAuth(encDat(k))#) IN 
+	   	a=OUT_UnBind(payloadData(d),b,TPM_SUCCESS)
+      ENDIF
+      AND s=state
 
-  unBind_pred_test: THEOREM
-    FORALL (state:(afterStartup?),k:(tpmKey?),d:(tpmBoundData?)) : 
-      LET (a,s) = runState(
-		  TPM_UnBind(k,d))
-		  (state) IN
-      IF unBind?(k,d) and crs(decrypt(private(k),d))=clear
-      THEN a=OUT_UnBind(payloadData(d),TPM_SUCCESS)
-      ELSE IF not(legacy?(keyUsage(k)) OR bind?(keyUsage(k))) 
-      	   THEN a=OUT_Error(TPM_INVALID_KEYUSAGE) 
-      	   ELSE a=OUT_CPUError(CPU_DECRYPT_ERROR) %TODO: unsure if this is correct
-	   ENDIF
-      ENDIF  	    
-      AND s = state
 	
   Tspi_Data_Bind(k:(tpmKey?),d:tpmData) : State = 
      output(LAMBDA (s:tpmAbsState): outputCom(s,ABS_Data_Bind(k,d)));
 
   %% UnBind an encrypted blob successfully
   unBind_prev_post: THEOREM 
-    FORALL (state:(afterStartup?),d:tpmData,p,k:(tpmKey?)) : 
+    FORALL (state:(afterStartup?),d:tpmData,p,k:(tpmKey?),a:authIn) : 
       LET (a,s) = runState(
 		  Tspi_Data_Bind(k,d)
 		  >>= LAMBDA (a:tpmAbsOutput) : 
 		      CASES a OF
-		        OUT_Data_Bind(d,m) : TPM_UnBind(k,d) 
+		        OUT_Data_Bind(d,m) : TPM_UnBind(k,d,a) 
 			ELSE TPM_Noop(a) 
 		      ENDCASES)
  		  (state) IN 
-	  tpmBoundData?(d) AND unBind?(k,d) =>
-	  a = OUT_UnBind(d,TPM_SUCCESS) 
+	  tpmBoundData?(d) AND unBind?(k) =>
+	  LET b=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+			resAuth:=usageAuth(encDat(k))#)
+	      IN 
+	  a = OUT_UnBind(d,b,TPM_SUCCESS) 
 	  AND s = state
 
 
   %% Wrap new key k with parent key
-  TPM_CreateWrapKey(parent,keyInfo:(tpmKey?)) : State = 
+  TPM_CreateWrapKey(p,k:(tpmKey?),dUA,dMA:(tpmEncAuth?),a:authIn) : State = 
      modifyOutput(
 	  (LAMBDA (s:tpmAbsState) :
-	      executeCom(s,ABS_CreateWrapKey(parent,keyInfo))),
+	      executeCom(s,ABS_CreateWrapKey(p,k,dUA,dMA,a))),
           (LAMBDA (s:tpmAbsState) :
-	      outputCom(s,ABS_CreateWrapKey(parent,keyInfo)))
+	      outputCom(s,ABS_CreateWrapKey(p,k,dUA,dMA,a)))
 	      );
 
   create_wrap_key_post: THEOREM 
-    FORALL (state:(afterStartup?),p,keyInfo:(tpmKey?)) : 
+    FORALL (state:(afterStartup?),p,k:(tpmKey?),dUA,dMA:(tpmEncAuth?),
+    	   a:authIn) : 
       LET (a,s) = runState(
-     	          TPM_CreateWrapKey(p,keyInfo))
+     	          TPM_CreateWrapKey(p,k,dUA,dMA,a))
 		  (state) IN
-    IF storage?(keyUsage(p)) 
-    THEN IF migratable(keyFlags(p))=TRUE AND migratable(keyFlags(keyInfo))=FALSE
-    	 THEN a = OUT_Error(TPM_INVALID_KEYUSAGE)
-      	      AND s = state
-	 ELSE IF identity?(keyUsage(keyInfo)) or authChange?(keyUsage(keyInfo))
-	      THEN a = OUT_Error(TPM_INVALID_KEYUSAGE)
-      	      	   AND s = state
-	      ELSE IF migrateAuthority(keyFlags(keyInfo))=TRUE
-	      	   THEN a = OUT_Error(TPM_INVALID_KEYUSAGE)
-      	     	   	AND s = state
-		   ELSE a = OUT_CreateWrapKey(tpmKey(keyGenCnt(state),
-						keyUsage(keyInfo),
-					      	keyFlags(keyInfo),
-					      	authDataUsage(keyInfo),
-						algoParms(keyInfo),
-					      	PCRInfo(keyInfo),
-					      	key(p),
-					      	encDat(keyInfo),
-					      	clear),TPM_SUCCESS)
-      	     		AND s = state WITH [`keyGenCnt := keyGenCnt(state)+1]
-		   ENDIF
-	      ENDIF
-	 ENDIF
-    ELSE a = OUT_Error(TPM_INVALID_KEYUSAGE)
-      	 AND s = state
+    IF not storage?(keyUsage(p)) 
+       THEN a=OUT_Error(TPM_INVALID_KEYUSAGE) AND s=state
+    ELSIF migratable(keyFlags(p)) AND not(migratable(keyFlags(k)))
+       THEN a=OUT_Error(TPM_INVALID_KEYUSAGE) AND s=state
+    ELSIF identity?(keyUsage(k)) or authChange?(keyUsage(k))
+       THEN a=OUT_Error(TPM_INVALID_KEYUSAGE) AND s=state
+    ELSIF migrateAuthority(keyFlags(k))
+       THEN a=OUT_Error(TPM_INVALID_KEYUSAGE) AND s=state
+    ELSIF state`permFlags`FIPS AND
+    	  (never?(authDataUsage(k)) OR legacy?(keyUsage(k)))
+       THEN a=OUT_Error(TPM_NOTFIPS) AND s=state
+    ELSIF (storage?(keyUsage(k)) OR migrate?(keyUsage(k))) AND
+    	  not(RSA?(algoId(algoParms(k))))
+       THEN a=OUT_Error(TPM_BAD_KEY_PROPERTY) AND s=state
+    ELSE LET DU1:(tpmSecret?)=decryptADIP(dUA,authHandle(a)),
+    	     DM1:(tpmSecret?)=decryptADIP(dMA,authHandle(a)),
+    	     b=(#nonceEven:=EVEN,nonceOdd:=ODD,
+		 contAuthSess:=FALSE,resAuth:=usageAuth(encDat(p))#),
+	     migAuth:(tpmSecret?)=IF migratable(keyFlags(k)) 
+	     			  THEN DM1 ELSE state`permData`tpmProof ENDIF,
+	     h=tpmCompositeHash((#select:=creationPCRSelect(PCRInfo(k)),
+					pcrValue:=state`pcrs#)) IN
+	 LET encData=tpmStoreAsymkey(DU1,migAuth,pubDataDigest(encDat(k)),
+			privKey(encDat(k)),clear),
+	     pcrs=tpmPCRInfoLong(state`locality,
+				locAtRelease(PCRInfo(k)),
+				creationPCRSelect(PCRInfo(k)),
+				releasePCRSelect(PCRInfo(k)),
+				h,digAtRelease(PCRInfo(k))) IN
+	     a=OUT_CreateWrapKey(tpmKey(state`keyGenCnt,
+					keyUsage(k),
+					keyFlags(k),
+					authDataUsage(k),
+					algoParms(k),
+					pcrs,
+					key(p),
+					encData,
+					clear),
+				b,TPM_SUCCESS)
+      	 AND s=state WITH [`keyGenCnt:=keyGenCnt(state)+1]
     ENDIF
 
-  create_wrap_key_pred_test: THEOREM
-    FORALL (state:(afterStartup?),p,k:(tpmKey?)) :
-      LET (a,s) = runState(
-    		    TPM_CreateWrapKey(p,k))
-		    (state) IN
-	IF createWrapKey?(p,k)
-	THEN a = OUT_CreateWrapKey(tpmKey(keyGenCnt(state),
-					  keyUsage(k),
-					  keyFlags(k),
-					  authDataUsage(k),
-					  algoParms(k),
-					  PCRInfo(k),
-					  key(p),
-					  encDat(k),
-					  clear),
-				   TPM_SUCCESS)
-      	     AND s = state WITH [`keyGenCnt := keyGenCnt(state)+1]
-        ELSE a = OUT_Error(TPM_INVALID_KEYUSAGE)
-      	     AND s = state
-        ENDIF	
 
   %% Install key k in a TPM
   TPM_LoadKey2(p:(tpmKey?),k:(tpmKey?)):State =
@@ -1781,13 +1975,14 @@ tpm [ B:TYPE+ % BLOB
 		=> member(key(j),s`keys);
 
   load_key_prev_post: THEOREM 
-    FORALL (state:(afterStartup?),k,p:(tpmKey?),i:nat) :
+    FORALL (state:(afterStartup?),k,p:(tpmKey?),i:nat,dUA,dMA:(tpmEncAuth?),
+    	   a:authIn) :
       LET (a,s) = runState(
-      	  	  TPM_CreateWrapKey(p,k)
+      	  	  TPM_CreateWrapKey(p,k,dUA,dMA,a)
 		  >>= CPU_saveOutput(i)
 		  >>= (LAMBDA (a:tpmAbsOutput) :
 		         CASES a OF
-		           OUT_CreateWrapKey(wk,m) : TPM_LoadKey2(p,wk)
+		           OUT_CreateWrapKey(wk,a,m) : TPM_LoadKey2(p,wk)
 			   ELSE TPM_Noop(a)
 			 ENDCASES))
 		  (state) IN
@@ -2356,13 +2551,14 @@ tpm [ B:TYPE+ % BLOB
 	AND s=state
       
   quote_with_prev_key: THEOREM
-    FORALL (state:(afterStartup?),pk,k:(tpmKey?),n:(tpmNonce?),pm:PCR_SELECTION) :
+    FORALL (state:(afterStartup?),pk,k:(tpmKey?),n:(tpmNonce?),pm:PCR_SELECTION,
+    	   dUA,dMA:(tpmEncAuth?),a:authIn) :
       LET (a,s) = runState(
-		  TPM_CreateWrapKey(pk,k)
+		  TPM_CreateWrapKey(pk,k,dUA,dMA,a)
 		  >>=CPU_saveOutput(0)
 		  >>= (LAMBDA (a:tpmAbsOutput) : 
 		       CASES a OF 
-		         OUT_CreateWrapKey(wk,m) : TPM_Quote(wk,n,pm) 
+		         OUT_CreateWrapKey(wk,a,m) : TPM_Quote(wk,n,pm) 
 			 ELSE TPM_Noop(a) 
 		       ENDCASES))
 		  (state) IN

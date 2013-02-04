@@ -36,7 +36,7 @@ startupData[B,K,HV : TYPE+] : THEORY
   IMPORTING StclearData[B,HV];
 
 
-  %% Flags used by the TPM_Startup command
+  %% Flags used by the TPM_Startup command				(4.5)
   TPM_STARTUP_TYPE : DATATYPE
   BEGIN
     TPM_ST_CLEAR : TPM_ST_CLEAR?
@@ -116,7 +116,7 @@ startupData[B,K,HV : TYPE+] : THEORY
        srk := srkInit,
        keyGenCnt := keyGenCntInit,
        pcrs := pcrsPower,
-       permFlags := permFlagsInit,
+       permFlags := permFlagsDefault,
        permData := permDataInit,	
        stanyFlags:= stanyFlagsInit,
        stanyData := stanyDataInit,

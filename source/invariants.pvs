@@ -1,4 +1,4 @@
-% ----
+%% ----
 %%
 %% Invariants Theory
 %%
@@ -105,6 +105,7 @@ BEGIN
     FORALL (s:tpmAbsState,c:tpmAbsInput) :
       not(ABS_Startup?(c) OR ABS_Init?(c) OR
           ABS_DisableOwnerClear?(c) OR 
+	  ABS_PhysicalPresence?(c) OR 
 	  ABS_ForceClear?(c) OR
 	  ABS_OwnerClear?(c) OR 
 	  ABS_TakeOwnership?(c) OR
@@ -167,19 +168,22 @@ BEGIN
 
   permFlags_physPresLL_unchanged: THEOREM
     FORALL (s:tpmAbsState,c:tpmAbsInput) :
-      not(ABS_Startup?(c) OR ABS_Init?(c)) =>
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+      	  ABS_PhysicalPresence?(c)) =>
         s`permFlags`physicalPresenceLifetimeLock = 
 		executeCom(s,c)`permFlags`physicalPresenceLifetimeLock;
 
   permFlags_physPresHWE_unchanged: THEOREM
     FORALL (s:tpmAbsState,c:tpmAbsInput) :
-      not(ABS_Startup?(c) OR ABS_Init?(c)) =>
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+      	  ABS_PhysicalPresence?(c)) =>
         s`permFlags`physicalPresenceHWEnable = 
 		executeCom(s,c)`permFlags`physicalPresenceHWEnable;
 
   permFlags_physPresCMDE_unchanged: THEOREM
     FORALL (s:tpmAbsState,c:tpmAbsInput) :
-      not(ABS_Startup?(c) OR ABS_Init?(c)) =>
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+      	  ABS_PhysicalPresence?(c)) =>
         s`permFlags`physicalPresenceCMDEnable = 
 		executeCom(s,c)`permFlags`physicalPresenceCMDEnable;
 

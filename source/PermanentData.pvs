@@ -82,7 +82,7 @@ PermanentData[DV,KV,HV:TYPE+] : THEORY
     %%  attributes must match requirements of the TCG platform specific 
     %%  specification that describes the platform.
     , pcrAttrib : PCR_ATTRIBUTES
-    %% Table indicating which ordinals are being audited.
+    %% Table indicating which ordinals are being audited. Has manufact. default
 %   , ordinalAuditStatus[] : BYTE[]
     %% The array of TPM Owner authorized DIR. Points to the same location as the
     %%  NV index value.
@@ -94,10 +94,10 @@ PermanentData[DV,KV,HV:TYPE+] : THEORY
     %% The delegate table
 %   , delegateTable : TPM_DELEGATE_TABLE
     %% 
-%   , lastFamilyID : UINT32
-    %% 
-%   , noOwnerNVWrite : UINT32
-    %% 
+%   , lastFamilyID : int
+    %% Manufacturing default 0
+%   , noOwnerNVWrite : int
+    %% Has manufacturing defalut
 %   , restrictDelegate : TPM_CMK_DELEGATE
     %% 
 %   , tpmDAASeed : TPM_DAA_TPM_SEED

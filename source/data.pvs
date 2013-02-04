@@ -22,6 +22,8 @@ data [DVAL,HVAL:TYPE+] : THEORY
   IMPORTING pcr[HVAL];
   IMPORTING authdata;
   IMPORTING keydata;
+  IMPORTING types;
+  
   
   %% Data items that the TPM is aware of
   tpmData : DATATYPE
@@ -32,11 +34,11 @@ data [DVAL,HVAL:TYPE+] : THEORY
     %% Stub for migrateScheme so can take digest - createMigBlob	(4.4)
     tpmMigScheme(migScheme:migrateScheme) : tpmMigScheme?
 
-    %% EK type - indicates what type of information the EK is dealing with(4.11)
+    %% EK type- indicates what type of information the EK's dealing with(4.11)
     tpmEKBlobActivate(sessK:(tpmSessKey?),idDigest:(tpmDigest?),
 	pcrInfo:(tpmPCRInfoShort?)) : tpmEKBlobActivate?
 
-    %%			
+    %% EK type- indicates what type of information the EK's dealing with(4.11)
     tpmEKBlobAuth(authValue:(tpmSecret?)) : tpmEKBlobAuth?
     
     %% Abitrarily long digest of arbitrary TPM data			(5.4)
@@ -53,10 +55,10 @@ data [DVAL,HVAL:TYPE+] : THEORY
     tpmNonce : tpmNonce?
 
     %% Authdata - don't know what it is yet				(5.6)
-    tpmAuthData(authData:AUTHDATA,crs:CRYPTOSTATUS) : tpmAuthData?
-    %% cases authData of
-    %% secret : crs = clear
-    %% encauth : crs = encrypted depending on context   
+    tpmEncAuth(authData:int,crs:CRYPTOSTATUS) : tpmEncAuth?
+
+    %% Authdata - don't know what it is yet				(5.6)
+    tpmSecret(i:int) : tpmSecret?
 
     %% Provides proof that the associated public key has		(5.12)
     %% TPM Owner AuthData to be a migration key
@@ -106,10 +108,11 @@ data [DVAL,HVAL:TYPE+] : THEORY
 		  %% encData is the piece encrypted by the crs.
 		  
     %% Sealed Data - contains confidential info related to sealed data	(9.3)
-    tpmSealedData(authData:(tpmAuthData?),
+    tpmSealedData(authData:(tpmSecret?),
 		  tpmProof:(tpmSecret?),
 		  storedDigest:(tpmDigest?), %TPM_COMPOSITE_HASH?
-		  data:tpmData) : tpmSealedData?
+		  data:tpmData,
+		  crs:CRYPTOSTATUS) : tpmSealedData?
     
     %% Session keys are simply symetric keys				(9.4)
     tpmSessKey(skey:KVAL,crs:CRYPTOSTATUS) : tpmSessKey?
@@ -187,24 +190,46 @@ data [DVAL,HVAL:TYPE+] : THEORY
     ELSE FALSE
   ENDCASES
 
-  authIn:TYPE = [# authHandle : AUTHDATA
+  tpmAuthData?(blob:tpmData) : bool =
+  CASES blob OF
+    tpmSecret(i) : TRUE,
+    tpmEncAuth(i,c) : TRUE
+    ELSE FALSE
+  ENDCASES
+  
+  authIn:TYPE = [# authHandle : (tpmAuthData?)
   	      	 , authLastNonceEven : (tpmNonce?)
 	      	 , nonceOdd : (tpmNonce?)
 	      	 , contAuthSess : bool
-	      	 , parentAuth : AUTHDATA
+	      	 , ownerAuth : (tpmAuthData?)
 	      	#];
 
   authOut:TYPE = [# nonceEven : (tpmNonce?)
 	      	  , nonceOdd : (tpmNonce?)
 	      	  , contAuthSess : bool
-	      	  , resAuth : AUTHDATA
+	      	  , resAuth : (tpmAuthData?)
 	      	 #];
 
   tpmNull : (tpmSealedData?)
   tpmNonceZero : (tpmNonce?)
-  evenN:(tpmNonce?)
-  oddN:(tpmNonce?)
+  EVEN:(tpmNonce?)
+  ODD:(tpmNonce?)
   pcrInfoLongDefault : (tpmPCRInfoLong?)
   storeAsymkeyDefault : (tpmStoreAsymkey?)
+
+  % Decrypting encAuth according to the ADIP indicated by authHandle
+  % TODO: where is ADIP indicated by authHandle?
+  % TPM_AUTHHANDLE is handle to an authorization session 4.1? 4.3? 5.6, 5.9, 
+  % Read Ryan's paper
+  % has session type. hmac?
+  decryptADIP(enc:(tpmEncAuth?),authHand:(tpmAuthData?)) : (tpmSecret?) =
+    tpmSecret(authData(enc));
+	
+  encryptADIP(auth:(tpmAuthData?)) : (tpmEncAuth?) = 
+    LET i=CASES auth OF
+    		tpmSecret(a) : a,
+		tpmEncAuth(a,c) : a 
+	  ENDCASES IN
+    tpmEncAuth(i,clear);
 
 END data

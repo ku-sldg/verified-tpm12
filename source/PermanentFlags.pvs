@@ -112,26 +112,46 @@ PermanentFlags : THEORY
     , disableFullDALogicInfo : bool
   #];
 
-  permFlagsInit : PermFlags = (#
-      disable:=TRUE
-    , ownership:=TRUE
-    , deactivated:=TRUE
-    , readPubek:=TRUE
-    , disableOwnerClear:=FALSE
-    , allowMaintenance:=FALSE
-    , physicalPresenceLifetimeLock:=FALSE
-    , physicalPresenceHWEnable:=FALSE
-    , physicalPresenceCMDEnable:=FALSE
-    , CEKPUsed:=FALSE
-    , TPMpost:=FALSE
-    , FIPS:=FALSE
-    , operator:=FALSE
-    , enableRevokeEK:=FALSE
-    , nvLocked:=FALSE
-    , readSRKPub:=FALSE
-    , tpmEstablished:=FALSE
-    , maintenanceDone:=FALSE
-    , disableFullDALogicInfo:=FALSE
+  disableDef:bool	= TRUE
+  ownershipDef:bool 	= TRUE
+  deactivatedDef:bool 	= TRUE
+  readPubekDef:bool 	= TRUE
+  disableOwnerClearDef:bool = FALSE
+  allowMaintenanceDef:bool  = TRUE
+  physPresLLDef:bool 	= FALSE
+  physPresHWEDef:bool	= FALSE
+  physPresCMDEDef:bool	= FALSE
+  CEKPUsedDef:bool	% none
+  TPMpostDef:bool	= FALSE
+  FIPSDef:bool		
+  operatorDef:bool	= FALSE
+  enableRevokeEKDef:bool
+  nvLockedDef:bool	= FALSE
+  readSRKPubDef:bool	= FALSE 
+  tpmEstablishedDef:bool= FALSE
+  maintenanceDoneDef:bool
+  disableFullDALogicInfoDef:bool = FALSE
+  
+  permFlagsDefault : PermFlags = (#
+      disable:=disableDef 
+    , ownership:=ownershipDef 
+    , deactivated:=deactivatedDef 
+    , readPubek:=readPubekDef 
+    , disableOwnerClear:=disableOwnerClearDef 
+    , allowMaintenance:=allowMaintenanceDef 
+    , physicalPresenceLifetimeLock:=physPresLLDef 
+    , physicalPresenceHWEnable:=physPresHWEDef 
+    , physicalPresenceCMDEnable:=physPresCMDEDef 
+    , CEKPUsed:=CEKPUsedDef
+    , TPMpost:=TPMpostDef
+    , FIPS:=FIPSDef
+    , operator:=operatorDef
+    , enableRevokeEK:=enableRevokeEKDef
+    , nvLocked:=nvLockedDef
+    , readSRKPub:=readSRKPubDef 
+    , tpmEstablished:=tpmEstablishedDef
+    , maintenanceDone:=maintenanceDoneDef
+    , disableFullDALogicInfo:=disableFullDALogicInfoDef 
   #);
 
   END PermanentFlags
