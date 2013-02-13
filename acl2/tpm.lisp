@@ -486,19 +486,20 @@
            (otherwise tpm-s)))
         (t tpm-s)))
 
+(in-theory (enable tpm-input-p))
 
-#|
+(f-put-global 'tpm *tpm-post-init* state)
+
 (i-am-here)
 
 (defun+ execute-com-startup (cmd tpm-s)
   (declare (xargs :guard (and (tpm-input-p cmd)
                               (tpm-state-p tpm-s))))
   (case (tpm-input->command cmd)
-    (:load-key2 (load-key-to-state (tpm-input->arg1 cmd) tpm-s))
-
+    (:load-key-2 (load-key-to-state (tpm-input->arg1 cmd) tpm-s))
+    (:extend (extend-state (tpm-input->arg1 tpm-input->arg2 tpm-s))
 ;;     (:extend (extend-state 
 ;; ; argument order is different here than in pvs model
 ;;               (tpm-input->arg1 cmd) 
 ;;               tpm-s
     (otherwise tpm-s)))
-|#

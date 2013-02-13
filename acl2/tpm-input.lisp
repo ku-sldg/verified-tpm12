@@ -69,7 +69,7 @@
 
     (:load-key-2 wrap-key-p)
     ;; measurement collection commands
-    ;; (:extend)
+    (:extend pcr-index-p valid-extension-value-p)
     ;; measurement reporting commands
     ;; (:pcr-read)
     ;; (:quote)
