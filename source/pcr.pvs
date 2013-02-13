@@ -18,9 +18,17 @@ pcr [HV: TYPE+] : THEORY
   BEGIN
 
   %% Locality type - check with spec
+  %% (8.6)
   LOCALITY : TYPE = {n:nat | n<=4};
+  LOCALITY_SELECTION : TYPE = set[LOCALITY];
 
-  %% Basic PCR datatype
+  %% PCR array index type - check with spec
+  PCRINDEX : TYPE = {n:nat | n <=23};
+
+  %% (8.1) 
+  %% Should be bit map that indicates if a PCR is active or not.
+  PCR_SELECTION : TYPE = list[PCRINDEX]; % TODO: Should we make this into an array?
+
   PCR : datatype
   begin
     reset : reset?
@@ -28,54 +36,83 @@ pcr [HV: TYPE+] : THEORY
     extend(pcr:PCR,hash:HV) : extend?
   end PCR;
 
-  %% PCR array index type - check with spec
-  PCRINDEX : TYPE = {n:nat | n <=23};
+  PCRVALUES : TYPE = ARRAY[PCRINDEX->PCR];
 
-  %% Information associated with PCR
-  PCRFLAG : TYPE = [# pcrLocality : LOCALITY, pcrReset : bool #];
+  %% (8.2)
+  PCR_COMPOSITE : TYPE = [#
+  		% The indication of which PCR values are active
+  		  select : PCR_SELECTION 
+		% Array of PCRVALUE structures. 
+		% The values come in the order specified by the select parameter and 
+		% are concatenated into a single blob.
+		, pcrValue : PCRVALUES
+  		#];
 
-  %% PCR array
-  PCRS : TYPE = ARRAY[PCRINDEX->PCR];
+
+%   %% (8.3)
+%   PCR_INFO : TYPE = [#
+%   	   % Selection of PCRs to which the data or key is bound
+%   	     pcrSelection : PCR_SELECTION
+% 	   % Digest of the PCR indices and PCR values to verify when revealing sealed data
+% 	   % or using a key that was wrapped to PCRs
+% 	   , digestAtRelease  : TPM_COMPOSITE_HASH
+% 	   % Composite digest value of the PCR values, at the time when the sealing is performed
+% 	   , digestAtCreation : TPM_COMPOSITE_HASH
+% 	   #];
+
+  %% Information associated with PCR 
+  %% (8.8)
+  PCR_ATTRIBUTE : TYPE = [# pcrExtendLocal : LOCALITY_SELECTION
+  	    	      	  , pcrResetLocal : LOCALITY_SELECTION 
+  	    	      	  , pcrReset : bool #];
 
   %% PCR flag array
-  PCRFLAGS : TYPE = ARRAY[PCRINDEX->PCRFLAG];
+  PCR_ATTRIBUTES : TYPE = ARRAY[PCRINDEX->PCR_ATTRIBUTE];
+
+  allLocs : LOCALITY_SELECTION = add(0,add(1,add(2,add(3,add(4,emptyset))))); 
+  %TODO: not sure this is correct... can add any real numbers to set.
+
+  % (8.9)
+  pcrDebug : PCR_ATTRIBUTES
+  pcrInit : PCR_ATTRIBUTES
+
+  % Pcr attributes are available on a per PCR basis. Differs by platform configuration
+  allResetAccess : PCR_ATTRIBUTES =
+    (LAMBDA (i:PCRINDEX) :
+      (# 
+         pcrReset := true
+       , pcrResetLocal := allLocs
+       , pcrExtendLocal := allLocs
+      #))
 
   %% Some common PCR sets
 
   %% Power on - unknown state
-  pcrsPower : PCRS;
+  pcrsPower : PCRVALUES;
+%   pcrInfoLongDefault : PCR_INFO_LONG;
 
   %% Following startup clear.  Nonresettable PCRs to 0 and resettable PCRs
   %% to -1
-  pcrsReset(flags : PCRFLAGS) : PCRS =
+  pcrsReset(flags : PCR_ATTRIBUTES) : PCRVALUES =
     (LAMBDA (i:PCRINDEX) : 
       IF pcrReset(flags(i)) THEN resetOne ELSE reset ENDIF);
 
-  %% Followign SENTER.  Nonresettable PCRs to same and resettable PCRs to 0
-  pcrsSenter(curr : PCRS, flags : PCRFLAGS) : PCRS =
+  %% Following SENTER.  Nonresettable PCRs to same and resettable PCRs to 0
+  pcrsSenter(curr : PCRVALUES, flags : PCR_ATTRIBUTES) : PCRVALUES =
     (LAMBDA (i:PCRINDEX) :
       IF pcrReset(flags(i)) THEN reset ELSE curr(i) ENDIF);
 
   %% Some common PCR flag settings
-
-  allResetAccess : PCRFLAGS =
-    (LAMBDA (i:PCRINDEX) :
-      (# 
-         pcrReset := true
-         , pcrLocality := 0
-      #))
-
+  
+  
   %% PCR extension operator
-  pcrsExtend(pcrs:PCRS,i:PCRINDEX,hv:HV) : PCRS = 
+  pcrsExtend(pcrs:PCRVALUES,i:PCRINDEX,hv:HV) : PCRVALUES = 
      (pcrs WITH [(i) := extend(pcrs(i),hv)])
 
-
-  PCRMASK : TYPE = list[PCRINDEX];
-
-  getPCRs(pcrs:PCRS,pcrMask:PCRMASK) : list[PCR] =
+  getPCRs(pcrs:PCRVALUES,pcrMask:PCR_SELECTION) : list[PCR] =
      map(pcrs,pcrMask);
   
-  getPCRsCorrectness: THEOREM (FORALL (pm:PCRMASK, i:PCRINDEX, pcrs:PCRS) :
+  getPCRsCorrectness: THEOREM (FORALL (pm:PCR_SELECTION, i:PCRINDEX, pcrs:PCRVALUES) :
      member(i,pm)
      =>
      member(pcrs(i),getPCRs(pcrs,pm)));

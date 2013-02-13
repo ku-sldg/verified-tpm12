@@ -14,7 +14,7 @@ PermanentFlags : THEORY
     , CEKPUsed : bool
 %     , TPMpost : bool
 %     , TPMpostLock : bool
-%     , FIPS : bool
+    , FIPS : bool
     , operator : bool
     , enableRevokeEK : bool
     , nvLocked : bool
@@ -36,7 +36,7 @@ PermanentFlags : THEORY
 %     , physicalPresenceCMDEnable:=FALSE
     , CEKPUsed:=FALSE
 %     , TPMpost:=FALSE
-%     , FIPS:=FALSE
+    , FIPS:=FALSE
     , operator:=FALSE
     , enableRevokeEK:=FALSE
     , nvLocked:=FALSE

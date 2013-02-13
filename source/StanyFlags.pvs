@@ -1,0 +1,35 @@
+StanyFlags[HV:TYPE+] : THEORY
+  BEGIN
+
+  IMPORTING pcr[HV];
+
+  % These flags reset on any TPM_Startup command. postInitialize indicates only that TPM_Startup
+  % has run, not that it was successful
+  % TOSPresent indicates the presence of a Trusted Operating System (TOS) that was established
+  % using the TPM_HASH_START command in the TPM Interface.
+  StanyFlags : TYPE = [#
+  	   % Prevents the operation of most capabilities. There is no default state. It is
+	   % initialized by TPM_Init to TRUE. TPM_Startup sets it to FALSE.
+ 	     postInitialize : bool 
+	   % This SHALL indicate for each command the presence of a locality modifier for 
+	   % the command. It MUST be always ensured that the value during usage reflects
+	   % the current active locality.
+	   , localityModifier : LOCALITY
+	   % Defaults to FALSE
+	   % TRUE when there is an exclusive transport session active. Execution of ANY
+	   % command other than TPM_ExecuteTransport targeting the exclusive transport
+	   % session MUST invalidate the exclusive transport session.  
+	   , transportExclusive : bool
+	   % Defaults to FALSE
+	   % Set to TRUE on TPM_HASH_START set to FALSE using setCapability
+	   , TOSPresent : bool
+  #];
+
+  stanyFlagsInit : StanyFlags = 
+  		 (# postInitialize:=FALSE,
+  	       	    localityModifier:=0, %TODO: NOT CORRECT!
+		    transportExclusive:=FALSE,
+		    TOSPresent:=FALSE
+		  #);
+
+  END StanyFlags
