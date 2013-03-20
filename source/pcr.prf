@@ -1,4 +1,31 @@
 (pcr
+ (pcrsResetSelectCorrect 0
+  (pcrsResetSelectCorrect-1 nil 3569606273
+   ("" (grind) (("" (rewrite pcrsResetSelection) nil nil)) nil)
+   ((pcrsResetSelection const-decl "PCRVALUES" pcr nil)
+    (int nonempty-type-eq-decl nil integers nil)
+    (nat nonempty-type-eq-decl nil naturalnumbers nil)
+    (PCRINDEX type-eq-decl nil pcr nil) (PCR type-decl nil pcr nil)
+    (PCRVALUES type-eq-decl nil pcr nil)
+    (boolean nonempty-type-decl nil booleans nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (NOT const-decl "[bool -> bool]" booleans nil)
+    (number nonempty-type-decl nil numbers nil)
+    (PRED type-eq-decl nil defined_types nil)
+    (list type-decl nil list_adt nil)
+    (every adt-def-decl "boolean" list_adt nil)
+    (AND const-decl "[bool, bool -> bool]" booleans nil)
+    (number_field_pred const-decl "[number -> boolean]" number_fields
+     nil)
+    (number_field nonempty-type-from-decl nil number_fields nil)
+    (real_pred const-decl "[number_field -> boolean]" reals nil)
+    (real nonempty-type-from-decl nil reals nil)
+    (rational_pred const-decl "[real -> boolean]" rationals nil)
+    (rational nonempty-type-from-decl nil rationals nil)
+    (integer_pred const-decl "[rational -> boolean]" integers nil)
+    (>= const-decl "bool" reals nil) (<= const-decl "bool" reals nil)
+    (PCR_SELECTION type-eq-decl nil pcr nil))
+   shostak))
  (getPCRsCorrectness 0
   (getPCRsCorrectness-1 nil 3549302168
    ("" (induct-and-simplify pm) nil nil)

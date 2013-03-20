@@ -89,6 +89,10 @@
    ((signStatus const-decl "(signed?)" key nil)
     (checkSigStatus const-decl "bool" key nil))
    shostak))
+ (load_key 0
+  (load_key-1 nil 3572106468
+   ("" (grind) (("1" (postpone) nil nil) ("2" (postpone) nil nil)) nil)
+   nil shostak))
  (child_if_parent 0
   (child_if_parent-1 nil 3560203723
    ("" (skosimp)

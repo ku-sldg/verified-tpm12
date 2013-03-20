@@ -95,14 +95,24 @@ pcr [HV: TYPE+] : THEORY
 
   %% Following startup clear.  Nonresettable PCRs to 0 and resettable PCRs
   %% to -1
-  pcrsReset(flags : PCR_ATTRIBUTES) : PCRVALUES =
+  pcrsReset(flags:PCR_ATTRIBUTES) : PCRVALUES =
     (LAMBDA (i:PCRINDEX) : 
       IF pcrReset(flags(i)) THEN resetOne ELSE reset ENDIF);
 
   %% Following SENTER.  Nonresettable PCRs to same and resettable PCRs to 0
-  pcrsSenter(curr : PCRVALUES, flags : PCR_ATTRIBUTES) : PCRVALUES =
+  pcrsSenter(curr:PCRVALUES,flags:PCR_ATTRIBUTES) : PCRVALUES =
     (LAMBDA (i:PCRINDEX) :
       IF pcrReset(flags(i)) THEN reset ELSE curr(i) ENDIF);
+
+  pcrsResetSelection(curr:PCRVALUES,select:PCR_SELECTION) : PCRVALUES = 
+    (LAMBDA (i:PCRINDEX) :
+      IF member(i,select) THEN reset ELSE curr(i) ENDIF);
+
+  pcrsResetSelectCorrect: THEOREM    % TODO: is this proof correct?
+   FORALL (pcrs:PCRVALUES,pm:PCR_SELECTION) : 
+     pcrsResetSelection(pcrs,pm)=
+	(LAMBDA (i:PCRINDEX) : IF member(i,pm) THEN reset ELSE pcrs(i) ENDIF)
+    
 
   %% Some common PCR flag settings
   

@@ -100,11 +100,11 @@ PermanentData[DV,KV,HV:TYPE+] : THEORY
     %% Has manufacturing defalut
 %   , restrictDelegate : TPM_CMK_DELEGATE
     %% 
-%   , tpmDAASeed : TPM_DAA_TPM_SEED
-    %% 
-%   , daaProof : (tpmNonce?)
-    %% 
-%   , daaBlobKey : (tpmKey?)
+%     , tpmDAASeed : (tpmNonce?)%TPM_DAA_TPM_SEED
+%     %% 
+%     , daaProof : (tpmNonce?)
+%     %% 
+%     , daaBlobKey : (tpmKey?)
   #];
 
   nonce:(tpmNonce?)
@@ -114,6 +114,10 @@ PermanentData[DV,KV,HV:TYPE+] : THEORY
   	       	 	     , ekReset:=nonce
 			     , ownerAuth:=tpmSecret(INVALIDAUTH)
 			     , operatorAuth:=tpmSecret(INVALIDAUTH)
-  	       	 	     , pcrAttrib := pcrInit #)
+  	       	 	     , pcrAttrib := allResetAccess% pcrInit TODO!
+% 			     , tpmDAASeed:=nonce
+% 			     , daaProof:=nonce
+% 			     , daaBlobKey:=
+			     #)
 
   END PermanentData

@@ -62,7 +62,8 @@ tpmDigest(null,clear),tpmSessKey(1,clear),clear)")
     (tpmCompositeHash? adt-recognizer-decl "[tpmData -> boolean]" data
      nil)
     (PCR_SELECTION type-eq-decl nil pcr nil)
-    (AND const-decl "[bool, bool -> bool]" booleans nil) nil
+    (AND const-decl "[bool, bool -> bool]" booleans nil)
+    (every adt-def-decl "boolean" list_adt nil)
     (PRED type-eq-decl nil defined_types nil)
     (list type-decl nil list_adt nil)
     (LOCALITY type-eq-decl nil pcr nil)

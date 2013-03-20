@@ -118,7 +118,7 @@ key [DVAL,HVAL:TYPE+] : THEORY
       tpmMigScheme(m0) : TRUE,
       tpmEKBlobActivate(k0,i0,p0) : TRUE,
       tpmEKBlobAuth(a0) : TRUE,
-      tpmNonce : TRUE,
+      tpmNonce(i0) : TRUE,
       tpmSecret(i0) : TRUE,
       tpmPCRInfoLong(lc0,lr0,sc0,sr0,dc0,dr0) : TRUE,
       tpmPubkey(k0) : TRUE,
@@ -265,7 +265,7 @@ key [DVAL,HVAL:TYPE+] : THEORY
       tpmEKBlobActivate(k0,i0,p0) : FALSE,
       tpmEKBlobAuth(a0) : FALSE,
       tpmCompositeHash(d0) : FALSE,
-      tpmNonce : FALSE,
+      tpmNonce(i0) : FALSE,
       tpmSecret(i0) : FALSE,
       tpmPCRInfoLong(lc0,lr0,sc0,sr0,dc0,dr0) : FALSE,
       tpmPCRInfoShort(ps0,l0,d0) : FALSE,
@@ -292,6 +292,7 @@ key [DVAL,HVAL:TYPE+] : THEORY
   installedOrSRK?(k:(tpmKey?),ks:KEYSET):bool =
     member(key(k),ks) OR key(k)=key(TPM_KH_SRK); 
 
+
   %% There is no magic for SRK - use the TPM_KH_SRK handle if the wrapping
   %% key is the SRK.
   addKey(k:(tpmKey?),ks:KEYSET):KEYSET = add(key(k),ks);
@@ -308,7 +309,16 @@ key [DVAL,HVAL:TYPE+] : THEORY
     THEN addKey(k,ks)
     ELSE ks
     ENDIF
- 
+
+  load_key :THEOREM FORALL(k,w:(tpmKey?),ks:KEYSET,d:PCRVALUES) :
+    loadKey(k,w,ks,d)=
+    IF member(key(w),ks)
+    THEN add(key(k),ks)
+    ELSIF key(w)=key(TPM_KH_SRK)
+    THEN add(key(k),ks)
+    ELSE ks
+    ENDIF
+
   %% Remove a key - this is not currently
   revokeKey(k:(tpmKey?),ks:KEYSET):KEYSET = remove(key(k),ks);
 

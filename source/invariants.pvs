@@ -83,12 +83,19 @@ BEGIN
 	  ABS_RevokeTrust?(c)) =>
       keys(s) = keys(executeCom(s,c));
 
+  % 1. The TPM SHALL only allow the following commands to alter the value 
+  % of TPM_STCLEAR_DATA -> PCR
+  % a. TPM_Extend
+  % b. TPM_SHA1CompleteExtend
+  % c. TPM_Startup
+  % d. TPM_PCR_Reset
   pcrs_unchanged: THEOREM 
     FORALL (s:tpmAbsState,c:tpmAbsInput) :
       not(ABS_Startup?(c) OR ABS_Init?(c) OR
 	  ABS_sinit?(c) OR 
 	  ABS_senter?(c) OR 
-	  ABS_Extend?(c)) =>
+	  ABS_Extend?(c) OR
+	  ABS_PCR_Reset?(c)) =>
       pcrs(s) = pcrs(executeCom(s,c));
 
   %% Monotonicity of locality
@@ -104,11 +111,12 @@ BEGIN
   permFlags_unchanged: THEOREM
     FORALL (s:tpmAbsState,c:tpmAbsInput) :
       not(ABS_Startup?(c) OR ABS_Init?(c) OR
+	  ABS_TakeOwnership?(c) OR
+	  ABS_OwnerClear?(c) OR 
+	  ABS_ForceClear?(c) OR
           ABS_DisableOwnerClear?(c) OR 
 	  ABS_PhysicalPresence?(c) OR 
-	  ABS_ForceClear?(c) OR
-	  ABS_OwnerClear?(c) OR 
-	  ABS_TakeOwnership?(c) OR
+	  ABS_ResetEstablishmentBit?(c) OR
 	  ABS_CreateEndorsementKeyPair?(c) OR
 	  ABS_CreateRevocableEK?(c) OR
 	  ABS_RevokeTrust?(c)) =>
@@ -235,7 +243,8 @@ BEGIN
 
   permFlags_tpmEstablished_unchanged: THEOREM
     FORALL (s:tpmAbsState,c:tpmAbsInput) :
-      not(ABS_Startup?(c) OR ABS_Init?(c)) =>
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+      	  ABS_ResetEstablishmentBit?(c)) =>
         s`permFlags`tpmEstablished = executeCom(s,c)`permFlags`tpmEstablished;
 
   permFlags_maintenanceDone_unchanged: THEOREM
@@ -303,7 +312,19 @@ BEGIN
       not(ABS_Startup?(c) OR ABS_Init?(c)) =>
         s`permData`pcrAttrib = executeCom(s,c)`permData`pcrAttrib;
 
+  %%%%% StanyData
+  stanyData_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c) OR
+      	  ABS_OwnerClear?(c) OR ABS_ForceClear?(c) OR
+      	  ABS_RevokeTrust?(c)) =>
+        stanyData(s) = stanyData(executeCom(s,c));
 
+  %%%%% StanyFlags
+  stanyFlags_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c)) =>
+        stanyFlags(s) = stanyFlags(executeCom(s,c));
 
 
   postInit_unchanged: THEOREM 
@@ -311,6 +332,23 @@ BEGIN
       not(ABS_Startup?(c) OR ABS_Init?(c)) =>
         postInitialize(stanyFlags(s)) = 
 		postInitialize(stanyFlags(executeCom(s,c)));
+
+  %%%%% StclearData
+  stclearData_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c) OR
+      	  ABS_OwnerClear?(c) OR ABS_ForceClear?(c) OR
+      	  ABS_RevokeTrust?(c)) =>
+        stclearData(s) = stclearData(executeCom(s,c));
+
+  %%%%% StclearFlags
+  stclearFlags_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c) OR
+      	  ABS_SetTempDeactivated?(c) OR
+	  ABS_DisableForceClear?(c) OR
+	  ABS_PhysicalPresence?(c)) =>
+        stclearFlags(s) = stclearFlags(executeCom(s,c));
 
   disableForceClear_unchanged: THEOREM
     FORALL (s:tpmAbsState,c:tpmAbsInput) :

@@ -35,7 +35,8 @@ data [DVAL,HVAL:TYPE+] : THEORY
     tpmMigScheme(migScheme:migrateScheme) : tpmMigScheme?
 
     %% EK type- indicates what type of information the EK's dealing with(4.11)
-    tpmEKBlobActivate(sessK:(tpmSessKey?),idDigest:(tpmDigest?),
+    tpmEKBlobActivate(sessK:(tpmSessKey?),
+	idDigest:(tpmDigest?),
 	pcrInfo:(tpmPCRInfoShort?)) : tpmEKBlobActivate?
 
     %% EK type- indicates what type of information the EK's dealing with(4.11)
@@ -49,10 +50,10 @@ data [DVAL,HVAL:TYPE+] : THEORY
 
     % TPM_COMPOSITE_HASH should be element of tpmDigest,
     % PCR_COMPOSITE : [#select:PCR_SELECTION,pcrValue:PCRVALUES#]
-    tpmCompositeHash(digest:PCR_COMPOSITE) : tpmCompositeHash?
+    tpmCompositeHash(dig:PCR_COMPOSITE) : tpmCompositeHash?
 
     %% Random value that provides protection from replay.		(5.5)
-    tpmNonce : tpmNonce?
+    tpmNonce(i:int) : tpmNonce?
 
     %% Authdata - don't know what it is yet				(5.6)
     tpmEncAuth(authData:int,crs:CRYPTOSTATUS) : tpmEncAuth?
@@ -62,7 +63,9 @@ data [DVAL,HVAL:TYPE+] : THEORY
 
     %% Provides proof that the associated public key has		(5.12)
     %% TPM Owner AuthData to be a migration key
-    tpmMigKeyAuth(key:(tpmKey?),scheme:(tpmMigScheme?),digest:(tpmDigest?),
+    tpmMigKeyAuth(key:(tpmKey?),
+	scheme:(tpmMigScheme?),
+	digest:(tpmDigest?),
 	crs:CRYPTOSTATUS) : tpmMigKeyAuth?
 
     %% Structure signed for certain commands (TPM_ReleaseTransportSigned)(5.14)
@@ -73,7 +76,7 @@ data [DVAL,HVAL:TYPE+] : THEORY
     %% TODO: This is only a stub.
     tpmPCRInfoLong(
 	  locAtCreation : LOCALITY %loc modifier when blob is created
-    	% Locality modifier required to reveal sealed data or use a key that was wrapped to PCRs
+    	% Loc modifier req to reveal sealed data or use a key wrapped to PCRs
 	% Value must not be zero (0)
 	, locAtRelease  : LOCALITY
 	% Selection of PCRs active when blob is created
@@ -82,15 +85,15 @@ data [DVAL,HVAL:TYPE+] : THEORY
 	, releasePCRSelect  : PCR_SELECTION
 	% Composite digest value of the PCR values, when the blob is created
   	, digAtCreation : (tpmCompositeHash?)
-	% Digest of PCR indices and PCR values to verify when revealing sealed data 
+	% Digest of PCR indices and values to verify when revealing sealed data 
 	% or using a key that was wrapped to PCRs
 	, digAtRelease  : (tpmCompositeHash?)
 	) : tpmPCRInfoLong?
-
+% TODO: locAtRelease = locality or selection for infoLong and infoShort
   tpmPCRInfoShort(
 	  pcrSelect : PCR_SELECTION 
 	% Selection of PCRs that specifies the digestAtRelease
-	, locAtRelease : LOCALITY_SELECTION
+	, locAtRelease : LOCALITY_SELECTION    
 	% Locality modifier required to release information
 	% must not be zero (0)
 	, digAtRelease : (tpmCompositeHash?)
@@ -103,16 +106,16 @@ data [DVAL,HVAL:TYPE+] : THEORY
     %% pcr index and values that must be present to properly unseal
     %% data.
     tpmStoredData(sealInfo:(tpmPCRInfoLong?),
-		  encData:(tpmSealedData?),
-		  crs:CRYPTOSTATUS) : tpmStoredData?
+	encData:(tpmSealedData?),
+	crs:CRYPTOSTATUS) : tpmStoredData?
 		  %% encData is the piece encrypted by the crs.
 		  
     %% Sealed Data - contains confidential info related to sealed data	(9.3)
     tpmSealedData(authData:(tpmSecret?),
-		  tpmProof:(tpmSecret?),
-		  storedDigest:(tpmDigest?), %TPM_COMPOSITE_HASH?
-		  data:tpmData,
-		  crs:CRYPTOSTATUS) : tpmSealedData?
+	tpmProof:(tpmSecret?),
+	storedDigest:(tpmDigest?), %TPM_COMPOSITE_HASH?
+	data:tpmData,
+	crs:CRYPTOSTATUS) : tpmSealedData?
     
     %% Session keys are simply symetric keys				(9.4)
     tpmSessKey(skey:KVAL,crs:CRYPTOSTATUS) : tpmSessKey?
@@ -122,14 +125,14 @@ data [DVAL,HVAL:TYPE+] : THEORY
 
     %% Assymetric keys used by the TPM - wrapped, signed, encrypted	(10.3)
     tpmKey(key:KVAL,
-	   keyUsage:KEY_USAGE,
-	   keyFlags:KEY_FLAGS,
-	   authDataUsage:AUTH_DATA_USAGE,
-	   algoParms:KEY_PARMS,
-	   PCRInfo:(tpmPCRInfoLong?),
-	   wrappingKey:KVAL,
-	   encDat:(tpmStoreAsymkey?),
-	   crs:CRYPTOSTATUS) : tpmKey?
+	keyUsage:KEY_USAGE,
+	keyFlags:KEY_FLAGS,
+	authDataUsage:AUTH_DATA_USAGE,
+	algoParms:KEY_PARMS,
+	PCRInfo:(tpmPCRInfoLong?),
+	wrappingKey:KVAL,
+	encDat:(tpmStoreAsymkey?),
+	crs:CRYPTOSTATUS) : tpmKey?
     %  tpmKey subsumes all asymmetric keys used by the TPM
     %  encrypted key: tpmKey(k,...,encrypted(public(j),clear))
     %  clear key encrypted with public j
@@ -141,25 +144,49 @@ data [DVAL,HVAL:TYPE+] : THEORY
 
     %% Store Asym Key [private key]					(10.6)
     tpmStoreAsymkey(usageAuth:(tpmSecret?),
-		    migrationAuth:(tpmSecret?),
-		    pubDataDigest:(tpmDigest?),
-		    privKey:KVAL,
-		    crs:CRYPTOSTATUS) : tpmStoreAsymkey?
+	migrationAuth:(tpmSecret?),
+	pubDataDigest:(tpmDigest?),
+	privKey:KVAL,
+	crs:CRYPTOSTATUS) : tpmStoreAsymkey?
 
     %% Migrate Asym Key							(10.8)
     tpmMigrateAsymkey(usageAuth:(tpmSecret?),
-		      pubDataDigest:(tpmDigest?),
-		      partPrivKey:(tpmKey?)) : tpmMigrateAsymkey?
+	pubDataDigest:(tpmDigest?),
+	partPrivKey:KVAL) : tpmMigrateAsymkey?
 
-    %%  Quote including a PCR digest and nonce.				(11.3)
+    %% Certified Key							(11.1)
+    tpmCertifyInfo(keyUsage:KEY_USAGE,
+	keyFlags:KEY_FLAGS,
+	authDataUsage:AUTH_DATA_USAGE,
+	algoParms:KEY_PARMS,
+	pubkeyDigest:(tpmDigest?),
+	data:(tpmNonce?),
+	parentPCRStatus:bool,
+	PCRInfo:(tpmPCRInfoLong?),
+	crs:CRYPTOSTATUS) : tpmCertifyInfo?
+    
+    %% Certified Key2							(11.2)
+    tpmCertifyInfo2(keyUsage:KEY_USAGE,
+	keyFlags:KEY_FLAGS,
+	authDataUsage:AUTH_DATA_USAGE,
+	algoParms:KEY_PARMS,
+	pubkeyDigest:(tpmDigest?),
+	data:(tpmNonce?),
+	parentPCRStatus:bool,
+	PCRInfo:(tpmPCRInfoLong?),
+	migAuth:(tpmDigest?),
+	crs:CRYPTOSTATUS) : tpmCertifyInfo2?
+
+    %% Quote including a PCR digest and nonce.				(11.3)
     tpmQuote(digest:(tpmCompositeHash?),
 	externalData:(tpmNonce?),
 	crs:CRYPTOSTATUS) : tpmQuote?
     %  PCRs are not current TPM data, so the digest is over PCR values.
     
     %% Quote the current values of a list of PCRs			(11.4)
-    tpmQuote2(infoShort:(tpmPCRInfoShort?),externalData:(tpmNonce?),crs:CRYPTOSTATUS) :
-    	tpmQuote2?
+    tpmQuote2(infoShort:(tpmPCRInfoShort?),
+	externalData:(tpmNonce?),
+	crs:CRYPTOSTATUS) : tpmQuote2?
     
     %% Provides wrapper to each type of structure that will be in use when(12.1)
     %% EK is in use
@@ -167,12 +194,15 @@ data [DVAL,HVAL:TYPE+] : THEORY
     %% blob must be tpmEKBlobAuth or tpmEKBlobActivate
 
     %% Certification request sent to Privacy CA				(12.5)
-    tpmIdContents(digest:(tpmDigest?),aik:(tpmKey?),crs:CRYPTOSTATUS) : tpmIdContents?
+    tpmIdContents(digest:(tpmDigest?),
+	aik:(tpmKey?),
+	crs:CRYPTOSTATUS) : tpmIdContents?
     %  digest should contain CA public key, name, and AIK
     
     %% Contains symmetric key to encrypt the identity credential	(12.8)
-    tpmAsymCAContents(sessK:(tpmSessKey?),idDigest:(tpmDigest?),crs:CRYPTOSTATUS) : 
-    	tpmAsymCAContents?
+    tpmAsymCAContents(sessK:(tpmSessKey?),
+	idDigest:(tpmDigest?),
+	crs:CRYPTOSTATUS) : tpmAsymCAContents?
 
     %% tpmFullQuote(cert:(tpmCertKey?),sml:list[HVAL],quote:(tpmQuote?)):tpmFullQuote?
     %  Implement as tpmAbsOutput
@@ -215,6 +245,7 @@ data [DVAL,HVAL:TYPE+] : THEORY
   EVEN:(tpmNonce?)
   ODD:(tpmNonce?)
   pcrInfoLongDefault : (tpmPCRInfoLong?)
+  pcrInfoNull : (tpmPCRInfoLong?)
   storeAsymkeyDefault : (tpmStoreAsymkey?)
 
   % Decrypting encAuth according to the ADIP indicated by authHandle
