@@ -1821,6 +1821,22 @@ tpm [ B:TYPE+ % BLOB
 		 ELSE OUT_CPUError(CPU_QUOTE_ERROR) %% TODO: Incorrect?
 		 ENDIF);
 
+  gen_quote : THEOREM
+   FORALL (state:(afterStartup?),x,y:nat) :
+    LET (a,s) = runState(
+    	      	CPU_BuildQuoteFromMem(x,y))
+		(state) IN
+    IF OUT_Quote?(s`memory(x)) AND 
+       tpmQuote?(sig(s`memory(x))) AND
+       OUT_MakeIdentity?(s`mem(y)) 
+       THEN a=OUT_FullQuote(sig(s`memory(x)),
+			idBinding(s`memory(y)),
+			CPU_SUCCESS)
+       ELSE a=OUT_CPUError(CPU_QUOTE_ERROR)
+    ENDIF
+    AND s=state;
+
+
   %% CA Command Definitions
   %% Invoke the certification authority
   CA_certify(aik:(tpmKey?),cr:(tpmIdContents?)) : State =
