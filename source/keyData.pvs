@@ -81,6 +81,9 @@ keydata : THEORY
   BEGIN 
     migrate : migrate?
     rewrap : rewrap?
+    maint : maint?
+    restrictMigrate : restrictMigrate?
+    restrictApprove : restrictApprove?
   END migrateScheme;
 
   %% Type indicating crypographic status - clear, encrypted, signed, wrapped,

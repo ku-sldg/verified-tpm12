@@ -98,7 +98,7 @@ PermanentData[DV,KV,HV:TYPE+] : THEORY
     %% Manufacturing default 0
 %   , noOwnerNVWrite : int
     %% Has manufacturing defalut
-%   , restrictDelegate : TPM_CMK_DELEGATE
+  , restrictDelegate : (tpmCMKDelegate?)
     %% 
 %     , tpmDAASeed : (tpmNonce?)%TPM_DAA_TPM_SEED
 %     %% 
@@ -107,14 +107,12 @@ PermanentData[DV,KV,HV:TYPE+] : THEORY
 %     , daaBlobKey : (tpmKey?)
   #];
 
-  nonce:(tpmNonce?)
-  INVALIDPROOF:nat
-  INVALIDAUTH:nat
   permDataInit : PermData = (# tpmProof:=tpmSecret(INVALIDPROOF)
-  	       	 	     , ekReset:=nonce
+  	       	 	     , ekReset:=nonceInit
 			     , ownerAuth:=tpmSecret(INVALIDAUTH)
 			     , operatorAuth:=tpmSecret(INVALIDAUTH)
   	       	 	     , pcrAttrib := allResetAccess% pcrInit TODO!
+			     , restrictDelegate := tpmCMKDelegateDefault
 % 			     , tpmDAASeed:=nonce
 % 			     , daaProof:=nonce
 % 			     , daaBlobKey:=
