@@ -33,28 +33,23 @@
 %%  4 = "bad quote parts"
 %%  5 = "Clear Disabled"
 
-tpm [ B:TYPE+ % BLOB
-      , HV:TYPE+ % Hash value
-      , hash:[B->HV] % Hash function
-%      , K:TYPE+ % Key
-     ] : THEORY
+tpm[HV:TYPE+] : THEORY
 
   BEGIN
 
-  ASSUMING
-  % Assume that different blobs always have different hashes
-    unique_hash: ASSUMPTION
-      FORALL (b0,b1:B) : hash(b0)=hash(b1) iff b0=b1;
-  ENDASSUMING
+%   ASSUMING
+%   % Assume that different blobs always have different hashes
+%     unique_hash: ASSUMPTION
+%       FORALL (b0,b1:B) : hash(b0)=hash(b1) iff b0=b1;
+%   ENDASSUMING
 
   K : TYPE = nat;
-    
-  IMPORTING ReturnCodes;
-  IMPORTING startupData[B,K,HV];
 
-  HMAC(data:tpmData,secret:(tpmSecret?)) : (tpmDigest?)
-  SHA1(data:tpmData) : (tpmDigest?)
-  OAEPdecode(d:(tpmXOR?)) : (OAEP?) = a(d)
+  IMPORTING ReturnCodes;
+  IMPORTING startupData[K,HV];
+
+  OAEPdecode(d:(tpmXOR?)) : tpmData = a(d)
+
 
   %% State monad output type
   tpmAbsOutput : DATATYPE
@@ -106,10 +101,10 @@ tpm [ B:TYPE+ % BLOB
     	OUT_AuthorizeMigrationKey?
     OUT_MigrateKey(outData:tpmData,a:authOut,m:ReturnCode) : OUT_MigrateKey?
     OUT_CMK_SetRestrictions(a:authOut,m:ReturnCode) : OUT_CMK_SetRestrictions?
-    OUT_CMK_ApproveMA(outData:(tpmDigest?),a:authOut,m:ReturnCode) : 
+    OUT_CMK_ApproveMA(outData:tpmDigest,a:authOut,m:ReturnCode) : 
         OUT_CMK_ApproveMA?
     OUT_CMK_CreateKey(wk:(tpmKey?),a:authOut,m:ReturnCode) : OUT_CMK_CreateKey?
-    OUT_CMK_CreateTicket(sigTic:(tpmDigest?),a:authOut,m:ReturnCode) : 
+    OUT_CMK_CreateTicket(sigTic:tpmDigest,a:authOut,m:ReturnCode) : 
         OUT_CMK_CreateTicket?
     OUT_CMK_CreateBlob(random:int,data:tpmData,a:authOut,m:ReturnCode) : 
         OUT_CMK_CreateBlob?
@@ -211,8 +206,9 @@ tpm [ B:TYPE+ % BLOB
     ABS_CMK_CreateTicket(verifKey:(tpmPubkey?),signedData:(tpmDigest?),
         sigVal:tpmData,i:authIn) : ABS_CMK_CreateTicket?
     ABS_CMK_CreateBlob(p:(tpmKey?),t:(tpmMigScheme?),mkAuth:(tpmMigKeyAuth?),
-        psk:(tpmDigest?),msaList:(tpmMSAComposite?),restrTicket:tpmData,
-        sigTicket:tpmData,encData:tpmData,i:authIn) : ABS_CMK_CreateBlob?
+        psk:(tpmDigest?),msaList:(tpmMSAComposite?),restrTicket:(tpmCMKAuth?),
+        sigTicket:(tpmDigest?),encData:(tpmStoreAsymkey?),i:authIn) : 
+	ABS_CMK_CreateBlob?
     ABS_CMK_ConvertMigration(p:(tpmKey?),restrTick:(tpmCMKAuth?),
         sigTick:(tpmDigest?),mk:(tpmKey?),msaList:(tpmMSAComposite?),rand:int,
         i:authIn) : ABS_CMK_ConvertMigration?
@@ -261,10 +257,12 @@ tpm [ B:TYPE+ % BLOB
   END tpmAbsInput;
 
   %% sinit blob instance for measurement
-  sinit : B;
+  %sinit : B;
+  sinitHash : HV;
 
   %% mle blob instance for measurement
-  mle : B;
+  %mle : B;
+  mleHash : HV;
 
   %% random number
   RAND : RNG;
@@ -835,7 +833,7 @@ tpm [ B:TYPE+ % BLOB
 			      clear) IN					% 7
 	     % decrypting encAuth according to the ADIP indicated by authHandle
 	 LET a1=decryptADIP(enc,authHandle(a)), % TODO: incorrect	% 12
-	     h3=tpmDigest(cons(s1,null),clear) IN %TODO: SHA1(s1)	% 14c
+	     h3:(tpmDigest?)=SHA1(s1) IN	  			% 14c
     	 LET S3=tpmSealedData(a1,			 		% 14e
 			      s`permData`tpmProof,			% 14b
 			      h3,					% 14d
@@ -866,7 +864,7 @@ tpm [ B:TYPE+ % BLOB
     ELSIF not crs(d)=clear						% 5
        THEN OUT_CPUError(CPU_DECRYPT_ERROR)
     ELSIF not(tpmProof(d1)=tpmProof(s`permData) AND			% 6b
-       tpmDigest(cons(S2,null),clear)=storedDigest(d1))			% 6e,f
+       SHA1(S2)=storedDigest(d1))					% 6e,f
        % TODO: 6g,
        THEN OUT_Error(TPM_NOTSEALED_BLOB)				% 6h
     ELSIF not locAtRelease(sealInfo(S2))=localityModifier(s`stanyFlags) % 7biii
@@ -921,7 +919,6 @@ tpm [ B:TYPE+ % BLOB
     ELSE TRUE
     ENDIF
 
-
   createWrapKey?(p,k:(tpmKey?)):bool = 
     storage?(keyUsage(p)) AND						% 4
     IF migratable(keyFlags(p)) AND not(migratable(keyFlags(k)))		% 5
@@ -938,9 +935,9 @@ tpm [ B:TYPE+ % BLOB
     %validate the session type for p is OSAP	     	   		% 2
     IF not createWrapKey?(p,k)				    		% 4,5,6
        THEN s
-    ELSIF checkFIPS?(s,k)						% 7
+    ELSIF not checkFIPS?(s,k)					% 7
        THEN s
-    ELSIF checkKey?(k)							% 8
+    ELSIF not checkKey?(k)						% 8
        THEN s
     % Determine version of key						% 9
     ELSE genKeyState(s)
@@ -953,9 +950,9 @@ tpm [ B:TYPE+ % BLOB
     %validate the session type for p is OSAP	     	   		% 2
     IF not createWrapKey?(p,k)				    		% 4,5,6
        THEN OUT_Error(TPM_INVALID_KEYUSAGE)
-    ELSIF checkFIPS?(s,k)	%TODO NOT?					% 7
+    ELSIF not checkFIPS?(s,k)						% 7
        THEN OUT_Error(TPM_NOTFIPS)
-    ELSIF checkKey?(k)		%TODO NOT?					% 8
+    ELSIF not checkKey?(k)						% 8
        THEN OUT_Error(TPM_BAD_KEY_PROPERTY)
     % determine version of key						% 9
     ELSE 
@@ -1069,7 +1066,7 @@ tpm [ B:TYPE+ % BLOB
     %TODO: If specified, validate any locality requests			% 4aii
     ELSE LET aOut:authOut=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
 			resAuth:=usageAuth(encDat(k))#),
-	     pubKey=tpmPubkey(key(k)) IN
+	     pubKey=tpmPubkey(algoParms(k),key(k)) IN
     	 OUT_GetPubKey(pubKey,aOut,TPM_SUCCESS)				% 5
     ENDIF;
     
@@ -1094,7 +1091,7 @@ tpm [ B:TYPE+ % BLOB
 % 	LET a1=decryptADIP(encAuth,authHandle(a)),			% 11
 % 	    % TODO: 11 a,b, 13
 % 	    % TODO: o1=decrypt(,inData)					% 14
-% 	    h3=tpmDigest(cons(S1,null),clear) IN			% 15c
+% 	    h3=SHA1(S1) IN						% 15c
 % 	LET S2=tpmSealedData(a1,					% 10,15e
 % 	    		     s`permData`tpmProof,			% 15b
 % 			     h3,					% 15d
@@ -1104,10 +1101,7 @@ tpm [ B:TYPE+ % BLOB
 			     
 
   checkMigKeyAuth?(s:tpmAbsState,a:(tpmMigKeyAuth?)):bool =		% 5
-    digest(a)=tpmDigest(cons(key(a),
-			     cons(scheme(a),
-				  cons(s`permData`tpmProof,
-				       null))),clear)
+    digest(a)=SHA1(concat(key(a),concat(scheme(a),s`permData`tpmProof)))
   
   createMigBlob?(s:tpmAbsState,p:(tpmKey?),m:migrateScheme,a:(tpmMigKeyAuth?),
 	e:tpmData) : bool = 
@@ -1117,7 +1111,7 @@ tpm [ B:TYPE+ % BLOB
     CASES m OF
     	  migrate : TRUE,
 	  rewrap  : TRUE
-	  %ELSE : FALSE							% 8
+	  ELSE FALSE							% 8
     ENDCASES	
 
   createMigBlobOut(s:tpmAbsState,p:(tpmKey?),migType:migrateScheme,
@@ -1194,8 +1188,8 @@ tpm [ B:TYPE+ % BLOB
     	 OUT_AuthorizeMigrationKey(
 		tpmMigKeyAuth(migKey,					% 3,5
 			migScheme,					% 6
-			tpmDigest(cons(migKey,cons(migScheme,		% 7,8,9
-				cons(s`permData`tpmProof,null))),clear),
+			SHA1(concat(migKey,
+				concat(migScheme,s`permData`tpmProof))),% 7,8,9
 			clear),
 		(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
 			resAuth:=ownerAuth(a)#),
@@ -1254,12 +1248,12 @@ tpm [ B:TYPE+ % BLOB
     LET M2=tpmCMKMAApproval(migAuth),	     	 			% 2
 	a=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
 		resAuth:=ownerAuth(i)#) IN
-    OUT_CMK_ApproveMA(HMAC(M2,s`permData`tpmProof),a,TPM_SUCCESS);	% 3
+    OUT_CMK_ApproveMA(tpmHMAC(M2,s`permData`tpmProof),a,TPM_SUCCESS);	% 3
 
-
-  validateMigrateAuthority?(s:tpmAbsState,m:(tpmDigest?)) : bool = 
-    LET M1=tpmCMKMAApproval(m) IN					% 8ai
-    m=HMAC(M1,s`permData`tpmProof)					% 8b
+%TODO!!
+  validateMigrateAuthority?(s:tpmAbsState,m:(tpmDigest?)) : bool % = 
+%     LET M1=tpmCMKMAApproval(m) IN					% 8ai
+%     m=tpmHMAC(M1,s`permData`tpmProof)					% 8b
 
   validateKeyParams?(k:(tpmKey?)) : bool =
     not(identity?(keyUsage(k)) or authChange?(keyUsage(k)))		% 9
@@ -1300,7 +1294,7 @@ tpm [ B:TYPE+ % BLOB
 					pcrValue:=s`pcrs#)),		% 18c
 				digAtRelease(PCRInfo(k))),
 	     M2=tpmCMKMigAuth(m,					% 17di
-             		      SHA1(tpmPubkey(key(k)))) IN		% 17dii
+             		      SHA1(tpmPubkey(algoParms(k),key(k)))) IN	% 17dii
 	 LET enc=tpmStoreAsymkey(DU1,					% 17a
 	     			 %HMAC(M2,s`permData`tpmProof),		% 17e
 				 tpmSecret(1),
@@ -1320,35 +1314,35 @@ tpm [ B:TYPE+ % BLOB
 	 OUT_CMK_CreateKey(wrappedKey,ao,TPM_SUCCESS)
     ENDIF;
 
-  validateKeyAlgo?(k:(tpmKey?)) : bool = 
+  validateKeyAlgo?(k:(tpmPubkey?)) : bool = 
     RSA?(algoId(algoParms(k)))
        %AND NONE?(encScheme(algoParms(verifKey)))
        %AND (SHA1?(sigScheme(algoParms(verifKey))) OR 
        % INFO?(sigScheme(algoParms(verifKey))))
   
-  CMKCreateTicketOut?(k:(tpmKey?),signedData:(tpmDigest?)) : bool = 
+  CMKCreateTicketOut?(k:(tpmPubkey?),signedData:(tpmDigest?)) : bool = 
     validateKeyAlgo?(k) AND
-    checkSig(key(k),signedData)
+    checkSig(pubKey(k),signedData)
     
-  CMKCreateTicketOut(s:tpmAbsState,verifKey:(tpmKey?),signedData:(tpmDigest?),
-    sigVal:tpmData,i:authIn) : tpmAbsOutput = 
+  CMKCreateTicketOut(s:tpmAbsState,verifKey:(tpmPubkey?),signedData:(tpmDigest?)
+    ,sigVal:tpmData,i:authIn) : tpmAbsOutput = 
     %TODO Validate Owner authentication					% 1
     IF not(validateKeyAlgo?(verifKey))					% 2
     THEN OUT_Error(TPM_BAD_KEY_PROPERTY)	%TODO: CHECK
-    ELSIF not(checkSig(key(verifKey),signedData))			% 3
+    ELSIF not(checkSig(pubKey(verifKey),signedData))			% 3
     THEN OUT_Error(TPM_BAD_SIGNATURE)
     ELSE LET M2=tpmCMKSigTicket(SHA1(verifKey),signedData),		% 4
     	     a=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,%TODO: FLAG?
-			resAuth:=usageAuth(ownerAuth(i))#) IN
-    	 OUT_CMK_CreateTicket(HMAC(M2,s`permData`tpmProof),a,TPM_SUCCESS)% 5,6
+			resAuth:=ownerAuth(i)#) IN%TODO: CHANGED... DOUBLE CHECK
+    	 OUT_CMK_CreateTicket(tpmHMAC(M2,s`permData`tpmProof),a,TPM_SUCCESS)%5,6
     ENDIF;
 
     %encData:(tpmStoreAsymkey?)
   CMKCreateBlobOut2(s:tpmAbsState,p:(tpmKey?),t:(tpmMigScheme?),
       mkAuth:(tpmMigKeyAuth?),psk:(tpmDigest?),msaList:(tpmMSAComposite?),
-      resTic:(tpmCMKAuth?),sigTic:(tpmDigest?),encData:tpmData,i:authIn) : 
-      tpmAbsOutput =
-    LET d1=decrypt(key(p),encData) IN					% 4
+      resTic:(tpmCMKAuth?),sigTic:(tpmDigest?),encData:(tpmStoreAsymkey?),
+      i:authIn) : tpmAbsOutput =
+    LET d1:(tpmStoreAsymkey?)=decrypt(key(p),encData) IN		% 4
     LET K1=privKey(d1),	   						% 11a
     	K2=privKey(d1) IN % TODO					% 11b
     LET M1=tpmMigrateAsymkey(usageAuth(d1),pubDataDigest(d1),K2) IN	% 12
@@ -1358,13 +1352,11 @@ tpm [ B:TYPE+ % BLOB
 			resAuth:=usageAuth(encDat(p))#) IN    
     OUT_CMK_CreateBlob(r1,tpmXOR(o1,r1,encrypted(key(key(mkAuth)),clear))% 15-17
 		,a,TPM_SUCCESS);
-    
-    
 
   CMKCreateBlobOut(s:tpmAbsState,p:(tpmKey?),t:(tpmMigScheme?),
       mkAuth:(tpmMigKeyAuth?),psk:(tpmDigest?),msaList:(tpmMSAComposite?),
-      resTic:(tpmCMKAuth?),sigTic:(tpmDigest?),encData:tpmData,i:authIn) : 
-      tpmAbsOutput =
+      resTic:(tpmCMKAuth?),sigTic:(tpmDigest?),encData:(tpmStoreAsymkey?),
+      i:authIn) : tpmAbsOutput =
     %TODO: Validate ownerAuth(i) authorizes use of key pointed to by p	% 1
     %TPM MAY DO FOLLOWING: ???
     LET d1=decrypt(key(p),encData),					% 4
@@ -1373,10 +1365,11 @@ tpm [ B:TYPE+ % BLOB
     THEN OUT_Error(TPM_BAD_MODE)
     ELSIF migratable(keyFlags(p))					% 3
     THEN OUT_Error(TPM_BAD_KEY_PROPERTY)
-    ELSIF % TODO % 5
-    	  % TODO % 6 Payload...
-	  migrationAuth(d1)/=HMAC(M2,s`permData`tpmProof)		% 7b
-    THEN OUT_Error(TPM_MA_AUTHORITY)
+%TODO!!
+%     ELSIF % TODO % 5
+%     	  % TODO % 6 Payload...
+% 	  migrationAuth(d1)/=tpmHMAC(M2,s`permData`tpmProof)		% 7b
+%     THEN OUT_Error(TPM_MA_AUTHORITY)
     ELSE CASES migScheme(scheme(mkAuth)) OF
     	   restrictMigrate : 						% 8
 	     %TODO: 8ai
@@ -1400,8 +1393,8 @@ tpm [ B:TYPE+ % BLOB
     %TODO: Validate authdata to use key in p				% 1
     LET d1=decrypt(key(p),encDat(mk)) IN  				% 3
     LET o1=tpmXOR(d1,RAND,clear) IN    					% 4
-    LET m1=OAEPdecode(o1),						% 5
-	migratedPubKey=tpmPubkey(key(mk)) IN				% 6
+    LET m1=OAEPdecode(o1), %TODO TCC GENERATED. FIGURE OUT OAEP DECODE	% 5
+	migratedPubKey=tpmPubkey(algoParms(mk),key(mk)) IN		% 6
     LET k1=partPrivKey(m(m1)), %todo: should be seed & partprivkey	% 7
         M2=tpmCMKMigAuth(SHA1(msaList),SHA1(migratedPubKey)) IN		% 18
     LET d2=tpmStoreAsymkey(usageAuth(m(m1)),		     		% 8b
@@ -1410,7 +1403,7 @@ tpm [ B:TYPE+ % BLOB
 		%TODO: FIX THIS ^^^^ IT AIN'T RIGHT!
 		pubDataDigest(m(m1)),k1,				% 8c,a
 		encrypted(key(p),clear)) IN				% 20
-    LET parentPubKey=tpmPubkey(key(p)) IN			   	% 12
+    LET parentPubKey=tpmPubkey(algoParms(p),key(p)) IN		   	% 12
     IF not(storage?(keyUsage(p)))					% 2
     THEN OUT_Error(TPM_INVALID_KEYUSAGE)
     ELSIF pHash(m1)/=SHA1(concat(SHA1(msaList),SHA1(migratedPubKey)))	% 6a
@@ -1469,7 +1462,7 @@ tpm [ B:TYPE+ % BLOB
     % Validate k parameters for key description?			% 2
 %     ELSIF RSA?(algoId(algoParms(k))) AND length(k)<2048		% 2b
 %     THEN OUT_Error(TPM
-    ELSE LET checksum=tpmDigest(cons(k,cons(r,null)),clear) IN		% 4
+    ELSE LET checksum=SHA1(concat(k,r)) IN				% 4
     	 OUT_CreateEndorsementKeyPair(k,checksum,TPM_SUCCESS)		% 3
     ENDIF;
 
@@ -1492,7 +1485,7 @@ tpm [ B:TYPE+ % BLOB
     ELSE LET o1=createEKPairOut(s,r,k) IN				% 2
     	 CASES o1 OF
 	 OUT_CreateEndorsementKeyPair(e,c,m) :
-	 	OUT_CreateRevocableEK(tpmPubkey(key(e)),c,		% 4
+	 	OUT_CreateRevocableEK(tpmPubkey(algoParms(e),key(e)),c,	% 4
 			IF genReset THEN tpmNonce(RAND)			% 3a
 			   ELSE i ENDIF,				% 3b
 			TPM_SUCCESS)
@@ -1516,8 +1509,8 @@ tpm [ B:TYPE+ % BLOB
 		  `ek:=tpmKey(0,keyUsage(s`ek),keyFlags(s`ek),		% 8
 			      authDataUsage(s`ek),algoParms(s`ek),
 			      PCRInfo(s`ek),wrappingKey(s`ek),
-			      encDat(s`ek),crs(s`ek))
-		]
+		 	      encDat(s`ek),crs(s`ek))
+		 ]
 	% TODO: invalidate any internal state associated with EK	% 8
     ELSE s
     ENDIF;
@@ -1541,7 +1534,7 @@ tpm [ B:TYPE+ % BLOB
     ELSIF not goodkey?(key(ek(s)))					% 2
     THEN OUT_Error(TPM_NO_ENDORSEMENT)
     ELSE LET pubEK=publicKey(ek(s)) IN
-    	 LET checksum=tpmDigest(cons(pubEK,cons(n,null)),clear) IN	% 3
+    	 LET checksum=SHA1(concat(pubEK,n)) IN				% 3
     	 OUT_ReadPubek(pubEK,checksum,TPM_SUCCESS)			% 4
     ENDIF;
 
@@ -1551,9 +1544,9 @@ tpm [ B:TYPE+ % BLOB
     LET ao=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
 		resAuth:=ownerAuth(a)#) IN
     IF key(k)=ekKeyVal							% 2
-    THEN OUT_OwnerReadInternalPub(tpmPubkey(ekKeyVal),ao,TPM_SUCCESS)
+    THEN OUT_OwnerReadInternalPub(tpmPubkey(algoParms(k),key(k)),ao,TPM_SUCCESS)
     ELSIF key(k)=srkKeyVal						% 3  
-    THEN OUT_OwnerReadInternalPub(tpmPubkey(srkKeyVal),ao,TPM_SUCCESS)
+    THEN OUT_OwnerReadInternalPub(tpmPubkey(algoParms(k),key(k)),ao,TPM_SUCCESS)
     ELSE OUT_Error(TPM_BAD_PARAMETER)					% 4
     ENDIF;  
 
@@ -1623,7 +1616,7 @@ tpm [ B:TYPE+ % BLOB
   activateIdentity?(s:tpmAbsState,i:(tpmKey?),b:(activateIdentityBlob?)) : bool=
     %Validate owners AuthData using authHandle(a1) to execute cmd & params  % 1
     %Use authHandle(a2) to validate the AuthData to execute cmd& params	% 2
-    LET h1=tpmDigest(cons(tpmPubkey(key(i)),null),clear),		% 4
+    LET h1=tpmDigest(cons(tpmPubkey(algoParms(i),key(i)),null),clear),	% 4
     	b1=decrypt(private(ekVal),b) IN					% 5
     identity?(keyUsage(i)) AND
 	CASES b1 OF			  				% 6
@@ -1656,7 +1649,8 @@ tpm [ B:TYPE+ % BLOB
 			resAuth:=ownerAuth(i2)#) IN
     IF not identity?(keyUsage(idKey)) 
     THEN OUT_Error(TPM_BAD_PARAMETER)					% 3
-    ELSE LET h1=tpmDigest(cons(tpmPubkey(key(idKey)),null),clear),	% 4
+    ELSE LET h1=tpmDigest(cons(tpmPubkey(algoParms(idKey),key(idKey)),
+							null),clear),	% 4
     	     b1=decrypt(private(ekVal),b) IN				% 5
 	 CASES b1 OF			  				% 6
 	 tpmAsymCAContents(k,d,crs) : 					% 6bi
@@ -1691,7 +1685,8 @@ tpm [ B:TYPE+ % BLOB
     (0<=pcrNum<=23) AND member(L1,P1)
 
   %% Extend operation on TPM state
-  extendState(s:tpmAbsState,pcrNum:PCRINDEX,inDigest:HV) : tpmAbsState =
+%TODO!!
+  extendState(s:tpmAbsState,pcrNum:PCRINDEX,inDigest:HV) :tpmAbsState=
     IF extend?(s,pcrNum,inDigest)
     THEN s WITH [`pcrs := pcrsExtend(pcrs(s),pcrNum,inDigest)]
     ELSE s
@@ -1997,6 +1992,7 @@ tpm [ B:TYPE+ % BLOB
       ABS_ResetEstablishmentBit: resetEstablishmentBitState(s),
       ABS_CreateWrapKey(p,k,u,m,a) : createWrapKeyState(s,p,k,u,m,a),
       ABS_LoadKey2(p,k,a): loadKey2State(s,p,k,a), 
+      ABS_CMK_SetRestrictions(r,i) : CMKSetRestrState(s,r,i),
       %ABS_CertifyKey(c,k,n,i1,i2) : certifyKeyState(s,c,k,n,i1,i2),
       ABS_CreateEndorsementKeyPair(n,k) : createEKPairState(s,n,k),
       ABS_CreateRevocableEK(r,k,g,i) : createRevEKState(s,r,k,g,i),
@@ -2007,8 +2003,8 @@ tpm [ B:TYPE+ % BLOB
       ABS_FlushSpecific(h) : flushSpecificState(s,h),
       ABS_certify(k,cr) : certState(s,k,cr),
       ABS_senter : 
-        changeLocalityState(extendState(pcrsResetSenterState(s),0,hash(sinit))),
-      ABS_sinit : changeLocalityState(extendState(s,0,hash(mle))),
+        changeLocalityState(extendState(pcrsResetSenterState(s),0,sinitHash)),
+      ABS_sinit : changeLocalityState(extendState(s,0,mleHash)),
       ABS_save(i,v) : saveToMemState(s,i,v)
       ELSE s
   ENDCASES;
@@ -2055,6 +2051,14 @@ tpm [ B:TYPE+ % BLOB
       ABS_ConvertMigrationBlob(p,d,r,a) : convertMigBlobOut(s,p,d,r,a),
       ABS_AuthorizeMigrationKey(mk,ms,a) : authorizeMigKeyOut(s,mk,ms,a),
       ABS_MigrateKey(mk,pubKey,data,a) : migrateKeyOut(s,mk,pubKey,data,a),
+      ABS_CMK_SetRestrictions(r,i) : CMKSetRestrOut(s,r,i),
+      ABS_CMK_ApproveMA(m,i) : CMKApproveMAOut(s,m,i),
+      ABS_CMK_CreateKey(p,d,k,m,a,i) : CMKCreateKeyOut(s,p,d,k,m,a,i),
+      ABS_CMK_CreateTicket(k,a,v,i) : CMKCreateTicketOut(s,k,a,v,i),
+      ABS_CMK_CreateBlob(p,t,m,k,l,r,d,e,i) : 
+      		CMKCreateBlobOut(s,p,t,m,k,l,r,d,e,i),
+      ABS_CMK_ConvertMigration(p,r,t,k,l,d,i) : 
+    		CMKConvertMigrationOut(s,p,r,t,k,l,d,i),
       ABS_Sign(k,a) : signOut(s,k,a),
       %ABS_CertifyKey(c,k,n,i1,i2) : certifyKeyOut(s,c,k,n,i1,i2),
       ABS_CreateEndorsementKeyPair(n,k) : createEKPairOut(s,n,k),
@@ -2268,8 +2272,8 @@ tpm [ B:TYPE+ % BLOB
       IN s = changeLocalityState(
                changeLocalityState(
                  extendState(
-                   extendState(pcrsResetSenterState(tpmStartup),0,hash(sinit)),
-			0,hash(mle))))
+                   extendState(pcrsResetSenterState(tpmStartup),0,sinitHash),
+			0,mleHash)))
       AND a = OUT_Error(TPM_SUCCESS)
 
   % grind, decompose-equality
@@ -2665,9 +2669,8 @@ tpm [ B:TYPE+ % BLOB
 	   a=OUT_Seal(tpmStoredData(sealInfo,
 			tpmSealedData(a1,
 				state`permData`tpmProof,
-				tpmDigest(cons(tpmStoredData(sealInfo,
-							tpmNull,clear),
-						null),clear),
+				SHA1(tpmStoredData(sealInfo,
+							tpmNull,clear)),
 				d,encrypted(key(k),clear)),
 			clear),
 		(#nonceEven:=EVEN,nonceOdd:=ODD,
@@ -2694,7 +2697,7 @@ tpm [ B:TYPE+ % BLOB
       ELSIF not(clear?(crs(decrypt(key(p),d))))
       	 THEN a=OUT_CPUError(CPU_DECRYPT_ERROR) %  TODO: correct?
       ELSIF not(tpmProof(encData(d))=s`permData`tpmProof AND 
-	    storedDigest(encData(d))=tpmDigest(cons(S2,null),clear))
+	    storedDigest(encData(d))=SHA1(S2))
 	 THEN a=OUT_Error(TPM_NOTSEALED_BLOB) 
       ELSIF not(locAtRelease(sealInfo(S2))=s`stanyFlags`localityModifier)
 	 THEN a=OUT_Error(TPM_BAD_LOCALITY)
@@ -2752,21 +2755,24 @@ tpm [ B:TYPE+ % BLOB
   Tspi_Data_Bind(k:(tpmKey?),d:tpmData) : State = 
      output(LAMBDA (s:tpmAbsState): outputCom(s,ABS_Data_Bind(k,d)));
 
+%   dataBindOut(s:tpmAbsState,k:(tpmKey?),d:tpmData) : tpmAbsOutput = 
+%     OUT_Data_Bind(tpmBoundData(d,encrypted(key(k),clear)),CPU_SUCCESS);
+
+
   %% UnBind an encrypted blob successfully
   unBind_prev_post: THEOREM 
-    FORALL (state:(afterStartup?),d:tpmData,p,k:(tpmKey?),a:authIn) : 
+    FORALL (state:(afterStartup?),d:tpmData,k:(tpmKey?),a:authIn) : 
       LET (a,s) = runState(
 		  Tspi_Data_Bind(k,d)
 		  >>= LAMBDA (a:tpmAbsOutput) : 
 		      CASES a OF
-		        OUT_Data_Bind(d,m) : TPM_UnBind(k,d,a) 
+		        OUT_Data_Bind(d1,m) : TPM_UnBind(k,d1,a) 
 			ELSE TPM_Noop(a) 
 		      ENDCASES)
  		  (state) IN 
-	  tpmBoundData?(d) AND unBind?(k) =>
+	  unBind?(k) =>
 	  LET b=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
-			resAuth:=usageAuth(encDat(k))#)
-	      IN 
+			resAuth:=usageAuth(encDat(k))#) IN 
 	  a = OUT_UnBind(d,b,TPM_SUCCESS) 
 	  AND s = state
 
@@ -3005,7 +3011,7 @@ tpm [ B:TYPE+ % BLOB
     IF getPubKey?(state,k)
     THEN LET aOut:authOut=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
 		       resAuth:=usageAuth(encDat(k))#) IN
-	a=OUT_GetPubKey(tpmPubkey(key(k)),aOut,TPM_SUCCESS)
+	a=OUT_GetPubKey(tpmPubkey(algoParms(k),key(k)),aOut,TPM_SUCCESS)
     ELSIF not never?(authDataUsage(k)) 
     THEN a=OUT_Error(TPM_AUTHFAIL) 
     ELSIF s`permFlags`readSRKPub=FALSE
@@ -3046,9 +3052,11 @@ tpm [ B:TYPE+ % BLOB
     	     d1:(tpmKey?)=decrypt(key(pk),d) IN
 	 CASES m OF
 	 migrate : a=OUT_CreateMigrationBlob(RAND,
-				tpmMigrateAsymkey(usageAuth(encDat(d1)),
-					pubDataDigest(encDat(d1)),
-					privKey(encDat(d1))),
+				tpmXOR(OAEP(tpmMigrateAsymkey(usageAuth(encDat(d1)),
+						pubDataDigest(encDat(d1)),
+						privKey(encDat(d1))),
+					    migrationAuth(encDat(d1)),privKey(encDat(d1))),
+				       RAND,encrypted(key(key(mka)),clear)),
 				a1,a2,TPM_SUCCESS),
 	 rewrap  : a=OUT_CreateMigrationBlob(0,
 				CASES d OF
@@ -3056,6 +3064,7 @@ tpm [ B:TYPE+ % BLOB
 				    tpmKey(k,u,f,a,ap,p,key(key(mka)),e,c)
 				ENDCASES,
 		     		a1,a2,TPM_SUCCESS)
+	 ELSE a=OUT_Error(TPM_BAD_PARAMETER)
 	 ENDCASES	
     ELSIF not storage?(keyUsage(pk))
     THEN a=OUT_Error(TPM_INVALID_KEYUSAGE)
@@ -3103,8 +3112,7 @@ tpm [ B:TYPE+ % BLOB
 	       (state) IN
       a=OUT_AuthorizeMigrationKey(
 		tpmMigKeyAuth(k,scheme,
-			tpmDigest(cons(k,cons(scheme,cons(s`permData`tpmProof,
-							null))),clear),
+			SHA1(concat(k,concat(scheme,s`permData`tpmProof))),
 			clear),
 		(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
 			resAuth:=ownerAuth(ai)#),
@@ -3130,6 +3138,7 @@ tpm [ B:TYPE+ % BLOB
     ENDIF
     AND s=state;
 
+  %TODO: CMK PROOFS
   
   %% Generate and output a signature
   TPM_Sign(k:(tpmKey?),areaToSign:tpmData) : State = 
@@ -3171,7 +3180,7 @@ tpm [ B:TYPE+ % BLOB
 		(state) IN
     IF key(ek(state))=badkey 
     THEN a=OUT_CreateEndorsementKeyPair(k,
-		tpmDigest(cons(k,cons(n,null)),clear),TPM_SUCCESS) AND
+		SHA1(concat(k,n)),TPM_SUCCESS) AND
 	 s=state WITH [`ek := privateKey(k),
       	     	       `permFlags(CEKPUsed) := TRUE,
 		       `permFlags(enableRevokeEK) := FALSE]
@@ -3191,8 +3200,8 @@ tpm [ B:TYPE+ % BLOB
       	  	  TPM_CreateRevocableEK(a,k,g,i))
 		  (state) IN
     IF key(ek(state)) = badkey
-    THEN a=OUT_CreateRevocableEK(tpmPubkey(key(k)),
-				tpmDigest(cons(k,cons(a,null)),clear),
+    THEN a=OUT_CreateRevocableEK(tpmPubkey(algoParms(k),key(k)),
+				SHA1(concat(k,a)),
 				s`permData`ekReset,
 				TPM_SUCCESS) AND
 	 s=state WITH [`ek := privateKey(k),
@@ -3253,7 +3262,7 @@ tpm [ B:TYPE+ % BLOB
     a=IF readPubek?(state,n)
       THEN LET pubEndoK=ek(state) IN
       	   OUT_ReadPubek(pubEndoK,
-		tpmDigest(cons(pubEndoK,cons(n,null)),clear),
+		SHA1(concat(pubEndoK,n)),
 		TPM_SUCCESS)
       ELSIF not state`permFlags`readPubek
       THEN OUT_Error(TPM_DISABLED_CMD)
@@ -3295,10 +3304,9 @@ tpm [ B:TYPE+ % BLOB
 		  (state) IN
       LET ao=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
 		resAuth:=ownerAuth(ai)#) IN
-      IF key(k)=ekKeyVal
-      THEN a=OUT_OwnerReadInternalPub(tpmPubkey(ekKeyVal),ao,TPM_SUCCESS)
-      ELSIF key(k)=srkKeyVal  
-      THEN a=OUT_OwnerReadInternalPub(tpmPubkey(srkKeyVal),ao,TPM_SUCCESS)
+      IF key(k)=ekKeyVal OR key(k)=srkKeyVal 
+      THEN a=OUT_OwnerReadInternalPub(tpmPubkey(algoParms(k),key(k)),ao,
+			TPM_SUCCESS)
       ELSE a=OUT_Error(TPM_BAD_PARAMETER)
       ENDIF
       AND s=state
@@ -3420,7 +3428,7 @@ tpm [ B:TYPE+ % BLOB
     	   ENDCASES
     ELSIF not identity?(keyUsage(aik))
     THEN a=OUT_Error(TPM_BAD_PARAMETER)
-    ELSE LET h1=tpmDigest(cons(tpmPubkey(key(aik)),null),clear),
+    ELSE LET h1=tpmDigest(cons(tpmPubkey(algoParms(aik),key(aik)),null),clear),
     	     b1=decrypt(private(ekVal),blob) IN
 	 CASES b1 OF
 	 tpmAsymCAContents(k,d,crs) : a=OUT_CPUError(CPU_DECRYPT_ERROR),
@@ -3766,8 +3774,8 @@ tpm [ B:TYPE+ % BLOB
   %% a command differs when SENTER is excluded.
   %% proved - Tue Jun 12 15:34:24 CDT 2012
   no_senter: THEOREM 
-    FORALL (state:tpmAbsState,k:(tpmKey?),hv:HV,n:(tpmNonce?),pm:PCR_SELECTION,
-		ind:PCRINDEX,i:authIn) :
+    FORALL (state:tpmAbsState,k:(tpmKey?),hv:HV,n:(tpmNonce?),
+		pm:PCR_SELECTION,ind:PCRINDEX,i:authIn) :
       runState(
 	TPM_Init
       	>> TPM_Startup(TPM_ST_CLEAR)

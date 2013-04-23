@@ -22,10 +22,10 @@
 %%
 %% ----
 
-StclearData[DV,HV:TYPE+] : THEORY
+StclearData[HV:TYPE+] : THEORY
   BEGIN
 
-  IMPORTING key[DV,HV];
+  IMPORTING key[HV];
 
     StclearData : TYPE = [#
 	   % This is the nonce in use to properly identify saved key context 

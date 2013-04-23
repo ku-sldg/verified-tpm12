@@ -19,10 +19,10 @@
 %% Todo: (key - => pending, + => done)
 %%
 %% ----
-StanyData[DV,HV:TYPE+] : THEORY
+StanyData[HV:TYPE+] : THEORY
   BEGIN
 
-  IMPORTING data[DV,HV];
+  IMPORTING data[HV];
 
   StanyData : TYPE = [#
 	   % The nonce used to properly identify saved session context blobs.

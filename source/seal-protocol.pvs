@@ -1,11 +1,8 @@
-sealProtocol [ B:TYPE+ % BLOB
-      	     , HV:TYPE+ % Hash value
-      	     , hash:[B->HV] % Hash function
-     	     ] : THEORY
+sealProtocol : THEORY
 
 BEGIN
 
-  IMPORTING tpm[B,HV,hash]
+  IMPORTING tpm
 
   seal_unseal: THEOREM
    FORALL (state:(afterStartup?)

@@ -27,15 +27,11 @@
 %% Todo: (key - => pending, + => done)
 %% ----
 
-invariants [ B:TYPE+ % BLOB
-      , HV:TYPE+ % Hash value
-      , hash:[B->HV] % Hash function
-%      , K:TYPE+ % Key
-     ] : THEORY
+invariants : THEORY
 
 BEGIN 
 
-  IMPORTING tpm[B,HV,hash]
+  IMPORTING tpm;
 
   restore_unchanged: THEOREM
     FORALL (s:tpmAbsState,c:tpmAbsInput) :

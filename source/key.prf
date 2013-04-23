@@ -92,7 +92,20 @@
  (load_key 0
   (load_key-1 nil 3572106468
    ("" (grind) (("1" (postpone) nil nil) ("2" (postpone) nil nil)) nil)
-   nil shostak))
+   ((tpmKey? adt-recognizer-decl "[tpmData -> boolean]" data nil)
+    (tpmData type-decl nil data nil)
+    (HV formal-nonempty-type-decl nil key nil)
+    (NOT const-decl "[bool -> bool]" booleans nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (boolean nonempty-type-decl nil booleans nil)
+    (member const-decl "bool" sets nil)
+    (keyFlagsF const-decl "KEY_FLAGS" keydata nil)
+    (keyParmsDef const-decl "KEY_PARMS" keydata nil)
+    (TPM_KH_SRK const-decl "(tpmKey?)" key nil)
+    (installedOrSRK? const-decl "bool" key nil)
+    (addKey const-decl "KEYSET" key nil)
+    (loadKey const-decl "KEYSET" key nil))
+   shostak))
  (child_if_parent 0
   (child_if_parent-1 nil 3560203723
    ("" (skosimp)

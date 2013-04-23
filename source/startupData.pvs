@@ -23,17 +23,17 @@
 %% Todo: (key - => pending, + => done)
 %% ----
 
-startupData[B,K,HV : TYPE+] : THEORY
+startupData[K,HV:TYPE+] : THEORY
 
   BEGIN
 
-  IMPORTING key[B,HV];
+  IMPORTING key[HV];
   IMPORTING PermanentFlags;
-  IMPORTING PermanentData[B,K,HV];
+  IMPORTING PermanentData[HV];
   IMPORTING StanyFlags[HV];
-  IMPORTING StanyData[B,HV];
+  IMPORTING StanyData[HV];
   IMPORTING StclearFlags;
-  IMPORTING StclearData[B,HV];
+  IMPORTING StclearData[HV];
 
 
   %% Flags used by the TPM_Startup command				(4.5)
@@ -125,5 +125,3 @@ startupData[B,K,HV : TYPE+] : THEORY
     #);
 
   END startupData
-
-

@@ -19,10 +19,10 @@
 %%
 %% ----
 
-PermanentData[DV,KV,HV:TYPE+] : THEORY
+PermanentData[HV:TYPE+] : THEORY
   BEGIN
 
-  IMPORTING data[DV,HV];
+  IMPORTING data[HV];
   
   PermData : TYPE = [#
     %% TPM_TAG_PERMANENT_DATA

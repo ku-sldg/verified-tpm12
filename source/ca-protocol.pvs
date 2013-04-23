@@ -14,14 +14,11 @@
    %%
 
 
-caProtocol [ B:TYPE+ % BLOB
-      	   , HV:TYPE+ % Hash value
-      	   , hash:[B->HV] % Hash function
-     	   ] : THEORY
+caProtocol : THEORY
 
 BEGIN
 
-  IMPORTING tpm[B,HV,hash]
+  IMPORTING tpm
 
   makeCertActivate(state:tpmAbsState,k:(tpmKey?),e:(tpmEncAuth?),
 	d:(tpmDigest?),i1,i2,i3,i4:authIn) : tpmAbsState =

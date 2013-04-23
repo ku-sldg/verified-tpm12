@@ -15,11 +15,11 @@
 %% Todo: (key - => pending, + => done)
 %%
 %% ----
-data [DVAL,HVAL:TYPE+] : THEORY
+data[HV:TYPE+]  : THEORY
 
   BEGIN
 
-  IMPORTING pcr[HVAL];
+  IMPORTING pcr[HV];
   IMPORTING authdata;
   IMPORTING keydata;
   IMPORTING types;
@@ -49,9 +49,6 @@ data [DVAL,HVAL:TYPE+] : THEORY
     %  tpmDigest is the list of things concatenated and hashed to create the
     %  digest value - #(d0++d1++...++dn).  
     %  Note that this digest does not contain PCRs 
-
-    % TPM_COMPOSITE_HASH should be element of tpmDigest,
-    % PCR_COMPOSITE : [#select:PCR_SELECTION,pcrValue:PCRVALUES#]
     tpmCompositeHash(dig:PCR_COMPOSITE) : tpmCompositeHash?
 
     %% Random value that provides protection from replay.		(5.5)
@@ -72,7 +69,7 @@ data [DVAL,HVAL:TYPE+] : THEORY
 
     %% Structure signed for certain commands (TPM_ReleaseTransportSigned)(5.14)
 %     tpmSignInfo(replay:(tpmNonce?),data:tpmData,crs:CRYPTOSTATUS) : tpmSignInfo?
-    %% crs should be signed? %%TODO
+    %% crs should be :(signed?) %%TODO
 
     %% Contains an arbitrary number of digests of public keys belonging (5.15)
     %%  to Migration Authorities. An instance is incorporated into the 
@@ -167,8 +164,9 @@ data [DVAL,HVAL:TYPE+] : THEORY
 	algoParms:KEY_PARMS,
 	PCRInfo:(tpmPCRInfoLong?),
 	wrappingKey:KVAL,
-	encDat:(tpmStoreAsymkey?),
-	crs:CRYPTOSTATUS) : tpmKey?
+	encDat:(tpmStoreAsymkey?)
+,crs:CRYPTOSTATUS
+) : tpmKey?
     %  tpmKey subsumes all asymmetric keys used by the TPM
     %  encrypted key: tpmKey(k,...,encrypted(public(j),clear))
     %  clear key encrypted with public j
@@ -176,8 +174,7 @@ data [DVAL,HVAL:TYPE+] : THEORY
     %  clear key signed by private j
 
     %% Pub Key (used for ek, srk?)					(10.5)
-    tpmPubkey(pubKey:KVAL):tpmPubkey?
-    %TODO IS THIS COMPLETE
+    tpmPubkey(algoParms:KEY_PARMS,pubKey:KVAL):tpmPubkey?
 
     %% Store Asym Key [private key]					(10.6)
     tpmStoreAsymkey(usageAuth:(tpmSecret?),
@@ -255,6 +252,18 @@ data [DVAL,HVAL:TYPE+] : THEORY
 
   END tpmData;
 
+  SHA1(data:tpmData) : (tpmDigest?)
+
+  tpmDigest : DATATYPE
+  BEGIN
+    tpmChosenIDHash : tpmChosenIDHash?
+    tpmCompHash(dig:PCR_COMPOSITE) : tpmCompHash?
+    	%PCR_COMPOSITE : [#select:PCR_SELECTION,pcrValue:PCRVALUES#]
+    tpmDIRValue : tpmDIRValue?
+    tpmHMAC(data:tpmData,secret:(tpmSecret?)) : tpmHMAC?
+    tpmPCRValue : HV%tpmPCRValue?
+    tpmAuditDigest : tpmAuditDigest?
+  END tpmDigest;
   
   activateIdentityBlob?(blob:tpmData) : bool =
   CASES blob OF

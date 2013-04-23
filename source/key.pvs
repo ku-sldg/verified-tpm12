@@ -16,11 +16,11 @@
 %% Todo: (key - => pending, + => done)
 %%
 %% ----
-key [DVAL,HVAL:TYPE+] : THEORY
+key[HV:TYPE+] : THEORY
 
   BEGIN
 
-  IMPORTING data[DVAL,HVAL];
+  IMPORTING data[HV];
 
   %% Reserved Key Handles - Should be moved to tpm.pvs
   TPM_KH_SRK : (tpmKey?) = tpmKey(2,storage,keyFlagsF,
@@ -120,9 +120,16 @@ key [DVAL,HVAL:TYPE+] : THEORY
       tpmEKBlobAuth(a0) : TRUE,
       tpmNonce(i0) : TRUE,
       tpmSecret(i0) : TRUE,
+      tpmMSAComposite(i0,m0) : TRUE,
+      tpmCMKDelegate(s0,s1,b0,l0,m0) : TRUE,
+      tpmCMKMigAuth(m0,p0) : TRUE,
+      tpmCMKSigTicket(v0,s0) : TRUE,
+      tpmCMKMAApproval(m0) : TRUE,
       tpmPCRInfoLong(lc0,lr0,sc0,sr0,dc0,dr0) : TRUE,
-      tpmPubkey(k0) : TRUE,
-      tpmMigrateAsymkey(u0,d0,p0) : TRUE
+      tpmPubkey(a0,k0) : TRUE,
+      tpmMigrateAsymkey(u0,d0,p0) : TRUE,
+      OAEP(m0,p0,s0) : TRUE,
+      concat(f0,s0) : TRUE
       ELSE FALSE
     ENDCASES;
 
@@ -267,10 +274,17 @@ key [DVAL,HVAL:TYPE+] : THEORY
       tpmCompositeHash(d0) : FALSE,
       tpmNonce(i0) : FALSE,
       tpmSecret(i0) : FALSE,
+      tpmMSAComposite(i0,m0) : FALSE,
+      tpmCMKDelegate(s0,s1,b0,l0,m0) : FALSE,
+      tpmCMKMigAuth(m0,p0) : FALSE,
+      tpmCMKSigTicket(v0,s0) : FALSE,
+      tpmCMKMAApproval(m0) : FALSE,
       tpmPCRInfoLong(lc0,lr0,sc0,sr0,dc0,dr0) : FALSE,
       tpmPCRInfoShort(ps0,l0,d0) : FALSE,
-      tpmPubkey(k0) : FALSE,
-      tpmMigrateAsymkey(u0,d0,p0) : FALSE
+      tpmPubkey(a0,k0) : FALSE,
+      tpmMigrateAsymkey(u0,d0,p0) : FALSE,
+      OAEP(m0,p0,s0) : FALSE,
+      concat(f0,s0) : FALSE
       ELSE 
         IF signed?(crs(d))
       	THEN checkSigStatus(k,crs(d))

@@ -14,7 +14,7 @@
 %%
 %% ----
 
-pcr [HV: TYPE+] : THEORY
+pcr[PCRVAL:TYPE+] : THEORY
   BEGIN
 
   %% Locality type - check with spec
@@ -28,12 +28,14 @@ pcr [HV: TYPE+] : THEORY
   %% (8.1) 
   %% Should be bit map that indicates if a PCR is active or not.
   PCR_SELECTION : TYPE = list[PCRINDEX]; % TODO: Should we make this into array?
+  
+  %PCRVAL : TYPE
 
   PCR : datatype
   begin
     reset : reset?
     resetOne : resetOne?
-    extend(pcr:PCR,hash:HV) : extend?
+    extend(pcr:PCR,hash:PCRVAL) : extend?
   end PCR;
 
   PCRVALUES : TYPE = ARRAY[PCRINDEX->PCR];
@@ -118,7 +120,7 @@ pcr [HV: TYPE+] : THEORY
   
   
   %% PCR extension operator
-  pcrsExtend(pcrs:PCRVALUES,i:PCRINDEX,hv:HV) : PCRVALUES = 
+  pcrsExtend(pcrs:PCRVALUES,i:PCRINDEX,hv:PCRVAL) : PCRVALUES = 
      (pcrs WITH [(i) := extend(pcrs(i),hv)])
 
   getPCRs(pcrs:PCRVALUES,pcrMask:PCR_SELECTION) : list[PCR] =
@@ -133,7 +135,7 @@ pcr [HV: TYPE+] : THEORY
   %% Theorems
 
   %% Extension is antisymmetric  
-  antisym : THEOREM FORALL (h1,h2:HV, p:PCR) :
+  antisym : THEOREM FORALL (h1,h2:PCRVAL, p:PCR) :
     h1/=h2 => extend(p,h1) /= extend(p,h2)
 
   END pcr
