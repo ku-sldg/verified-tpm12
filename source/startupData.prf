@@ -27,8 +27,7 @@
   (ekInit_TCC1-1 nil 3575741940
    (""
     (inst 1
-     "tpmKey(0,bind, keyFlagsF, never, (#algoId:=RSA#), tpmPCRInfoLong(0,0, null, null, tpmCompositeHash((#select:=null, pcrValue:=pcrsPower#)), tpmCompositeHash((#select:=null, pcrValue:=pcrsPower#))),
-1,tpmStoreAsymkey(tpmSecret(0), tpmSecret(0), tpmDigest(null,clear), 0, clear), clear)")
+     "tpmKey(0,bind, keyFlagsF, never, (#algoId:=RSA#), tpmPCRInfoLong(0,0, null, null, tpmCompositeHash((#select:=null, pcrValue:=pcrsPower#)), tpmCompositeHash((#select:=null, pcrValue:=pcrsPower#))),tpmStoreAsymkey(tpmSecret(0), tpmSecret(0), tpmDigest(null,clear), 0, clear))")
     nil nil)
    ((clear adt-constructor-decl "(clear?)" keydata nil)
     (clear? adt-recognizer-decl "[CRYPTOSTATUS -> boolean]" keydata
@@ -39,6 +38,7 @@
     (tpmStoreAsymkey adt-constructor-decl
      "[[(tpmSecret?), (tpmSecret?), (tpmDigest?), KVAL, CRYPTOSTATUS] ->
    (tpmStoreAsymkey?)]" data nil)
+    (CRYPTOSTATUS type-decl nil keydata nil)
     (tpmDigest? adt-recognizer-decl "[tpmData -> boolean]" data nil)
     (tpmSecret? adt-recognizer-decl "[tpmData -> boolean]" data nil)
     (pcrsPower const-decl "PCRVALUES" pcr nil)
@@ -76,9 +76,8 @@
     (bind? adt-recognizer-decl "[KEY_USAGE -> boolean]" keydata nil)
     (tpmKey adt-constructor-decl
      "[[KVAL, KEY_USAGE, KEY_FLAGS, AUTH_DATA_USAGE, KEY_PARMS,
-  (tpmPCRInfoLong?), KVAL, (tpmStoreAsymkey?), CRYPTOSTATUS] ->
+  (tpmPCRInfoLong?), (tpmStoreAsymkey?)] ->
    (tpmKey?)]" data nil)
-    (CRYPTOSTATUS type-decl nil keydata nil)
     (tpmStoreAsymkey? adt-recognizer-decl "[tpmData -> boolean]" data
      nil)
     (tpmPCRInfoLong? adt-recognizer-decl "[tpmData -> boolean]" data

@@ -26,7 +26,6 @@ data[HV:TYPE+]  : THEORY
 
   RNG : TYPE = int;
 
-  
   %% Data items that the TPM is aware of
   tpmData : DATATYPE
   BEGIN
@@ -37,7 +36,7 @@ data[HV:TYPE+]  : THEORY
     tpmMigScheme(migScheme:migrateScheme) : tpmMigScheme?
 
     %% EK type- indicates what type of information the EK's dealing with(4.11)
-    tpmEKBlobActivate(sessK:(tpmSessKey?),
+    tpmEKBlobActivate(sessK:(tpmSessKey?), 
 	idDigest:(tpmDigest?),
 	pcrInfo:(tpmPCRInfoShort?)) : tpmEKBlobActivate?
 
@@ -49,7 +48,9 @@ data[HV:TYPE+]  : THEORY
     %  tpmDigest is the list of things concatenated and hashed to create the
     %  digest value - #(d0++d1++...++dn).  
     %  Note that this digest does not contain PCRs 
+
     tpmCompositeHash(dig:PCR_COMPOSITE) : tpmCompositeHash?
+    	%PCR_COMPOSITE : [#select:PCR_SELECTION,pcrValue:PCRVALUES#]
 
     %% Random value that provides protection from replay.		(5.5)
     tpmNonce(i:int) : tpmNonce?
@@ -82,7 +83,7 @@ data[HV:TYPE+]  : THEORY
     %%  has apporved the public key "destination key" as a mig destination
     %%  for the key with pub key "source key". Usu signed by priv "migAuth"
     tpmCMKAuth(migAuth:(tpmDigest?),
-        destKey:(tpmDigest?),
+        destKey:(tpmDigest?), 
         sourceKey:(tpmDigest?),
 	crs:CRYPTOSTATUS) : tpmCMKAuth?
 
@@ -96,10 +97,10 @@ data[HV:TYPE+]  : THEORY
     
     %% Structure to keep track of CMK migration authorization		(5.19)
     tpmCMKMigAuth(msaDigest:(tpmDigest?),
-        pubKeyDigest:(tpmDigest?)) : tpmCMKMigAuth?
+        pubKeyDigest:(tpmDigest?)) : tpmCMKMigAuth? 
 
     %% Structure to keep track of the CMK migraiton authorization	(5.20)
-    tpmCMKSigTicket(verKeyDigest:(tpmDigest?),
+    tpmCMKSigTicket(verKeyDigest:(tpmDigest?), 
         signedData:(tpmDigest?)) : tpmCMKSigTicket?
 
     %% Structure to keep track of CMK migration authorization		(5.21)
@@ -146,7 +147,7 @@ data[HV:TYPE+]  : THEORY
     %% Sealed Data - contains confidential info related to sealed data	(9.3)
     tpmSealedData(authData:(tpmSecret?),
 	tpmProof:(tpmSecret?),
-	storedDigest:(tpmDigest?), %TPM_COMPOSITE_HASH?
+	storedDigest:(tpmDigest?),
 	data:tpmData,
 	crs:CRYPTOSTATUS) : tpmSealedData?
     
@@ -163,10 +164,10 @@ data[HV:TYPE+]  : THEORY
 	authDataUsage:AUTH_DATA_USAGE,
 	algoParms:KEY_PARMS,
 	PCRInfo:(tpmPCRInfoLong?),
-	wrappingKey:KVAL,
+	%wrappingKey:KVAL,
 	encDat:(tpmStoreAsymkey?)
-,crs:CRYPTOSTATUS
-) : tpmKey?
+	%,crs:CRYPTOSTATUS
+	) : tpmKey?
     %  tpmKey subsumes all asymmetric keys used by the TPM
     %  encrypted key: tpmKey(k,...,encrypted(public(j),clear))
     %  clear key encrypted with public j
@@ -253,18 +254,23 @@ data[HV:TYPE+]  : THEORY
   END tpmData;
 
   SHA1(data:tpmData) : (tpmDigest?)
+  tpmChosenIDHash(digest:list[tpmData],crs:CRYPTOSTATUS) : (tpmDigest?)
+  tpmDIRValue(digest:list[tpmData],crs:CRYPTOSTATUS) : (tpmDigest?)
+  tpmHMAC(data:tpmData,secret:(tpmSecret?)) : (tpmDigest?)
+  tpmPCRValue(digest:list[tpmData],crs:CRYPTOSTATUS) : HV%tpmPCRValue?
+  tpmAuditDigest(digest:list[tpmData],crs:CRYPTOSTATUS) : (tpmDigest?)
 
-  tpmDigest : DATATYPE
-  BEGIN
-    tpmChosenIDHash : tpmChosenIDHash?
-    tpmCompHash(dig:PCR_COMPOSITE) : tpmCompHash?
-    	%PCR_COMPOSITE : [#select:PCR_SELECTION,pcrValue:PCRVALUES#]
-    tpmDIRValue : tpmDIRValue?
-    tpmHMAC(data:tpmData,secret:(tpmSecret?)) : tpmHMAC?
-    tpmPCRValue : HV%tpmPCRValue?
-    tpmAuditDigest : tpmAuditDigest?
-  END tpmDigest;
-  
+%   tpmDig?(blob:tpmData) : bool = 
+%   CASES blob OF
+%     tpmChosenIDHash(d,c) : TRUE,
+%     tpmCompositeHash(d) : TRUE,
+%     tpmDIRValue(d,c) : TRUE,
+%     tpmHMAC(d,s) : TRUE,
+%     tpmPCRValue(d,c) : TRUE,
+%     tpmAuditDigest(d,c) : TRUE
+%     ELSE FALSE
+%   ENDCASES;
+
   activateIdentityBlob?(blob:tpmData) : bool =
   CASES blob OF
     tpmEKBlob(b,c) : TRUE,
@@ -298,7 +304,17 @@ data[HV:TYPE+]  : THEORY
   ODD:(tpmNonce?)
   pcrInfoLongDefault : (tpmPCRInfoLong?)
   pcrInfoNull : (tpmPCRInfoLong?)
-  storeAsymkeyDefault : (tpmStoreAsymkey?)
+
+  usageAuthDefault : (tpmSecret?)
+  migrationAuthDefault : (tpmSecret?)
+  pubDataDigestDefault : (tpmDigest?)
+  storeAsymkeyDefault(k,p:KVAL) : (tpmStoreAsymkey?) = 
+    tpmStoreAsymkey(usageAuthDefault,
+		    migrationAuthDefault,
+		    pubDataDigestDefault,
+		    inverse(k),
+		    encrypted(p,clear));
+
   tpmCMKDelegateDefault  : (tpmCMKDelegate?) = 
     tpmCMKDelegate(false,false,false,false,false);
   %PermData

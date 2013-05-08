@@ -67,9 +67,10 @@
     (= const-decl "[T, T -> boolean]" equalities nil)
     (extend? adt-recognizer-decl "[PCR -> boolean]" pcr nil)
     (pcr adt-accessor-decl "[(extend?) -> PCR]" pcr nil)
-    (HV formal-nonempty-type-decl nil pcr nil)
-    (extend adt-constructor-decl "[[PCR, HV] -> (extend?)]" pcr nil)
-    (hash adt-accessor-decl "[(extend?) -> HV]" pcr nil)
+    (PCRVAL formal-nonempty-type-decl nil pcr nil)
+    (extend adt-constructor-decl "[[PCR, PCRVAL] -> (extend?)]" pcr
+     nil)
+    (hash adt-accessor-decl "[(extend?) -> PCRVAL]" pcr nil)
     (/= const-decl "boolean" notequal nil))
    shostak)))
 
