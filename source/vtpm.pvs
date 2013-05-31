@@ -1,0 +1,27 @@
+vtpm[ HASH:TYPE+,PCR:TYPE+,KEY:TYPE+ ]
+		: THEORY
+
+  BEGIN
+
+  % ASSUMING
+   % assuming declarations
+  % ENDASSUMING
+
+  MAXINDEX : posint
+  LTID : TYPE = posint
+  DOMID : TYPE = posint
+
+  vtpmEntry : TYPE = [# ltID:LTID,domID:DOMID,sessk:KEY,hash:HASH #]
+ 
+  vtpmManState : TYPE = ARRAY[{x:naturalnumber|x<=MAXINDEX}->vtpmEntry]
+
+  wellFormed?(s:vtpmManState):boolean =
+    FORALL (x,y:{z:naturalnumber | z<=MAXINDEX}) : 
+      sessk(s(x))=sessk(s(y)) <=> x=y
+      AND hash(s(x))=hash(s(y)) <=> x=y
+      AND ltID(s(x))=ltID(s(y)) <=> x=y
+      AND domID(s(x))=domID(s(y)) <=> x=y
+
+  initVtpmState(l:LTID,d:DOMID,h:HASH,s:(wellFormed?)):(wellFormed?) = s
+
+  END vtpm
