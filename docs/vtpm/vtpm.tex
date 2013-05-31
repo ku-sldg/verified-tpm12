@@ -1,0 +1,211 @@
+\documentclass[10pt]{article}
+
+%\usepackage{hyperref}
+\usepackage{fullpage}
+\usepackage{alltt}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage{fancyhdr}
+\usepackage{tikz}
+\usetikzlibrary{arrows,shadows}
+\usepackage[underline=false]{pgf-umlsd}
+\usepackage{trust}
+\pagestyle{fancy}
+
+\lhead{}
+\rhead{}
+\lfoot{\copyright The University of Kansas, 2012}
+\cfoot{\thepage}
+
+
+\newtheorem{conjecture}{Conjecture}
+\newtheorem{obligation}{Obligation}
+\newtheorem{definition}{Definition}
+
+
+\usepackage{ifthen}
+\newboolean{submission}  %%set to true for the submission version
+\setboolean{submission}{false}
+%\setboolean{submission}{true}
+\ifthenelse
+{\boolean{submission}}
+{ \newcommand{\todo}[1]{ } } % hide todo
+{ \newcommand{\todo}[1]{ % show todo
+   \marginpar{\raggedright\footnotesize{#1}}
+               }}
+
+\parskip=\medskipamount
+\parindent=0pt
+
+\bibliographystyle{abbrvnat}
+
+\title{vTPM Design Notes}
+\author{Perry Alexander and Brigid Halling \\ Information and
+  Telecommunication Technology Center \\
+  The University of Kansas \\
+  \url{{palexand,bhalling}@ku.edu}}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\listoffigures
+\listoftables
+
+\begin{abstract}
+  This document is designed to document our work understanding the
+  interaction among elements of the vTPM infrastructure and
+  interaction between the vTPM and its operational environment.
+\end{abstract}
+
+\section{Introduction}
+
+\section{vTPM Manager Data}
+
+\begin{figure}[hbtp]
+  \centering
+  \begin{tabular}{llll}
+    \emph{Field} & \emph{Description} & \emph{Initialized} &
+    \emph{Updated} \\ \hline
+    $ID_{vtpm}$ & The persistent name of the vTPM & provisioning &
+    never \\
+    $ID_{dom}$ & Domain ID of vTPM VM & boot & boot \\
+    $\hash{D}$ & vTPM data hash value & provisioning & vTPM sleep \\
+    $PCR_6$ & Hash of the vTPM + Long Term Name & provisioning & boot
+    \\
+    $PCR_5$ & Hash of the platform controller & provisioning & boot \\
+    $\seal{K_D}{PCR_5,PCR_6}$ & Sealed symmetric key encrypting vTPM data &
+    provisioning & vTPM sleep \\
+
+  \end{tabular}
+  \caption{vTPM Information Table contents}
+  \label{fig:vtpm-information-table-format}
+\end{figure}
+
+\section{Provisioning Sequence}
+
+I'm not at all sure I have the provisioning sequence right.  The vTPM
+can be used to generate an $EK$ while the \textsf{TPM\_TakeOwnership}
+command can be used to generate an $SRK$ after startup.  What else is
+initialized?  Monotonic counter values and other stuff not specified here.
+
+\begin{enumerate}
+\item Platform booted through Controller -- $PCR_5$ is now known by
+  the vTPM Manager
+\item A new Long Term Name is generated for the new vTPM
+\item The new vTPM is built using the Domain Builder -- $PCR_6$ is now
+  known by the vTPM Manager
+\item vTPM data is initialized -- including fresh EK value.
+\item vTPM is put to sleep using the standard sleep protocol
+\end{enumerate}
+
+\section{Startup Sequence}
+
+\subsection{vTPM Running}
+
+\begin{enumerate}
+\item Controller requests a build by sending a manifest identifying
+  the vTPM image and its Long Term Name to the Domain Builder
+\item Domain Builder hashes the vTPM image and Long Term Name
+\item Domain Builder starts the vTPM VM resulting in a Domain ID
+\item Domain Builder sends the Long Term Name, Hash, and Domain ID to
+  the vTPM Manager
+\item vTPM Manager updates data associated with the Long Term Name in
+  the vTPM information table
+\end{enumerate}
+
+\begin{sequencediagram}
+  \newthread[white]{controller}{Controller}
+  \newinst[1.5]{db}{Domain Builder}
+  \newinst[4.5]{manager}{vTPM Manager}
+  
+  \begin{call}{controller}{vTPM,$ID_{vtpm}$}{db}{$\hash{(vTPM+ID_{vtpm})}$}a
+    \begin{callself}{db}{build vTPM,$ID_{vtpm}$}{$\hash{(vTPM+ID_{vtpm}),ID_{dom}}$}\end{callself}
+    \begin{call}{db}{$\hash{(vTPM+ID_{vtpm})}$,$ID_{vtpm}$,$ID_{dom}$}{manager}{}
+      \begin{callself}{manager}{Update $ID_{vtpm}$ entry}{}\end{callself}
+    \end{call}
+  \end{call}
+\end{sequencediagram}
+
+\begin{sequencediagram}
+  \newthread[white]{vtpm}{vTPM}
+  \newinst[2.0]{manager}{vTPM Manager}
+  \newinst[2.5]{tpm}{hTPM}
+  \newinst[2.0]{store}{Host Storage}
+  \begin{call}{vtpm}{$ID_{dom}$}{manager}{$K_D$}
+    \begin{call}{manager}{Reset $PCR_5$}{tpm}{}
+    \end{call}
+    \begin{call}{manager}{Reset $PCR_6$}{tpm}{}
+    \end{call}
+    \begin{call}{manager}{$\seal{K_D}{PCR_5,PCR_6}$}{tpm}{$K_D$}
+      \begin{callself}{tpm}{$unseal$}{$K_D$}\end{callself}
+    \end{call}
+  \end{call}
+  \begin{call}{vtpm}{Request Data}{store}{$\encrypt{D}{K_D}$}
+  \end{call}
+  \begin{callself}{vtpm}{$\encrypt{D}{K_D}$}{D}\end{callself}
+\end{sequencediagram}
+
+\subsection{vTPM Data Initialization}
+
+\begin{enumerate}
+\item vTPM requests its data key from the vTPM Manager
+\item vTPM Manager uses the vTPM Domain ID to find table entry
+\item vTPM Manager resets $PCR_5$ and $PCR_6$ with table entry
+  values\footnote{This happens whenever the vTPM Manager communicates
+    with a vTPM.}
+\item vTPM Manager attempts to unseal $K_D$
+  \begin{enumerate}
+    \item On failure abort the request response
+    \item On success return $K_D$ and $\hash{D}$ to vTPM
+  \end{enumerate}
+\item vTPM requests its encrypted data from Host Storage
+\item vTPM decrypts its data with $K_D$ and checks hash against
+  $\hash{D}$
+\item vTPM installs data and begins providing services.
+\end{enumerate}
+
+\section{Sleep Sequence}
+
+\begin{enumerate}
+\item vTPM generates a fresh session key, $K_D$
+\item vTPM hashes its data, $\hash{D}$ and encrypts with $K_D$
+\item vTPM stores $\encrypt{D}{K_D}$ in Host Storage
+\item vTPM sends sleep request to vTPM manager with $K_D$ and
+  $\hash{D}$
+\item vTPM Manager uses vTPM Domain ID to find table entry
+\item vTPM Manager resets and loads $PCR_5$ and $PCR_6$ from table
+  entry
+\item vTPM Manager seals $K_D$ to TPM state
+\item vTPM Manager updates its table with
+  $\seal{K_D}{PCR_5,PCR_6}$ and $\hash{K_D}$
+\item vTPM Manager clears Domain ID\footnote{I'm not certain of this,
+    but it seems reasonable}
+\end{enumerate}
+
+\begin{sequencediagram}
+  \newthread[white]{vtpm}{vTPM}
+  \newinst[2.0]{manager}{vTPM Manager}
+  \newinst[2.5]{tpm}{hTPM}
+  \newinst[2.0]{store}{Host Storage}
+  \begin{callself}{vtpm}{Generate $K_D'$}{$K_D'$}\end{callself}
+  \begin{callself}{vtpm}{Hash $D$}{$\hash{D}$}\end{callself}
+  \begin{callself}{vtpm}{Encrypt $D$}{$\encrypt{D}{K_D'}$}\end{callself}  
+  \begin{call}{vtpm}{$ID_{dom},K_D,\hash{D}$}{manager}{}
+    \begin{call}{manager}{Reset $PCR_5$}{tpm}{}
+    \end{call}
+    \begin{call}{manager}{Reset $PCR_6$}{tpm}{}
+    \end{call}
+    \begin{call}{manager}{$K_D'$}{tpm}{$\seal{K_D'}{PCR_5,PCR_6}$}
+      \begin{callself}{tpm}{$seal$}{$\seal{K_D'}{PCR_5,PCR_6}$}\end{callself}
+    \end{call}
+    \begin{callself}{manager}{Update $ID_{dom}$ entry}{}\end{callself}
+  \end{call}
+  \begin{call}{vtpm}{\encrypt{D}{K_{D}'}}{store}{}
+  \end{call}
+\end{sequencediagram}
+
+\bibliography{vtpm}
+
+\end{document}

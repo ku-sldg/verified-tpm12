@@ -1,0 +1,46 @@
+sealProtocol : THEORY
+
+BEGIN
+
+  IMPORTING tpm
+
+  seal_unseal: THEOREM
+   FORALL (state:(afterStartup?)
+   	  ,p,k:(tpmKey?)
+	  ,dUA,dMA,e:(tpmEncAuth?)
+	  ,pcr:(tpmPCRInfoLong?)
+	  ,d:tpmData
+	  ,i1,i2,i3,i4,i5:authIn
+	  ,x,y:nat):
+    LET (a,s) = runState(
+    	        TPM_CreateWrapKey(p,k,dUA,dMA,i1)
+		>>= CPU_saveOutput(x)
+		>>= (LAMBDA (a:tpmAbsOutput) :
+		    CASES a OF
+		    OUT_CreateWrapKey(wk,o1,m) : TPM_LoadKey2(p,wk,i2)
+		    ELSE TPM_Noop(a)
+		    ENDCASES)
+		>>= (LAMBDA (a:tpmAbsOutput) : 
+		    CASES a OF
+		    OUT_LoadKey2(k,o2,m) : TPM_Seal(k,e,pcr,d,i3)
+		    ELSE TPM_Noop(a)
+		    ENDCASES)
+%		>>= CPU_saveOutput(y)
+		>>= (LAMBDA (a:tpmAbsOutput) : 
+		    CASES a OF
+		    OUT_Seal(sd,o3,m) : TPM_Unseal(p,sd,i4,i5)
+		    ELSE TPM_Noop(a)
+		    ENDCASES))
+		(state) IN
+	createWrapKey?(p,k) AND loadKey2?(tpmRestore(s`restore),p,k,i1) AND
+	seal?(k) AND unseal?(p) AND key(p)=private(k) AND
+	locAtRelease(pcr)=localityModifier(stanyFlags(state)) AND
+	digAtRelease(pcr)=tpmCompositeHash((#select:=releasePCRSelect(pcr),
+						pcrValue:=state`pcrs#))
+	   =>  LET b=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+	       	   resAuth:=usageAuth(encDat(p))#) IN 
+	a=OUT_Unseal(d,b,b,TPM_SUCCESS)
+	AND s=state
+
+
+END sealProtocol

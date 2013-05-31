@@ -1,0 +1,27 @@
+%% Standard formatting commands for crypto primitives and trust
+%% relationships.
+
+\newcommand{\encrypt}[2]{\ensuremath{\{#1\}_{#2}}}
+\newcommand{\hash}[1]{\ensuremath{\##1}}
+\newcommand{\extend}[2]{\ensuremath{#1\mid#2}}
+\newcommand{\sign}[2]{\ensuremath{\{|#1|\}_{#2^{-1}}}}
+\newcommand{\cert}[2]{\ensuremath{[[#1]]_{#2}}}
+\newcommand{\evidence}[2]{\ensuremath{\langle #1,\sign{#2}{AIK}\rangle}}
+\newcommand{\request}[3]{\ensuremath{\langle #1,#2,#3\rangle}}
+\newcommand{\proposal}[2]{\ensuremath{ \langle #1,#2\rangle}}
+\newcommand{\public}[1]{\ensuremath{#1}}
+\newcommand{\private}[1]{\ensuremath{#1^{-1}}}
+\newcommand{\seal}[2]{\ensuremath{seal(#1,\{#2\})}}
+\newcommand{\wrap}[2]{\ensuremath{(#1,\encrypt{\private{#1}}{#2})}}
+
+\newcommand{\trustworthy}[1]{\ensuremath{W(#1)}}
+\newcommand{\trusts}[2]{\ensuremath{T^{\mathsf{#1}}[\mathsf{#2}]}}
+\newcommand{\conf}[3]{\ensuremath{\mathit{C(\mathsf{#1},\mathsf{#2},\{#3\})}}}
+\newcommand{\confrest}[2]{\ensuremath{\mathit{C_r(\mathsf{#1},\mathsf{#2})}}}
+\newcommand{\integ}[3]{\ensuremath{\mathit{I(\mathsf{#1},\mathsf{#2},\{#3\})}}}
+\newcommand{\integrest}[2]{\ensuremath{\mathit{I_r(\mathsf{#1},\mathsf{#2})}}}
+\newcommand{\avail}[3]{\ensuremath{\mathit{A(\mathsf{#1},\mathsf{#2},\{#3\})}}}
+\newcommand{\availrest}[2]{\ensuremath{\mathit{A_r(\mathsf{#1},\mathsf{#2})}}}
+\newcommand{\account}[2]{\ensuremath{\mathit{N(\mathsf{#1},\mathsf{#2})}}}
+\newcommand{\provides}[1]{\ensuremath{\mathsf{provides}(#1)}}
+

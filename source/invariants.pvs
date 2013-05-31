@@ -1,0 +1,356 @@
+%% ----
+%%
+%% Invariants Theory
+%%
+%% Author: Perry Alexander, Brigid Halling
+%% Date: Mon Nov 28 01:09:39 CST 2011
+%%
+%% Description: Prove invariants of TPM
+%% 
+%% Dependencies:
+%%  tpm.pvs
+%%  StateMonad.pvs
+%%  ReturnCodes.pvs
+%%  memory.pvs 
+%%  StclearFlags.pvs
+%%  startupData.pvs
+%%  PermanentData.pvs
+%%  StanyData.pvs
+%%  StanyFlags.pvs
+%%  key.pvs
+%%  data.pvs
+%%  keyData.pvs
+%%  pcr.pvs
+%%  authdata.pvs
+%%  PermanentFlags.pvs
+%%
+%% Todo: (key - => pending, + => done)
+%% ----
+
+invariants : THEORY
+
+BEGIN 
+
+  IMPORTING tpm;
+
+  restore_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+      	  ABS_SaveState?(c)) =>
+        restore(s) = restore(executeCom(s,c));
+
+  memory_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+      	  ABS_save?(c)) =>
+        memory(s) = memory(executeCom(s,c));
+
+  srk_unchanged: THEOREM 
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+      	  ABS_TakeOwnership?(c) OR
+	  ABS_OwnerClear?(c) OR
+	  ABS_ForceClear?(c) OR
+	  ABS_RevokeTrust?(c)) =>
+        srk(s) = srk(executeCom(s,c));
+
+  ek_unchanged: THEOREM 
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+          ABS_CreateEndorsementKeyPair?(c) OR
+	  ABS_CreateRevocableEK?(c) OR
+	  ABS_RevokeTrust?(c) ) =>
+        ek(s) = ek(executeCom(s,c));
+
+  keyGenCnt_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c) OR
+      	  ABS_CreateWrapKey?(c) OR ABS_certify?(c) OR
+	  ABS_MakeIdentity?(c)) =>
+        keyGenCnt(s) = keyGenCnt(executeCom(s,c));
+  
+  keys_unchanged: THEOREM 
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR 
+    	  ABS_LoadKey2?(c) OR
+	  ABS_ActivateIdentity?(c) OR
+	  ABS_OwnerClear?(c) OR
+	  ABS_ForceClear?(c) OR
+	  ABS_RevokeTrust?(c)) =>
+      keys(s) = keys(executeCom(s,c));
+
+  % 1. The TPM SHALL only allow the following commands to alter the value 
+  % of TPM_STCLEAR_DATA -> PCR
+  % a. TPM_Extend
+  % b. TPM_SHA1CompleteExtend
+  % c. TPM_Startup
+  % d. TPM_PCR_Reset
+  pcrs_unchanged: THEOREM 
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+	  ABS_sinit?(c) OR 
+	  ABS_senter?(c) OR 
+	  ABS_Extend?(c) OR
+	  ABS_PCR_Reset?(c)) =>
+      pcrs(s) = pcrs(executeCom(s,c));
+
+  %% Monotonicity of locality
+  %% Assuming that we're not resetting or powering on, locality goes down
+  %% or remains the same
+  %% proved - Fri Sep 21 15:07:30 CDT 2012
+  monotonic_locality: THEOREM 
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c)) =>
+        locality(s) >= locality(executeCom(s,c));
+	
+  %%%%% PermFlags
+  permFlags_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+	  ABS_TakeOwnership?(c) OR
+	  ABS_OwnerClear?(c) OR 
+	  ABS_ForceClear?(c) OR
+          ABS_DisableOwnerClear?(c) OR 
+	  ABS_PhysicalPresence?(c) OR 
+	  ABS_ResetEstablishmentBit?(c) OR
+	  ABS_CreateEndorsementKeyPair?(c) OR
+	  ABS_CreateRevocableEK?(c) OR
+	  ABS_RevokeTrust?(c)) =>
+        permFlags(s) = permFlags(executeCom(s,c));
+
+  permFlags_disable_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+	  ABS_ForceClear?(c) OR
+	  ABS_OwnerClear?(c) OR 
+	  ABS_RevokeTrust?(c)) =>
+        s`permFlags`disable = executeCom(s,c)`permFlags`disable
+
+  permFlags_ownership_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+	  ABS_ForceClear?(c) OR
+	  ABS_OwnerClear?(c) OR 
+	  ABS_RevokeTrust?(c)) =>
+        s`permFlags`ownership = executeCom(s,c)`permFlags`ownership
+
+  permFlags_deactivated_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+	  ABS_ForceClear?(c) OR
+	  ABS_OwnerClear?(c) OR 
+	  ABS_RevokeTrust?(c)) =>
+        s`permFlags`deactivated = executeCom(s,c)`permFlags`deactivated;
+
+  permFlags_readPubek_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+	  ABS_ForceClear?(c) OR
+	  ABS_OwnerClear?(c) OR 
+	  ABS_RevokeTrust?(c) OR
+	  ABS_TakeOwnership?(c)) =>
+        s`permFlags`readPubek = executeCom(s,c)`permFlags`readPubek;
+
+  permFlags_disableOC_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+	  ABS_ForceClear?(c) OR
+	  ABS_OwnerClear?(c) OR 
+	  ABS_RevokeTrust?(c) OR
+          ABS_DisableOwnerClear?(c)) =>
+        s`permFlags`disableOwnerClear = 
+		executeCom(s,c)`permFlags`disableOwnerClear;
+
+  permFlags_allowMaint_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+	  ABS_ForceClear?(c) OR
+	  ABS_OwnerClear?(c) OR 
+	  ABS_RevokeTrust?(c)) =>
+        s`permFlags`allowMaintenance = 
+		executeCom(s,c)`permFlags`allowMaintenance;
+
+  permFlags_physPresLL_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+      	  ABS_PhysicalPresence?(c)) =>
+        s`permFlags`physicalPresenceLifetimeLock = 
+		executeCom(s,c)`permFlags`physicalPresenceLifetimeLock;
+
+  permFlags_physPresHWE_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+      	  ABS_PhysicalPresence?(c)) =>
+        s`permFlags`physicalPresenceHWEnable = 
+		executeCom(s,c)`permFlags`physicalPresenceHWEnable;
+
+  permFlags_physPresCMDE_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+      	  ABS_PhysicalPresence?(c)) =>
+        s`permFlags`physicalPresenceCMDEnable = 
+		executeCom(s,c)`permFlags`physicalPresenceCMDEnable;
+
+  permFlags_CEKPUsed_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+ 	  ABS_CreateEndorsementKeyPair?(c) OR
+	  ABS_CreateRevocableEK?(c)) =>
+        s`permFlags`CEKPUsed = executeCom(s,c)`permFlags`CEKPUsed;
+
+  permFlags_TPMpost_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c)) =>
+        s`permFlags`TPMpost = executeCom(s,c)`permFlags`TPMpost;
+
+  permFlags_FIPS_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c)) =>
+        s`permFlags`FIPS = executeCom(s,c)`permFlags`FIPS;
+
+  permFlags_operator_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+	  ABS_ForceClear?(c) OR
+	  ABS_OwnerClear?(c) OR 
+	  ABS_RevokeTrust?(c)) =>
+        s`permFlags`operator = executeCom(s,c)`permFlags`operator;
+
+  permFlags_enableRevokeEK_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+	  ABS_CreateEndorsementKeyPair?(c) OR
+	  ABS_CreateRevocableEK?(c)) =>
+        s`permFlags`enableRevokeEK = executeCom(s,c)`permFlags`enableRevokeEK;
+
+  permFlags_nvLocked_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+	  ABS_RevokeTrust?(c)) =>
+        s`permFlags`nvLocked = executeCom(s,c)`permFlags`nvLocked;
+
+  permFlags_readSRKPub_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+	  ABS_ForceClear?(c) OR
+	  ABS_OwnerClear?(c) OR 
+	  ABS_RevokeTrust?(c)) =>
+        s`permFlags`readSRKPub = executeCom(s,c)`permFlags`readSRKPub;
+
+  permFlags_tpmEstablished_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+      	  ABS_ResetEstablishmentBit?(c)) =>
+        s`permFlags`tpmEstablished = executeCom(s,c)`permFlags`tpmEstablished;
+
+  permFlags_maintenanceDone_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+	  ABS_ForceClear?(c) OR
+	  ABS_OwnerClear?(c) OR 
+	  ABS_RevokeTrust?(c)) =>
+        s`permFlags`maintenanceDone = executeCom(s,c)`permFlags`maintenanceDone;
+
+  permFlags_disableFullDAL_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+	  ABS_ForceClear?(c) OR
+	  ABS_OwnerClear?(c) OR 
+	  ABS_RevokeTrust?(c)) =>
+        s`permFlags`disableFullDALogicInfo = 
+		executeCom(s,c)`permFlags`disableFullDALogicInfo;
+
+  %%%%% PermData
+  permData_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c) OR
+      	  ABS_CreateRevocableEK?(c) OR
+	  ABS_TakeOwnership?(c) OR 
+	  ABS_RevokeTrust?(c) OR
+	  ABS_ForceClear?(c) OR
+	  ABS_OwnerClear?(c)) =>
+        permData(s) = permData(executeCom(s,c));
+
+  permData_tpmProof_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR 
+	  ABS_RevokeTrust?(c) OR
+	  ABS_ForceClear?(c) OR
+	  ABS_OwnerClear?(c)) =>
+        s`permData`tpmProof = executeCom(s,c)`permData`tpmProof;
+
+  %% TODO: MAKE SURE THIS ONE WORKS... was proving anything (i think it has something to do with nonces)
+  permData_ekReset_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+      	  ABS_CreateRevocableEK?(c)) =>
+        s`permData`ekReset = executeCom(s,c)`permData`ekReset;
+
+  permData_ownerAuth_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+	  ABS_TakeOwnership?(c) OR
+	  ABS_RevokeTrust?(c) OR
+	  ABS_ForceClear?(c) OR
+	  ABS_OwnerClear?(c)) =>
+        s`permData`ownerAuth = executeCom(s,c)`permData`ownerAuth;
+
+  permData_operatorAuth_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+	  ABS_RevokeTrust?(c) OR
+	  ABS_ForceClear?(c) OR
+	  ABS_OwnerClear?(c)) =>
+        s`permData`operatorAuth = executeCom(s,c)`permData`operatorAuth;
+
+  permData_pcrAttrib_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c)) =>
+        s`permData`pcrAttrib = executeCom(s,c)`permData`pcrAttrib;
+
+  %%%%% StanyData
+  stanyData_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c) OR
+      	  ABS_OwnerClear?(c) OR ABS_ForceClear?(c) OR
+      	  ABS_RevokeTrust?(c)) =>
+        stanyData(s) = stanyData(executeCom(s,c));
+
+  %%%%% StanyFlags
+  stanyFlags_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c)) =>
+        stanyFlags(s) = stanyFlags(executeCom(s,c));
+
+
+  postInit_unchanged: THEOREM 
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c)) =>
+        postInitialize(stanyFlags(s)) = 
+		postInitialize(stanyFlags(executeCom(s,c)));
+
+  %%%%% StclearData
+  stclearData_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c) OR
+      	  ABS_OwnerClear?(c) OR ABS_ForceClear?(c) OR
+      	  ABS_RevokeTrust?(c)) =>
+        stclearData(s) = stclearData(executeCom(s,c));
+
+  %%%%% StclearFlags
+  stclearFlags_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) or ABS_Init?(c) OR
+      	  ABS_SetTempDeactivated?(c) OR
+	  ABS_DisableForceClear?(c) OR
+	  ABS_PhysicalPresence?(c)) =>
+        stclearFlags(s) = stclearFlags(executeCom(s,c));
+
+  disableForceClear_unchanged: THEOREM
+    FORALL (s:tpmAbsState,c:tpmAbsInput) :
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+      	  ABS_DisableForceClear?(c)) =>
+        s`stclearFlags`disableForceClear = 
+		disableForceClear(stclearFlags(executeCom(s,c)));
+
+END invariants

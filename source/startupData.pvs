@@ -1,15 +1,42 @@
-startupData[B,K,HV : TYPE+] : THEORY
+%% ----
+%%
+%% startupData Theory
+%%
+%% Author: Perry Alexander, Brigid Halling
+%% Date: 
+%%
+%% Description: 
+%% 
+%% Dependencies:
+%%  PermanentData.pvs
+%%  PermanentFlags.pvs
+%%  StanyData.pvs
+%%  StanyFlags.pvs
+%%  StclearData.pvs
+%%  StclearFlags.pvs
+%%  key.pvs
+%%  data.pvs
+%%  keyData.pvs
+%%  pcr.pvs
+%%  authdata.pvs
+%%
+%% Todo: (key - => pending, + => done)
+%% ----
+
+startupData[K,HV:TYPE+] : THEORY
 
   BEGIN
 
-  IMPORTING pcr[HV];
-  IMPORTING key[B,HV];
+  IMPORTING key[HV];
   IMPORTING PermanentFlags;
-  IMPORTING PermanentData[B,K,HV];
+  IMPORTING PermanentData[HV];
   IMPORTING StanyFlags[HV];
-  IMPORTING StanyData[B,HV];
+  IMPORTING StanyData[HV];
+  IMPORTING StclearFlags;
+  IMPORTING StclearData[HV];
 
-  %% Flags used by the TPM_Startup command
+
+  %% Flags used by the TPM_Startup command				(4.5)
   TPM_STARTUP_TYPE : DATATYPE
   BEGIN
     TPM_ST_CLEAR : TPM_ST_CLEAR?
@@ -34,7 +61,9 @@ startupData[B,K,HV : TYPE+] : THEORY
 			  permFlags : PermFlags,
 			  permData : PermData,
 			  stanyFlags: StanyFlags,
-			  stanyData: StanyData
+			  stanyData: StanyData,
+			  stclearFlags: StclearFlags,
+			  stclearData: StclearData
 			#];
 
   wellFormedRestore?(r:restoreStateData) : bool =
@@ -52,7 +81,9 @@ startupData[B,K,HV : TYPE+] : THEORY
 	    tpmPermFlags : PermFlags,
 	    tpmPermData : PermData,
 	    tpmStanyFlags: StanyFlags,
-	    tpmStanyData: StanyData ) : (wellFormedRestore?) = 
+	    tpmStanyData: StanyData,
+	    tpmStclearFlags: StclearFlags,
+	    tpmStclearData: StclearData ) : (wellFormedRestore?) = 
     (# valid? := TRUE,
        keys := tpmKeys,
        ek := tpmEK,
@@ -66,7 +97,9 @@ startupData[B,K,HV : TYPE+] : THEORY
        permFlags := tpmPermFlags,
        permData := tpmPermData,
        stanyFlags := tpmStanyFlags,
-       stanyData := tpmStanyData
+       stanyData := tpmStanyData,
+       stclearFlags := tpmStclearFlags,
+       stclearData := tpmStclearData
        #);
 
   %% Initial value for saved data.  The only field that matters is the valid?
@@ -83,12 +116,12 @@ startupData[B,K,HV : TYPE+] : THEORY
        srk := srkInit,
        keyGenCnt := keyGenCntInit,
        pcrs := pcrsPower,
-       permFlags := permFlagsInit,
+       permFlags := permFlagsDefault,
        permData := permDataInit,	
        stanyFlags:= stanyFlagsInit,
-       stanyData := stanyDataInit
+       stanyData := stanyDataInit,
+       stclearFlags:= stclearFlagsInit,
+       stclearData := stclearDataInit
     #);
 
   END startupData
-
-

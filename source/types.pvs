@@ -1,0 +1,132 @@
+%% ----
+%%
+%% Types Theory
+%%
+%% Author: Brigid Halling
+%% Date: 
+%%
+%% Description:  
+%% 
+%% Dependencies:
+%%  None
+%%
+%% Todo: (key - => pending, + => done)
+%%
+%% ----
+
+types : THEORY
+  BEGIN
+  
+  resource : DATATYPE	% TPM_RESOURCE_TYPE				(4.1)
+  BEGIN
+    RT_KEY : RT_KEY?	% The handle is key handle and is result of a LoadKey 
+    	     	     	% type operation
+    RT_AUTH : RT_AUTH? 	% The handle is an authorization handle. Auth handles 
+    	      	       	% come from TPM_OIAP, TPM_OSAP and TPM_DSAP
+    RT_HASH : RT_HASH? 	% Reserved for hashes
+    RT_TRANS : RT_TRANS?% The handle is for a transport session. Transport
+    	       		%  handles come from TPM_EstablishTransport
+    RT_CONTEXT : RT_CONTEXT?   % Resource wrapped and held outside the TPM
+    	       	 	       % using the context save/restore commands
+    RT_COUNTER : RT_COUNTER?   % Reserved for counters
+    RT_DELEGATE : RT_DELEGATE? % The handle is for a delegate row. These are the
+    		  	       % internal rows held in NV storage by the TPM
+    RT_DAA_TPM : RT_DAA_TPM?   % The value is a DAA TPM specific blob
+    RT_DAA_V0 : RT_DAA_V0?     % The value is a DAA V0 parameter
+    RT_DAA_V1 : RT_DAA_V1?     % The value is a DAA V1 parameter
+  END resource;
+
+  %% This structure specifies the type of payload in various messages.
+  %% The payload may indicate whether the key is a CMK, and the CMK type. 
+  %%  The distinction was put here rather than in TPM_KEY_USAGE:
+  %%  - for backward compatibility
+  %%  - some commands only see the TPM_STORE_ASYMKEY, not the entire TPM_KEY
+  payload : DATATYPE	% TPM_PAYLOAD_TYPE				(4.2)
+  BEGIN
+    ASYM : ASYM?	% The entity is an asymmetric key
+    BIND : BIND? 	% The entity is bound data
+    MIGRATE : MIGRATE? 	% The entity is a migration blob
+    MAINT : MAINT? 	% The entity is a maintenance blob
+    SEAL : SEAL? 	% The entity is sealed data
+    MIGRATE_RESTRICTED : MIGRATE_RESTRICTED? % The entity is a restricted-
+    		       	 		     % migration asymmetric key
+    MIGRATE_EXTERNAL : MIGRATE_EXTERNAL? % The entity is external migratable key
+    CMK_MIGRATE : CMK_MIGRATE? 		 % The entity is a CMK migratable blob
+  END payload;
+
+  %% This specifies the types of entity and ADIP encryption schemes that are 
+  %%  supported by the TPM. TPM entities are objects with authorization, such as
+  %%  the owner, a key, NV defined space, etc.
+  entity : DATATYPE	% TPM_ENTITY_TYPE				(4.3)
+  BEGIN
+    %% TPM_ENTITY_TYPE LSB Values
+    KEYHANDLE : KEYHANDLE?	% The entity is a keyHandle or key
+    OWNER : OWNER? 	 	% The entity is the TPM Owner
+    DATA : DATA? 		% The entity is some data
+    SRK : SRK? 		 	% The entity is the SRK
+    KEY : KEY? 		 	% The entity is a key or keyHandle
+    REVOKE : REVOKE? 	 	% The entity is the RevokeTrust value
+    DEL_OWNER_BLOB : DEL_OWNER_BLOB?  % The entity is a delegate owner blob
+    DEL_ROW : DEL_ROW?	 	% The entity is a delegate row
+    DEL_KEY_BLOB : DEL_KEY_BLOB?% The entity is a delegate key blob
+    COUNTER : COUNTER?		% The entity is a counter
+    NV : NV?			% The entity is a NV index
+    OPERATOR : OPERATOR?	% The entity is the operator
+    RESERVED_HANDLE : RESERVED_HANDLE?% This value avoids collisions with the 
+    		      		      %  handle MSB setting.
+    %% TPM_ENTITY_TYPE MSB Values
+    ET_XOR : ET_XOR?		% XOR
+    AES128_CTR : AES128_CTR?	% AES 128 bits in CTR mode
+  END entity;
+
+  %% Handles (4.4) in keys.pvs
+  %% TPM_STARTUP_TYPE (4.5) in startupData.pvs
+  %% TPM_STARTUP_EFECTS (4.6) TODO?
+
+  %% This value identifies the protocol in use.
+  protocol : DATATYPE  % TPM_PROTOCOL_ID				(4.7)
+  BEGIN
+    OIAP : OIAP?	% The OIAP protocol.
+    OSAP : OSAP? 	% The OSAP protocol.
+    ADIP : ADIP? 	% The ADIP protocol.
+    ADCP : ADCP? 	% The ADCP protocol.
+    OWNER : OWNER? 	% The protocol for taking ownership of a TPM.
+    DSAP : DSAP? 	% The DSAP protocol
+    TRANSPORT : TRANSPORT? % The transport protocol
+  END protocol;
+
+  %% This table defines the types of algorithms that may be supported by the TPM
+  %% TPM_ALG_AESxxx is used to represent any of TPM_ALG_AES128, TPM_ALG_AES192, 
+  %%  or TPM_ALG_AES256.
+  algo : DATATYPE	% TPM_ALGORITHM_ID				(4.8)
+  BEGIN
+    RSA : RSA?		% The RSA algorithm.
+    SHA : SHA? 		% The SHA1 algorithm
+    HMAC : HMAC? 	% The RFC 2104 HMAC algorithm
+    AES128 : AES128? 	% The AES algorithm, key size 128
+    MGF1 : MGF1?	% The XOR algorithm using MGF1 to create a string the 
+    	   		%  size of the encrypted block
+    AES192 : AES192? 	% AES, key size 192
+    AES256 : AES256? 	% AES, key size 256
+    ALG_XOR : ALG_XOR?	% XOR using the rolling nonces
+  END algo;
+
+  physPres : DATATYPE	% TPM_PHYSICAL_PRESENCE				(4.9)
+  BEGIN
+    HW_DISABLE : HW_DISABLE? % Sets the physicalPresenceHWEnable to FALSE
+    CMD_DISABLE : CMD_DISABLE? % Sets the physicalPresenceCMDEnable to FALSE
+    LIFETIME_LOCK : LIFETIME_LOCK? % Sets physicalPresenceLifetimeLock to TRUE
+    HW_ENABLE : HW_ENABLE? % Sets the physicalPresenceHWEnable to TRUE
+    CMD_ENABLE : CMD_ENABLE? % Sets the physicalPresenceCMDEnable to TRUE
+    NOTPRESENT : NOTPRESENT? % Sets PhysicalPresence = FALSE
+    PRESENT : PRESENT? % Sets PhysicalPresence = TRUE
+    LOCK : LOCK? % Sets PhysicalPresenceLock = TRUE
+  END physPres;
+
+  PHYSPRES : TYPE = set[physPres]
+
+  %% TPM_MIGRATE_SCHEME (4.10) in keyData.pvs
+  %% TPM_EK_TYPE (4.11) in data.pvs
+  %% TPM_PLATFORM_SPECIFIC (4.12) TODO?
+
+  END types

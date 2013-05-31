@@ -1,0 +1,100 @@
+%% ----
+%%
+%% keyData Theory
+%%
+%% Author: Brigid Halling
+%% Date: Fri Jan 11 13:25:11 CST 2013
+%%
+%% Description: 
+%% 
+%% Dependencies:
+%%  None
+%%
+%% Todo: (key - => pending, + => done)
+%%
+%% ----
+keydata : THEORY
+
+  BEGIN
+
+  KEYDATA : TYPE;
+  
+  %% Keys are integers.
+  KVAL : TYPE = integer;
+
+  %% The inverse of a key its negation
+  inverse(k:KVAL):KVAL = -k;
+
+  %% The bad key value is 0
+  badkey:KVAL = 0;
+
+  goodkey?(key:KVAL) : bool =
+    key/=badkey
+
+  %% Purpose for key
+
+  %%									(5.8)
+  KEY_USAGE : DATATYPE
+  BEGIN
+    signing : signing?
+    storage : storage?
+    identity : identity?
+    authChange : authChange?
+    bind : bind?
+    legacy : legacy?
+    migrate : migrate?
+  END KEY_USAGE;
+
+  %% Flags for defining key properties					(5.10)
+  KEY_FLAGS : TYPE = [#redirection : bool
+		     , migratable : bool
+		     , isVolatile : bool
+		     , pcrIgnoredOnRead : bool
+		     , migrateAuthority : bool
+  	      	     #];
+
+  %% All key flags false
+  keyFlagsF : KEY_FLAGS = (#redirection:= FALSE
+     	      		  , migratable := FALSE
+	     		  , isVolatile := FALSE
+	     		  , pcrIgnoredOnRead := FALSE
+	     		  , migrateAuthority := FALSE #)
+  
+  ALGO_ID : DATATYPE
+  BEGIN
+    RSA : RSA?
+    SHA : SHA?
+    HMAC : HMAC?
+    AESxxx : AES?
+    MGF1 : MGF1?
+  END ALGO_ID;
+
+  KEY_PARMS : TYPE = [#algoId : ALGO_ID
+% 		     , encScheme : 
+% 		     , sigScheme : 
+% 		     , parms :
+  	      	     #];
+  keyParmsDef : KEY_PARMS = (#algoId:=RSA#)
+  	     
+  %% Migragion scheme indicator						(4.10)
+  migrateScheme : DATATYPE
+  BEGIN 
+    migrate : migrate?
+    rewrap : rewrap?
+    maint : maint?
+    restrictMigrate : restrictMigrate?
+    restrictApprove : restrictApprove?
+  END migrateScheme;
+
+  %% Type indicating crypographic status - clear, encrypted, signed, wrapped,
+  %% sealed.  Type is recursive allowing multiple operations on the same
+  %% element.
+  CRYPTOSTATUS : DATATYPE
+  BEGIN
+    clear : clear?
+    encrypted(key:KVAL,crstat:CRYPTOSTATUS) : encrypted?
+    signed(key:KVAL,crstat:CRYPTOSTATUS) : signed?
+    sealed(key:KVAL,crstat:CRYPTOSTATUS) : sealed?
+  END CRYPTOSTATUS;
+
+END keydata
