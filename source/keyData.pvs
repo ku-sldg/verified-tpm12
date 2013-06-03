@@ -92,9 +92,9 @@ keydata : THEORY
   CRYPTOSTATUS : DATATYPE
   BEGIN
     clear : clear?
-    encrypted(key:KVAL,crstat:CRYPTOSTATUS) : encrypted?
-    signed(key:KVAL,crstat:CRYPTOSTATUS) : signed?
-    sealed(key:KVAL,crstat:CRYPTOSTATUS) : sealed?
+    encrypted(key:KVAL) : encrypted?
+    signed(key:KVAL) : signed?
+    sealed(key:KVAL) : sealed?
   END CRYPTOSTATUS;
 
 END keydata

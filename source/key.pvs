@@ -80,7 +80,7 @@ key[HV:TYPE+] : THEORY
       tpmKey(v,u,f,d,g,p,e) : 
       	tpmKey(v,u,f,d,g,p,CASES e OF 
 			     tpmStoreAsymkey(u0,m0,p0,k0,c0) : 
-			       tpmStoreAsymkey(u0,m0,p0,k0,encrypted(w,clear))
+			       tpmStoreAsymkey(u0,m0,p0,k0,encrypted(w))
 			   ENDCASES)
     ENDCASES;
    
@@ -95,7 +95,7 @@ key[HV:TYPE+] : THEORY
 				migrationAuth(encDat(k)),
 				pubDataDigest(encDat(k)),
 				privKey(encDat(k)),
-				encrypted(p,clear)))
+				encrypted(p)))
 
 
   %% Basic crypto functions operating on KVAL xStatus functions
@@ -106,13 +106,11 @@ key[HV:TYPE+] : THEORY
   % Data Encryption
 
   encryptStatus(k:KVAL,c:CRYPTOSTATUS) : (encrypted?) =
-    encrypted(k,c);
+    encrypted(k);
 
   encrypt(k:KVAL,d:tpmData) : tpmData =
     CASES d OF 
       tpmID(id0,crs0) : tpmID(id0,encryptStatus(k,crs0)),
-      tpmDigest(digest0,crs0) :
-        tpmDigest(digest0,encryptStatus(k,crs0)),
       tpmEncAuth(authdata0,crs0) :
         tpmEncAuth(authdata0,encryptStatus(k,crs0)),
       tpmMigKeyAuth(k0,s0,d0,crs0) : 
@@ -138,6 +136,7 @@ key[HV:TYPE+] : THEORY
       tpmMigScheme(m0) : TRUE,
       tpmEKBlobActivate(k0,i0,p0) : TRUE,
       tpmEKBlobAuth(a0) : TRUE,
+      tpmDigest(digest0) : TRUE,
       tpmNonce(i0) : TRUE,
       tpmSecret(i0) : TRUE,
       tpmKey(k0,u0,f0,a0,ap0,p0,e0) : TRUE,
@@ -156,7 +155,7 @@ key[HV:TYPE+] : THEORY
 
   % Data decryption
   decryptStatus(k:KVAL,c:(encrypted?)) : CRYPTOSTATUS =
-    IF k = inverse(key(c)) THEN crstat(c) ELSE c ENDIF;
+    IF k = inverse(key(c)) THEN clear ELSE c ENDIF;
 
   decrypt(k:KVAL,d:tpmData) : tpmData =
     CASES d OF
@@ -164,11 +163,6 @@ key[HV:TYPE+] : THEORY
         IF encrypted?(crs0)
         THEN tpmID(id0,decryptStatus(k,crs0))
 	ELSE d	
-	ENDIF,
-      tpmDigest(digest0,crs0) :
-        IF encrypted?(crs0)
-        THEN tpmDigest(digest0,decryptStatus(k,crs0))
-	ELSE d
 	ENDIF,
       tpmEncAuth(authdata0,crs0) :
         %tpmEncAuth is encrypted by definition 
@@ -232,10 +226,10 @@ key[HV:TYPE+] : THEORY
   % Lemmas on decryption and encryption
 
   decrypt_encrypt : THEOREM FORALL (k:KVAL,c:CRYPTOSTATUS) : 
-    decryptStatus(inverse(k),encryptStatus(k,c)) = c;
+    decryptStatus(inverse(k),encryptStatus(k,c)) = clear;
 
   decrypt_equal_keys: THEOREM FORALL (k0,k1:KVAL,b:CRYPTOSTATUS) :
-    k0=k1 IMPLIES decryptStatus(inverse(k1),encryptStatus(k0,b)) = b;
+    k0=k1 IMPLIES decryptStatus(inverse(k1),encryptStatus(k0,b)) = clear;
 
   no_decrypt_unequal_keys: THEOREM FORALL (k0,k1:KVAL,b:CRYPTOSTATUS) :
     k0/=k1 IMPLIES decryptStatus(inverse(k1),encryptStatus(k0,b)) = encryptStatus(k0,b)
@@ -243,13 +237,11 @@ key[HV:TYPE+] : THEORY
   % Data signing
 
   signStatus(k:KVAL,c:CRYPTOSTATUS) : (signed?) =
-    signed(k,c);
+    signed(k);
 
   sign(k:KVAL,d:tpmData) : tpmData =
     CASES d OF 
       tpmID(id0,crs0) : tpmID(id0,signStatus(k,crs0)),
-      tpmDigest(digest0,crs0) :
-        tpmDigest(digest0,signStatus(k,crs0)),
       tpmEncAuth(authdata0,crs0) :
         tpmEncAuth(authdata0,signStatus(k,crs0)),
       tpmMigKeyAuth(k0,s0,d0,crs0) :
@@ -277,7 +269,7 @@ key[HV:TYPE+] : THEORY
 
   checkSigStatus(k:KVAL,c:CRYPTOSTATUS) : bool =
     CASES c OF
-      signed(kq,cq) : k = kq
+      signed(kq) : k = kq
       ELSE FALSE
     ENDCASES;
 
@@ -286,6 +278,7 @@ key[HV:TYPE+] : THEORY
       tpmMigScheme(m0) : FALSE,
       tpmEKBlobActivate(k0,i0,p0) : FALSE,
       tpmEKBlobAuth(a0) : FALSE,
+      tpmDigest(digest0) : FALSE,
       tpmCompositeHash(d0) : FALSE,
       tpmNonce(i0) : FALSE,
       tpmSecret(i0) : FALSE,

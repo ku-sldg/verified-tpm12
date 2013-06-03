@@ -44,7 +44,7 @@ data[HV:TYPE+]  : THEORY
     tpmEKBlobAuth(authValue:(tpmSecret?)) : tpmEKBlobAuth?
     
     %% Abitrarily long digest of arbitrary TPM data			(5.4)
-    tpmDigest(digest:list[tpmData],crs:CRYPTOSTATUS) : tpmDigest?
+    tpmDigest(digest:list[tpmData]) : tpmDigest?
     %  tpmDigest is the list of things concatenated and hashed to create the
     %  digest value - #(d0++d1++...++dn).  
     %  Note that this digest does not contain PCRs 
@@ -250,6 +250,7 @@ data[HV:TYPE+]  : THEORY
     OAEP(m:(tpmMigrateAsymkey?),pHash:tpmData,seed:KVAL) : OAEP?
     concat(f:tpmData,s:tpmData) : concat?
 
+%    decrypted(d:tpmData) : decrypted?
 
   END tpmData;
 
@@ -313,7 +314,7 @@ data[HV:TYPE+]  : THEORY
 		    migrationAuthDefault,
 		    pubDataDigestDefault,
 		    inverse(k),
-		    encrypted(p,clear));
+		    encrypted(p));
 
   tpmCMKDelegateDefault  : (tpmCMKDelegate?) = 
     tpmCMKDelegate(false,false,false,false,false);

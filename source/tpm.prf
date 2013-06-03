@@ -3075,7 +3075,6 @@ stclearData := stclearDataInit #)")
      nil)
     (afterStartup? const-decl "bool" tpm nil)
     (NOT const-decl "[bool -> bool]" booleans nil)
-    (minus_int_is_int application-judgement "int" integers nil)
     (afterInit? const-decl "bool" tpm nil)
     (outputComPostInit const-decl "tpmAbsOutput" tpm nil)
     (inverse const-decl "KVAL" keydata nil)
@@ -8087,14 +8086,10 @@ stclearData := stclearDataInit #)")
     (TRUE const-decl "bool" booleans nil)
     (ODD const-decl "(tpmNonce?)" data nil)
     (EVEN const-decl "(tpmNonce?)" data nil)
-    (clear adt-constructor-decl "(clear?)" keydata nil)
-    (clear? adt-recognizer-decl "[CRYPTOSTATUS -> boolean]" keydata
-     nil)
     (key adt-accessor-decl "[(tpmKey?) -> KVAL]" data nil)
     (- const-decl "[numfield -> numfield]" number_fields nil)
     (numfield nonempty-type-eq-decl nil number_fields nil)
-    (signed adt-constructor-decl "[[KVAL, CRYPTOSTATUS] -> (signed?)]"
-     keydata nil)
+    (signed adt-constructor-decl "[KVAL -> (signed?)]" keydata nil)
     (signed? adt-recognizer-decl "[CRYPTOSTATUS -> boolean]" keydata
      nil)
     (KVAL type-eq-decl nil keydata nil)
@@ -8246,14 +8241,10 @@ stclearData := stclearDataInit #)")
     (KVAL type-eq-decl nil keydata nil)
     (signed? adt-recognizer-decl "[CRYPTOSTATUS -> boolean]" keydata
      nil)
-    (signed adt-constructor-decl "[[KVAL, CRYPTOSTATUS] -> (signed?)]"
-     keydata nil)
+    (signed adt-constructor-decl "[KVAL -> (signed?)]" keydata nil)
     (numfield nonempty-type-eq-decl nil number_fields nil)
     (- const-decl "[numfield -> numfield]" number_fields nil)
     (key adt-accessor-decl "[(tpmKey?) -> KVAL]" data nil)
-    (clear? adt-recognizer-decl "[CRYPTOSTATUS -> boolean]" keydata
-     nil)
-    (clear adt-constructor-decl "(clear?)" keydata nil)
     (EVEN const-decl "(tpmNonce?)" data nil)
     (ODD const-decl "(tpmNonce?)" data nil)
     (TRUE const-decl "bool" booleans nil)
@@ -8419,9 +8410,6 @@ stclearData := stclearDataInit #)")
            OR OUT_FlushSpecific?(x) OR OUT_DAA_Join?(x)
            OR OUT_DAA_Sign?(x)} ->
    ReturnCode]" tpm nil)
-    (crstat shared-adt-accessor-decl
-     "[{x: CRYPTOSTATUS | encrypted?(x) OR signed?(x) OR sealed?(x)} ->
-   CRYPTOSTATUS]" keydata nil)
     (key shared-adt-accessor-decl
      "[{x: CRYPTOSTATUS | encrypted?(x) OR signed?(x) OR sealed?(x)} -> KVAL]"
      keydata nil)
@@ -8574,14 +8562,10 @@ stclearData := stclearDataInit #)")
     (KVAL type-eq-decl nil keydata nil)
     (signed? adt-recognizer-decl "[CRYPTOSTATUS -> boolean]" keydata
      nil)
-    (signed adt-constructor-decl "[[KVAL, CRYPTOSTATUS] -> (signed?)]"
-     keydata nil)
+    (signed adt-constructor-decl "[KVAL -> (signed?)]" keydata nil)
     (numfield nonempty-type-eq-decl nil number_fields nil)
     (- const-decl "[numfield -> numfield]" number_fields nil)
     (key adt-accessor-decl "[(tpmKey?) -> KVAL]" data nil)
-    (clear? adt-recognizer-decl "[CRYPTOSTATUS -> boolean]" keydata
-     nil)
-    (clear adt-constructor-decl "(clear?)" keydata nil)
     (EVEN const-decl "(tpmNonce?)" data nil)
     (ODD const-decl "(tpmNonce?)" data nil)
     (TRUE const-decl "bool" booleans nil)

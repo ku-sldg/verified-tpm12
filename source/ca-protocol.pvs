@@ -14,11 +14,11 @@
    %%
 
 
-caProtocol : THEORY
+caProtocol[HV:TYPE+] : THEORY
 
 BEGIN
 
-  IMPORTING tpm
+  IMPORTING tpm[HV];
 
   makeCertActivate(state:tpmAbsState,k:(tpmKey?),e:(tpmEncAuth?),
 	d:(tpmDigest?),i1,i2,i3,i4:authIn) : tpmAbsState =
@@ -35,13 +35,11 @@ BEGIN
 				    select := creationPCRSelect(PCRInfo(k)),
                                     pcrValue := pcrs(state) #)),
                                  digAtRelease(PCRInfo(k))),
-                  wrappingKey(state`srk),
                   tpmStoreAsymkey(tpmSecret(authData(e)),
                                   state`permData`tpmProof,
                                   pubDataDigest(encDat(k)),
                                   privKey(encDat(k)),
-				  clear),
-                  clear) IN
+				  clear)) IN
    state WITH[
   	`keyGenCnt := 2+keyGenCnt(state),
         `memory := updateLoc(updateLoc(state`memory,
@@ -51,7 +49,7 @@ BEGIN
                                         tpmIdContents
                                         (d,
                                          key,
-                                         signed(--keyGenCnt(state), clear)),
+                                         signed(--keyGenCnt(state))),
                                         (# nonceEven:=EVEN,
                                            nonceOdd:=ODD,
                                            contAuthSess:=FALSE,
@@ -67,7 +65,7 @@ BEGIN
                                          tpmAsymCAContents(
 					  tpmSessKey(1+-keyGenCnt(state),clear),
                                           d,
-                                          encrypted(1,clear)),
+                                          encrypted(1)),
                                          CPU_SUCCESS))]
 
   %% Note that the identity is not used in building the final
@@ -176,7 +174,7 @@ BEGIN
 % 		LET wk:wrapKey = (# parentKey:= private(asymKey(srkKeyVal)),
 %                                     childKey := aik #)
 % 				    IN
-LET key=idKey(s`memory(0))
+LET key:(tpmKey?)=idKey(s`memory(0))
 		  IN
 %TODO: FIX KEY STUFF!!
     makeIdentity?(state,idKey) AND 
@@ -204,9 +202,8 @@ LET key=idKey(s`memory(0))
 				tpmCompositeHash((#select:=pm,
 					pcrValue:=s`pcrs#)),
 				n,
-				signed(private(key),clear)),
-				tpmIdContents(caDig,key,signed(private(key),
-					clear)),
+				signed(private(key))),
+				tpmIdContents(caDig,key,signed(private(key))),
 				CPU_SUCCESS) AND
       s = state WITH[`keyGenCnt := 2+keyGenCnt(state),
       	     	     `memory := s`memory]
@@ -277,9 +274,8 @@ LET key=idKey(s`memory(0))
          a = OUT_FullQuote(
 		tpmQuote(tpmCompositeHash((#select:=p,pcrValue:=s`pcrs#)),
 			 n,
-			 signed(private(key),clear)),
-			 tpmIdContents(d,key,signed(private(key),
-			 clear)),
+			 signed(private(key))),
+			 tpmIdContents(d,key,signed(private(key))),
 		CPU_SUCCESS) AND
     s=state WITH [`memory:=s`memory
     	    	 ,`keyGenCnt:=state`keyGenCnt+2]
