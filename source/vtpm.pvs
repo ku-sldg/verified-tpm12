@@ -7,21 +7,29 @@ vtpm[ HASH:TYPE+,PCR:TYPE+,KEY:TYPE+ ]
    % assuming declarations
   % ENDASSUMING
 
-  MAXINDEX : posint
-  LTID : TYPE = posint
-  DOMID : TYPE = posint
+  MAXID : posint
+  IDVTPM : TYPE = {x:posint | x<=MAXID}
+  IDDOM : TYPE = posint
 
-  vtpmEntry : TYPE = [# ltID:LTID,domID:DOMID,sessk:KEY,hash:HASH #]
+  vtpmEntry : TYPE = [# IDvtpm:IDVTPM,IDdom:IDDOM,kd:KEY,hashD:HASH #]
  
-  vtpmManState : TYPE = ARRAY[{x:naturalnumber|x<=MAXINDEX}->vtpmEntry]
+  vtpmManState : TYPE = ARRAY[IDVTPM->vtpmEntry]
 
+  % This condition is too strong.  Induction is not useful.  Pretty easy to 
+  % go left to right, but not possile to go right to left except for the
+  % the third clause that's trivial
   wellFormed?(s:vtpmManState):boolean =
-    FORALL (x,y:{z:naturalnumber | z<=MAXINDEX}) : 
-      sessk(s(x))=sessk(s(y)) <=> x=y
-      AND hash(s(x))=hash(s(y)) <=> x=y
-      AND ltID(s(x))=ltID(s(y)) <=> x=y
-      AND domID(s(x))=domID(s(y)) <=> x=y
+    FORALL (x,y:IDVTPM) : 
+      kd(s(x))=kd(s(y)) <=> x=y
+      AND hashD(s(x))=hashD(s(y)) <=> x=y
+      AND IDvtpm(s(x))=IDvtpm(s(y)) <=> x=y
+      AND IDdom(s(x))=IDdom(s(y)) <=> x=y
 
-  initVtpmState(l:LTID,d:DOMID,h:HASH,s:(wellFormed?)):(wellFormed?) = s
+  % This is not a good function - why would we assume wellFormed? before
+  % provisioning?
+  provisionVtpm(l:IDVTPM,d:IDDOM,h:HASH,s:(wellFormed?)):(wellFormed?) =
+    s WITH [(l) := s(l) WITH [IDvtpm :=l, IDdom := d, hashD := h]]
+
+      
 
   END vtpm

@@ -1,0 +1,23 @@
+(vtpm
+ (provisionVtpm_TCC1 0
+  (provisionVtpm_TCC1-1 nil 3579023246
+   ("" (skosimp)
+    (("" (rewrite "wellFormed?")
+      (("" (skosimp)
+        (("" (prop)
+          (("1" (grind) nil nil)
+           ("2" (replace -3 1) (("2" (propax) nil nil)) nil)
+           ("3" (rewrite -3) nil nil) ("4" (rewrite -1) nil nil)
+           ("5" (rewrite -7) nil nil) ("6" (rewrite -) nil nil)
+           ("7" (postpone) nil nil)
+           ("8" (rewrite +) (("8" (postpone) nil nil)) nil)
+           ("9" (postpone) nil nil) ("10" (postpone) nil nil)
+           ("11" (postpone) nil nil) ("12" (postpone) nil nil)
+           ("13" (postpone) nil nil) ("14" (postpone) nil nil)
+           ("15" (postpone) nil nil) ("16" (postpone) nil nil))
+          nil))
+        nil))
+      nil))
+    nil)
+   nil nil)))
+

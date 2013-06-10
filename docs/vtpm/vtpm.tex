@@ -107,7 +107,7 @@ what is stored in the vTPM Manager.
     \emph{Initialized} & \emph{Modified} \\ \hline
     $\encrypt{D}{K_D}$ & Encrypted vTPM data & Host Storage &
     provisioning & vTPM sleep \\
-    $vtpm$ & \emph{vTPM Image} & Host Storage & provisioning & never
+    $I_{vtpm}$ & \emph{vTPM Image} & Host Storage & provisioning & never
     \\
     $\hash{(vTPM+ID_{vtpm})}$ & Hash of vTPM named $ID_{vtpm}$ & vTPM
     Manager & build & build \\ 
@@ -167,9 +167,9 @@ of the process:
   \newinst[1.5]{db}{Domain Builder}
   \newinst[4.5]{manager}{vTPM Manager}
   
-  \begin{call}{controller}{vTPM,$ID_{vtpm}$}{db}{$\hash{(vTPM+ID_{vtpm})}$}a
-    \begin{callself}{db}{build vTPM,$ID_{vtpm}$}{$\hash{(vTPM+ID_{vtpm}),ID_{dom}}$}\end{callself}
-    \begin{call}{db}{$\hash{(vTPM+ID_{vtpm})}$,$ID_{vtpm}$,$ID_{dom}$}{manager}{}
+  \begin{call}{controller}{$I_{vtpm}$,$ID_{vtpm}$}{db}{$\hash{(I_{vtpm}+ID_{vtpm})}$}
+    \begin{callself}{db}{build vTPM,$ID_{vtpm}$}{$\hash{(I_{vtpm}+ID_{vtpm}),ID_{dom}}$}\end{callself}
+    \begin{call}{db}{$\hash{(I_{vtpm}+ID_{vtpm})}$,$ID_{vtpm}$,$ID_{dom}$}{manager}{}
       \begin{callself}{manager}{Update $ID_{vtpm}$ entry}{}\end{callself}
     \end{call}
   \end{call}
