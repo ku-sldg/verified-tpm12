@@ -1,4 +1,10 @@
 (data
+ (encStoreAsymkey?_TCC1 0
+  (encStoreAsymkey?_TCC1-1 nil 3579274802 ("" (subtype-tcc) nil nil)
+   nil nil))
+ (keyEncDatStoreAsymkey 0
+  (keyEncDatStoreAsymkey-1 nil 3579274888
+   ("" (grind) (("" (postpone) nil nil)) nil) nil shostak))
  (tpmNull_TCC1 0
   (tpmNull_TCC1-1 nil 3566921310
    (""
@@ -9,10 +15,7 @@ tpmDigest(null,clear),tpmSessKey(1,clear),clear)")
    ((tpmSessKey adt-constructor-decl "[KVAL -> (tpmSessKey?)]" data
      nil)
     (tpmSessKey? adt-recognizer-decl "[tpmData -> boolean]" data nil)
-    (KVAL type-eq-decl nil keydata nil)
-    (clear adt-constructor-decl "(clear?)" keydata nil)
-    (clear? adt-recognizer-decl "[CRYPTOSTATUS -> boolean]" keydata
-     nil)
+    (KVAL type-eq-decl nil keydata nil) nil nil
     (null adt-constructor-decl "(null?)" list_adt nil)
     (null? adt-recognizer-decl "[list -> boolean]" list_adt nil)
     (tpmDigest adt-constructor-decl "[list[tpmData] -> (tpmDigest?)]"
@@ -32,7 +35,7 @@ tpmDigest(null,clear),tpmSessKey(1,clear),clear)")
     (tpmSealedData adt-constructor-decl
      "[[(tpmSecret?), (tpmSecret?), (tpmDigest?), tpmData] -> (tpmSealedData?)]"
      data nil)
-    (CRYPTOSTATUS type-decl nil keydata nil)
+    nil
     (tpmDigest? adt-recognizer-decl "[tpmData -> boolean]" data nil)
     (tpmSecret? adt-recognizer-decl "[tpmData -> boolean]" data nil)
     (tpmSealedData? adt-recognizer-decl "[tpmData -> boolean]" data
@@ -86,6 +89,9 @@ tpmDigest(null,clear),tpmSessKey(1,clear),clear)")
      nil)
     (boolean nonempty-type-decl nil booleans nil)
     (tpmData type-decl nil data nil))
+   nil))
+ (invalidAuth?_TCC1 0
+  (invalidAuth?_TCC1-1 nil 3579274882 ("" (subtype-tcc) nil nil) nil
    nil))
  (encryptADIP_TCC1 0
   (encryptADIP_TCC1-1 nil 3567428896 ("" (cases-tcc) nil nil)

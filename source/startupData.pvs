@@ -27,7 +27,6 @@ startupData[K,HV:TYPE+] : THEORY
 
   BEGIN
 
-  IMPORTING key[HV];
   IMPORTING PermanentFlags;
   IMPORTING PermanentData[HV];
   IMPORTING StanyFlags[HV];

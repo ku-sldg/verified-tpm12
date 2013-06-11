@@ -20,6 +20,104 @@ BEGIN
 
   IMPORTING tpm[HV];
 
+  make_cert : THEOREM
+   FORALL (state:(afterStartup?)
+   	  ,e:(tpmEncAuth?)
+	  ,d:(tpmDigest?)
+	  ,idk:(tpmKey?)
+	  ,id:(tpmIdContents?)
+	  ,i1,i2,i3,i4:authIn
+	  ,x:nat) :
+    LET (a,s) = runState(
+ 		TPM_MakeIdentity(e,d,idk,i1,i2)
+		>>= CPU_saveOutput(x)
+		>>= (LAMBDA (a:tpmAbsOutput) :
+		    CASES a OF
+		    	  OUT_MakeIdentity(k,i,o1,o2,m) : CA_certify(k,i)
+			  ELSE TPM_Noop(a)
+		    ENDCASES))
+		(state) IN
+    makeIdentity?(state,idk) AND 
+     OUT_MakeIdentity?(s`memory(x)) AND 
+     certify?(idKey(s`memory(x)),idBinding(s`memory(x))) 
+    =>
+     a=OUT_Certify(idKey(s`memory(x)),
+		encrypted(tpmAsymCAContents(tpmSessKey(keyGenCnt(state)+1),
+				digest(idBinding(s`memory(x)))),
+			key(ekVal)),
+		CPU_SUCCESS) 
+     AND s=state WITH [`keyGenCnt:=state`keyGenCnt+2
+       	       	      ,`memory:=s`memory]
+
+  cert_activate : THEOREM
+    FORALL(state:(afterStartup?),aik:(tpmKey?),c:(signed?),i1,i2:authIn,
+		x:nat):
+      LET (a,s) = runState(
+      	  	  CA_certify(aik,c)
+		  >>= CPU_saveOutput(x)
+		  >>= (LAMBDA (a:tpmAbsOutput) :
+		       CASES a OF
+		       OUT_Certify(k,d,m) : TPM_ActivateIdentity(k,d,i1,i2)
+		       ELSE TPM_Noop(a)	
+		       ENDCASES))
+		  (state) IN
+    LET o1=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+			resAuth:=usageAuth(data(encDat(aik)))#),
+	o2=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+			resAuth:=ownerAuth(i2)#) IN
+    certify?(aik,c) AND
+     OUT_Certify?(s`memory(x)) AND
+     activateIdentity?(s,k(s`memory(x)),dat(s`memory(x)))
+    =>
+    a=OUT_ActivateIdentity(sessK(data(dat(s`memory(x)))),o1,o2,TPM_SUCCESS) AND
+     s=state WITH [`keyGenCnt:=1+keyGenCnt(state)
+              	  ,`memory:=updateLoc(state`memory,x,
+                             OUT_Certify(aik,
+				encrypted(tpmAsymCAContents(
+						tpmSessKey(keyGenCnt(state)),
+                                        	digest(c)),
+                                          key(ekVal)),
+                                         CPU_SUCCESS))]
+
+
+  make_cert_activate_identity: THEOREM 
+   FORALL (state:(afterStartup?)
+   	  ,e:(tpmEncAuth?)
+	  ,d:(tpmDigest?)
+	  ,k:(tpmKey?)
+	  ,i1,i2,i3,i4:authIn
+	  ,x,y:nat) :
+    LET (a,s) = runState(
+ 		TPM_MakeIdentity(e,d,k,i1,i2)
+		>>= CPU_saveOutput(x)
+		>>= (LAMBDA (a:tpmAbsOutput) :
+		    CASES a OF
+		    	  OUT_MakeIdentity(k,i,o1,o2,m) : CA_certify(k,i)
+			  ELSE TPM_Noop(a)
+		    ENDCASES)
+		>>= CPU_saveOutput(y)
+		>>= (LAMBDA (a:tpmAbsOutput) : 
+		    CASES a OF
+		    	  OUT_Certify(j,d,m) : TPM_ActivateIdentity(j,d,i3,i4)
+			  ELSE TPM_Noop(a)
+		    ENDCASES))
+		(state) IN
+    makeIdentity?(state,k) AND 
+    	OUT_MakeIdentity?(s`memory(x)) AND
+    certify?(idKey(s`memory(x)),idBinding(s`memory(x))) AND
+    	OUT_Certify?(s`memory(y)) AND
+	wellFormedRestore?(s`restore) AND
+    activateIdentity?(tpmRestore(s`restore),idKey(s`memory(x)),
+	dat(s`memory(y))) 
+    => 
+    LET o3=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+			resAuth:=usageAuth(data(encDat(idKey(s`memory(x)))))#),
+	o4=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+			resAuth:=ownerAuth(i4)#) IN
+    a=OUT_ActivateIdentity(sessK(data(dat(s`memory(y)))),o3,o4,TPM_SUCCESS) AND
+    s=state WITH [`memory:=s`memory
+    	    	 ,`keyGenCnt:=state`keyGenCnt+2]
+
   makeCertActivate(state:tpmAbsState,k:(tpmKey?),e:(tpmEncAuth?),
 	d:(tpmDigest?),i1,i2,i3,i4:authIn) : tpmAbsState =
    LET key=tpmKey(-keyGenCnt(state),

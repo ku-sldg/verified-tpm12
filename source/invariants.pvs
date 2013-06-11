@@ -27,11 +27,11 @@
 %% Todo: (key - => pending, + => done)
 %% ----
 
-invariants : THEORY
+invariants[HV:TYPE+] : THEORY
 
 BEGIN 
 
-  IMPORTING tpm;
+  IMPORTING tpm[HV];
 
   restore_unchanged: THEOREM
     FORALL (s:tpmAbsState,c:tpmAbsInput) :

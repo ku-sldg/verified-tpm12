@@ -59,11 +59,41 @@
     (KVAL type-eq-decl nil keydata nil)
     (rewrap const-decl "(tpmKey?)" key nil))
    shostak))
+ (decrypt_encrypt_TCC1 0
+  (decrypt_encrypt_TCC1-1 nil 3579889657 ("" (subtype-tcc) nil nil)
+   ((boolean nonempty-type-decl nil booleans nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (NOT const-decl "[bool -> bool]" booleans nil)
+    (number nonempty-type-decl nil numbers nil)
+    (number_field_pred const-decl "[number -> boolean]" number_fields
+     nil)
+    (number_field nonempty-type-from-decl nil number_fields nil)
+    (real_pred const-decl "[number_field -> boolean]" reals nil)
+    (real nonempty-type-from-decl nil reals nil)
+    (rational_pred const-decl "[real -> boolean]" rationals nil)
+    (rational nonempty-type-from-decl nil rationals nil)
+    (integer_pred const-decl "[rational -> boolean]" integers nil)
+    (KVAL type-eq-decl nil keydata nil)
+    (encrypt const-decl "tpmData" key nil))
+   nil))
  (decrypt_encrypt 0
   (decrypt_encrypt-1 nil 3560012031 ("" (grind) nil nil)
-   ((inverse const-decl "KVAL" keydata nil)
-    (encryptStatus const-decl "(encrypted?)" key nil)
-    (decryptStatus const-decl "CRYPTOSTATUS" key nil))
+   ((boolean nonempty-type-decl nil booleans nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (NOT const-decl "[bool -> bool]" booleans nil)
+    (number nonempty-type-decl nil numbers nil)
+    (number_field_pred const-decl "[number -> boolean]" number_fields
+     nil)
+    (number_field nonempty-type-from-decl nil number_fields nil)
+    (real_pred const-decl "[number_field -> boolean]" reals nil)
+    (real nonempty-type-from-decl nil reals nil)
+    (rational_pred const-decl "[real -> boolean]" rationals nil)
+    (rational nonempty-type-from-decl nil rationals nil)
+    (integer_pred const-decl "[rational -> boolean]" integers nil)
+    (KVAL type-eq-decl nil keydata nil)
+    (inverse const-decl "KVAL" keydata nil)
+    (encrypt const-decl "tpmData" key nil)
+    (decrypt const-decl "tpmData" key nil))
    shostak))
  (decrypt_equal_keys 0
   (decrypt_equal_keys-1 nil 3560012037 ("" (grind) nil nil)
@@ -81,8 +111,8 @@
     (integer_pred const-decl "[rational -> boolean]" integers nil)
     (KVAL type-eq-decl nil keydata nil)
     (inverse const-decl "KVAL" keydata nil)
-    (encryptStatus const-decl "(encrypted?)" key nil)
-    (decryptStatus const-decl "CRYPTOSTATUS" key nil))
+    (encrypt const-decl "tpmData" key nil)
+    (decrypt const-decl "tpmData" key nil))
    shostak))
  (no_decrypt_unequal_keys 0
   (no_decrypt_unequal_keys-1 nil 3560012042 ("" (grind) nil nil)
@@ -102,16 +132,16 @@
     (minus_int_is_int application-judgement "int" integers nil)
     (/= const-decl "boolean" notequal nil)
     (inverse const-decl "KVAL" keydata nil)
-    (encryptStatus const-decl "(encrypted?)" key nil)
-    (decryptStatus const-decl "CRYPTOSTATUS" key nil))
+    (encrypt const-decl "tpmData" key nil)
+    (decrypt const-decl "tpmData" key nil))
    shostak))
  (checkSig_TCC1 0
   (checkSig_TCC1-1 nil 3561308360 ("" (subtype-tcc) nil nil) nil
    shostak))
  (check_sign 0
   (check_sign-1 nil 3560012098 ("" (grind) nil nil)
-   ((signStatus const-decl "(signed?)" key nil)
-    (checkSigStatus const-decl "bool" key nil))
+   ((sign const-decl "tpmData" key nil)
+    (checkSig const-decl "bool" key nil))
    shostak))
  (load_key 0
   (load_key-1 nil 3572106468
@@ -126,12 +156,21 @@
     (keyParmsDef const-decl "KEY_PARMS" keydata nil)
     (inverse const-decl "KVAL" keydata nil)
     (HV formal-nonempty-type-decl nil key nil)
-    (storeAsymkeyDefault const-decl "(tpmStoreAsymkey?)" data nil)
+    (storeAsymkeyDefault const-decl "(encrypted?)" data nil)
     (TPM_KH_SRK const-decl "(tpmKey?)" key nil)
     (installedOrSRK? const-decl "bool" key nil)
     (addKey const-decl "KEYSET" key nil)
     (loadKey const-decl "KEYSET" key nil))
    shostak))
+ (child_if_parent_TCC1 0
+  (child_if_parent_TCC1-1 nil 3579274348 ("" (subtype-tcc) nil nil)
+   ((boolean nonempty-type-decl nil booleans nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (NOT const-decl "[bool -> bool]" booleans nil)
+    (HV formal-nonempty-type-decl nil key nil)
+    (tpmData type-decl nil data nil)
+    (tpmKey? adt-recognizer-decl "[tpmData -> boolean]" data nil))
+   nil))
  (child_if_parent 0
   (child_if_parent-1 nil 3560203723
    ("" (skosimp)
@@ -142,7 +181,7 @@
     (keyParmsDef const-decl "KEY_PARMS" keydata nil)
     (inverse const-decl "KVAL" keydata nil)
     (HV formal-nonempty-type-decl nil key nil)
-    (storeAsymkeyDefault const-decl "(tpmStoreAsymkey?)" data nil)
+    (storeAsymkeyDefault const-decl "(encrypted?)" data nil)
     (TPM_KH_SRK const-decl "(tpmKey?)" key nil)
     (installedOrSRK? const-decl "bool" key nil)
     (addKey const-decl "KEYSET" key nil)
@@ -156,5 +195,8 @@
    ((revokeKey const-decl "KEYSET" key nil)
     (member const-decl "bool" sets nil)
     (remove const-decl "set" sets nil))
-   shostak)))
+   shostak))
+ (decryptWrapped_TCC1 0
+  (decryptWrapped_TCC1-1 nil 3579888572 ("" (subtype-tcc) nil nil) nil
+   nil)))
 

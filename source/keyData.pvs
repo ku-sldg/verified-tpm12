@@ -89,12 +89,12 @@ keydata : THEORY
   %% Type indicating crypographic status - clear, encrypted, signed, wrapped,
   %% sealed.  Type is recursive allowing multiple operations on the same
   %% element.
-  CRYPTOSTATUS : DATATYPE
-  BEGIN
-    clear : clear?
-    encrypted(key:KVAL) : encrypted?
-    signed(key:KVAL) : signed?
-    sealed(key:KVAL) : sealed?
-  END CRYPTOSTATUS;
+%   CRYPTOSTATUS : DATATYPE
+%   BEGIN
+%     clear : clear?
+% %     encrypted(key:KVAL) : encrypted?
+% %     signed(key:KVAL) : signed?
+% %     sealed(key:KVAL) : sealed?
+%   END CRYPTOSTATUS;
 
 END keydata
