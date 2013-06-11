@@ -1,0 +1,35 @@
+vtpm[ HASH:TYPE+,PCR:TYPE+,KEY:TYPE+ ]
+		: THEORY
+
+  BEGIN
+
+  % ASSUMING
+   % assuming declarations
+  % ENDASSUMING
+
+  MAXID : posint
+  IDVTPM : TYPE = {x:posint | x<=MAXID}
+  IDDOM : TYPE = posint
+
+  vtpmEntry : TYPE = [# IDvtpm:IDVTPM,IDdom:IDDOM,kd:KEY,hashD:HASH #]
+ 
+  vtpmManState : TYPE = ARRAY[IDVTPM->vtpmEntry]
+
+  % This condition is too strong.  Induction is not useful.  Pretty easy to 
+  % go left to right, but not possile to go right to left except for the
+  % the third clause that's trivial
+  wellFormed?(s:vtpmManState):boolean =
+    FORALL (x,y:IDVTPM) : 
+      kd(s(x))=kd(s(y)) <=> x=y
+      AND hashD(s(x))=hashD(s(y)) <=> x=y
+      AND IDvtpm(s(x))=IDvtpm(s(y)) <=> x=y
+      AND IDdom(s(x))=IDdom(s(y)) <=> x=y
+
+  % This is not a good function - why would we assume wellFormed? before
+  % provisioning?
+  provisionVtpm(l:IDVTPM,d:IDDOM,h:HASH,s:(wellFormed?)):(wellFormed?) =
+    s WITH [(l) := s(l) WITH [IDvtpm :=l, IDdom := d, hashD := h]]
+
+      
+
+  END vtpm
