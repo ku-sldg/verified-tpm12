@@ -1,6 +1,11 @@
 \documentclass[10pt]{article}
 
 %\usepackage{hyperref}
+\usepackage{semantic}
+\usepackage{listings}
+\usepackage{times}
+\usepackage[scaled]{beramono}
+\usepackage[T1]{fontenc}
 \usepackage{fullpage}
 \usepackage{alltt}
 \usepackage{natbib}
@@ -12,6 +17,43 @@
 \usepackage[underline=false]{pgf-umlsd}
 \usepackage{trust}
 \pagestyle{fancy}
+
+\lstdefinelanguage{pvs}{
+   basicstyle=\color{black}\ttfamily,
+   emphstyle=\bfseries,
+   keywordstyle=\bfseries,
+   commentstyle=\color{red},
+   stringstyle=\color{blue},
+%￼ identifierstyle=\sffamily,
+   morekeywords={theory,begin,end,type,type+,axiom,theorem,lemma,datatype,
+     judgement,assumption,assuming,endassuming,lambda,forall,exists,if,then,
+     else,endif},
+   emph={true,false,not,and,or,xor,iff,implies,lambda,forall,exists},
+   mathescape=true,
+   sensitive=false,
+   showstringspaces=false,
+   morestring=[b]",
+ }
+
+\lstdefinelanguage{logic}{
+  basicstyle=\color{black}\sffamily,
+  emphstyle=\bfseries,
+  keywordstyle=\bfseries,
+  commentstyle=\color{red},
+  stringstyle=\color{blue},
+  morekeywords={theory,begin,end,if,then,else,endif},
+  emph={true,false,not,and,or,xor,iff,implies,lambda,forall,exists},
+  sensitive=false,
+  showstringspaces=false,
+  mathescape=true,
+  literate={->}{{$\rightarrow$}}1 {=>}{{$\Rightarrow$}}1 
+            {forall}{{$\forall$}}1 {EXISTS}{{$\exists$}}1
+            {lambda}{{$\lambda$}}1 {<=>}{{$\Rightleftarrow$}}1
+            {==}{{$\equiv$}}1,
+  morestring=[b]",
+ }
+
+\lstset{language=pvs}
 
 \lhead{}
 \rhead{}
@@ -56,6 +98,10 @@
 \tableofcontents
 \listoffigures
 \listoftables
+
+\newtheorem{invariant}{Invariant}
+\newtheorem{post}{Postcondition}
+\newtheorem{pre}{Precondition}
 
 \begin{abstract}
   This document is designed to document our work understanding the
@@ -134,6 +180,64 @@ initialized?  Monotonic counter values and other stuff not specified here.
 \item vTPM data is initialized -- including fresh EK value.
 \item vTPM is put to sleep using the standard sleep protocol
 \end{enumerate}
+
+\subsection*{Post-conditions for Provisioning}
+
+\subsubsection*{vTPM Information Table}
+
+Conditions on the vTPM information table residing in the vTPM
+Manager:\footnote{Note that we use the PVS notation $X(ID_{vtpm}$ to
+  reference property $X$ from the vTPM Manager's record for vTPM $ID_{vtpm}$.}
+
+
+\begin{invariant}[Unique vTPM Name]
+  An $ID_{vtpm}$ will never have two different table entries.
+
+\[\forall i,j:ID_{vtpm} \cdot t(i)=t(j) <=> i=j\]
+
+\end{invariant}
+
+\begin{invariant}[vTPM Data Seal]
+  A vTPM cannot access its data if its platform was not built from the
+  correct parts.
+
+  The state of a vTPM's data session key following provisioning or
+  sleep is sealed to $PCR_0$ through $PCR_6$ that contain measurements
+  of MLE and SVP components that boot before the vTPM:
+
+  \[\seal{K_D}{PCR_0\ldots PCR_6}\]
+
+  Given the key is initially sealed during provisioning to $PCR$s
+  resulting from hashing correct components, $K_D$ will not unseal
+  unless: (i) the unsealing TPM is the same as the sealing TPM; and
+  (ii) hashes in sealing $PCR$s must match hashes of those in the TPM
+  at provisioning.  Assumption (i) and a certificate binding the
+  sealing TPM to a system ensures that the $K_D$ will only unseal on
+  the hardware it was sealed on.  Assumption (ii) and the assumptions
+  that the hash function is injective and the MLE is correct ensures
+  that $K_D$ will only unseal if the correct Domain Builder, vTPM
+  Manager, Controller and Schema, and vTPM were started during system
+  boot.
+
+  The assumption that $ID_{vtpm}$ values are unique ensures that $K_D$
+  will not unseal unless the correct vTPM makes the unseal request.
+  The vTPM Manager resets $PCR_5$ and $PCR_6$ based on the domain ID
+  ($ID_{dom}$) of vTPM initiating communication.
+\end{invariant}
+
+\begin{invariant}[vTPM Data Existence]
+  A vTPM's data exists and is available through its table entry.
+
+  \[\forall i:ID_{vtpm} \cdot \exists d:D \cdot \encrypt{d}{K_{d}(ID_{vtpm})}\]
+\end{invariant}
+
+\begin{invariant}[Endorsement Key]
+  The vTPM's Endorsement Key (EK) is initialized and a certificate
+  binding it to its vTPM is available.
+
+  \[\exists k:KEY \cdot EK(ID_{vtpm})=k\] 
+  \[\exists \cert{EK(D)}{CA}:cert \cdot TRUE\]
+\end{invariant}
 
 \section{Startup Sequence}
 
