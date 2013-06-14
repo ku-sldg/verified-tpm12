@@ -1,0 +1,45 @@
+vtpm[ HASH:TYPE+,PCR:TYPE+,KEY:TYPE+,ID_dom:TYPE+,ID_vtpm:TYPE+ ]
+		: THEORY
+
+  BEGIN
+
+  % ASSUMING
+   % assuming declarations
+  % ENDASSUMING
+
+  vtpmEntry : TYPE = [# id_vtpm:ID_vtpm,id_dom:ID_dom,k_D:KEY,hash_D:HASH #]
+ 
+  vtpmManState : TYPE = ARRAY[ID_vtpm->vtpmEntry]
+
+  wellFormedK_D?(s:vtpmManState):boolean =
+    FORALL (x,y:ID_vtpm) : x/=y => k_D(s(x))/=k_D(s(y))
+
+  wellFormedHash_D?(s:vtpmManState):boolean =
+    FORALL (x,y:ID_vtpm) : x/=y => hash_D(s(x))/=hash_D(s(y))
+
+  wellFormedId_dom?(s:vtpmManState):boolean =
+    FORALL (x,y:ID_vtpm) : x/=y => id_dom(s(x))/=id_dom(s(y))
+
+  % This condition is too strong.  Induction is not useful.  Pretty easy to 
+  % go left to right, but not possile to go right to left except for the
+  % the third clause that's trivial
+  wellFormed?(s:vtpmManState):boolean =
+%    wellFormedK_D?(s)
+%    AND wellFormedId_dom?(s)
+    FORALL (x,y:ID_vtpm) : 
+      k_D(s(x))=k_D(s(y)) <=> x=y
+      AND id_dom(s(x))=id_dom(s(y)) <=> x=y
+
+  % This is not a good function - why would we assume wellFormed? before
+  % provisioning?
+  provisionVtpm(l:ID_vtpm,d:ID_dom,h:HASH,k:KEY,s:(wellFormed?)):(wellFormed?) =
+    IF (FORALL (i:ID_vtpm) : i/=l =>
+        id_dom(s(i)) /= d
+	AND k_D(s(i)) /= k)
+      THEN s WITH [(l) := (s(l) WITH [id_dom := d, hash_D := h, k_D := k])]
+      ELSE s
+    ENDIF
+
+      
+
+  END vtpm

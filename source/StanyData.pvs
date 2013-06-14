@@ -1,13 +1,31 @@
-StanyData[DV,HV:TYPE+] : THEORY
+%% ----
+%%
+%% STANY Data Theory
+%%
+%% Author: Brigid Halling
+%% Date: 
+%%
+%% Description:   Most of the data in this structure resets on 
+%%  TPM_Startup(ST_STATE). A TPM may implement rules that provide longer-term 
+%%  persistence for the data. The TPM reflects how it handles the data in 
+%%  various TPM_GetCapability fields including startup effects.
+%% 
+%% Dependencies:
+%%  data.pvs
+%%  keydata.pvs
+%%  authdata.pvs
+%%  pcr.pvs
+%%
+%% Todo: (key - => pending, + => done)
+%%
+%% ----
+StanyData[HV:TYPE+] : THEORY
   BEGIN
 
-  IMPORTING key[DV,HV];
+  IMPORTING data[HV];
 
-  % Most of the data in this structure resets on TPM_Startup(ST_STATE). A TPM may implement
-  % rules that provide longer-term persistence for the data. The TPM reflects how it handles
-  % the data in various TPM_GetCapability fields including startup effects.
   StanyData : TYPE = [#
-	   % This is the nonce in use to properly identify saved session context blobs.
+	   % The nonce used to properly identify saved session context blobs.
 	   % This MUST be set to all zeros on each TPM_Startup (ST_Clear).
 	   % The nonce MAY be set to all zeros on TPM_Startup(any).
 	   % Flag Name : TPM_AD_CONTEXTNONCESESSION
@@ -22,12 +40,14 @@ StanyData[DV,HV:TYPE+] : THEORY
 	   % Flag Name : TPM_AD_CURRENTTICKS
 %	   , currentTicks : TPM_CURRENT_TICKS
 	   % This is the counter to avoid session context blob replay attacks.
-	   % This MUST be set to 0 on each TPM_Startup (ST_Clear). The value MAY be set to 0 on TPM_Startup (any).
+	   % This MUST be set to 0 on each TPM_Startup (ST_Clear). The value MAY
+	   %  be set to 0 on TPM_Startup (any).
 	   % Flag Name : TPM_AD_CONTEXTCOUNT
 	   , contextCount : int
 	   % This is the list of outstanding session blobs.
-	   % All elements of this array MUST be set to 0 on each TPM_Startup (ST_Clear).
-	   % The values MAY be set to 0 on TPM_Startup (any). TPM_MIN_SESSION_LIST MUST be 16 or greater.
+	   % All elements of this array MUST be set to 0 on each 
+	   % TPM_Startup(ST_Clear). The values MAY be set to 0 on 
+	   % TPM_Startup(any). TPM_MIN_SESSION_LIST MUST be 16 or greater.
 	   % Flag Name : TPM_AD_CONTEXTLIST
 	   , contextList : int
 	   % List of current sessions. Sessions can be OSAP, OIAP, DSAP and Transport
@@ -44,4 +64,4 @@ StanyData[DV,HV:TYPE+] : THEORY
 		    %, sessions:=
 		  #);
 
-  END StanyData
+END StanyData
