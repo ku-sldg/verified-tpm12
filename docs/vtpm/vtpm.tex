@@ -181,6 +181,19 @@ initialized?  Monotonic counter values and other stuff not specified here.
 \item vTPM is put to sleep using the standard sleep protocol
 \end{enumerate}
 
+\subsection*{Pre-conditions for Provisioning}
+
+\begin{pre}[MLE Measurements]
+  hTPM logical $PCR_{0-4}$ contain hashes of MLE components.
+\end{pre}
+
+\begin{pre}
+  hTPM logical $PCR_5$ contains a hash of the controller/schema pair
+  uniquely identifying the vTPM's virtual platform.\footnote{The
+    controller and schema may be hashed separately with the schema
+    providing the unique identifier for the platform.}
+\end{pre}
+
 \subsection*{Post-conditions for Provisioning}
 
 \subsubsection*{vTPM Information Table}
@@ -190,14 +203,55 @@ Manager:\footnote{Note that we use the PVS notation $X(ID_{vtpm}$ to
   reference property $X$ from the vTPM Manager's record for vTPM $ID_{vtpm}$.}
 
 
-\begin{invariant}[Unique vTPM Name]
-  An $ID_{vtpm}$ will never have two different table entries.
+\begin{post}[Controller Measurement]
+  The vTPM's controller measurement is available in the vTPM
+  information table referenced as $PCR_5$.
 
-\[\forall i,j:ID_{vtpm} \cdot t(i)=t(j) <=> i=j\]
+  \[PCR_5(ID_{vtpm}) = \hash{Controller}\]
 
-\end{invariant}
+\end{post}
 
-\begin{invariant}[vTPM Data Seal]
+\begin{post}[vTPM Measurement]
+  The vTPM's measurement is unique and available in the vTPM
+  information table, referenced as $PCR_6$.
+
+  \[PCR_6(ID_{vtpm}) = \hash{(vTPM+ID_{vtpm})}\]
+
+\end{post}
+
+\begin{post}[vTPM Data Existence]
+  The vTPM's initial data exists and is available through its table entry.
+
+  \[\forall i:ID_{vtpm} \cdot \exists d:D \cdot \encrypt{d}{K_{d}(ID_{vtpm})}\]
+\end{post}
+
+\begin{post}[vTPM Data Seal]
+  The vTPM's data will be sealed to hTPM logical $PCR_{0-6}$
+\end{post}
+
+\begin{post}[vTPM Data Hash]
+  The vTPM's data hash will be stored in the vTPM information table.
+\end{post}
+
+\begin{post}[Endorsement Key]
+  The vTPM's Endorsement Key (EK) is initialized and a certificate
+  binding it to its vTPM is available.
+
+  \[\exists k:KEY \cdot EK(ID_{vtpm})=k\] 
+  \[\exists \cert{EK(D)}{CA}:cert \cdot TRUE\]
+\end{post}
+
+\begin{post}[Unique vTPM Name]
+  The $ID_{vtpm}$ will be unique.
+
+  \[\forall i,j:ID_{vtpm} \cdot t(i)=t(j) <=> i=j\]
+\end{post}
+
+\subsection{Invariants Following Provisioning}
+
+\subsection{Conjectures}
+
+\begin{conjecture}[vTPM Data Seal]
   A vTPM cannot access its data if its platform was not built from the
   correct parts.
 
@@ -223,21 +277,7 @@ Manager:\footnote{Note that we use the PVS notation $X(ID_{vtpm}$ to
   will not unseal unless the correct vTPM makes the unseal request.
   The vTPM Manager resets $PCR_5$ and $PCR_6$ based on the domain ID
   ($ID_{dom}$) of vTPM initiating communication.
-\end{invariant}
-
-\begin{invariant}[vTPM Data Existence]
-  A vTPM's data exists and is available through its table entry.
-
-  \[\forall i:ID_{vtpm} \cdot \exists d:D \cdot \encrypt{d}{K_{d}(ID_{vtpm})}\]
-\end{invariant}
-
-\begin{invariant}[Endorsement Key]
-  The vTPM's Endorsement Key (EK) is initialized and a certificate
-  binding it to its vTPM is available.
-
-  \[\exists k:KEY \cdot EK(ID_{vtpm})=k\] 
-  \[\exists \cert{EK(D)}{CA}:cert \cdot TRUE\]
-\end{invariant}
+\end{conjecture}
 
 \section{Startup Sequence}
 
