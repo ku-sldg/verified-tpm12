@@ -77,8 +77,10 @@
    \marginpar{\raggedright\footnotesize{#1}}
                }}
 
-\parskip=\medskipamount
-\parindent=0pt
+\newcommand{\squeeze}{\parskip=0pt\itemsep=0pt}
+
+%\parskip=\medskipamount
+%\parindent=0pt
 
 \bibliographystyle{abbrvnat}
 
@@ -129,6 +131,8 @@ vTPM Data key and vTPM Data hash.
     $ID_{vtpm}$ & The persistent name of the vTPM & provisioning &
     never \\
     $ID_{dom}$ & Domain ID of vTPM VM & build & build \\
+    $ID_{con}$ & The persistent name of the vTPM's controller &
+    provisioning & never \\
     $\hash{\encrypt{D_{vtpm}}{K_3}}$ & vTPM data hash value & provisioning & vTPM sleep \\
     $PCR_6$ & Hash of the vTPM + Long Term Name & provisioning & boot
     \\
@@ -172,7 +176,7 @@ command can be used to generate an $SRK$ after startup.  What else is
 initialized?  Monotonic counter values and other stuff not specified here.
 
 \begin{enumerate}
-\item Platform booted through Controller -- $PCR_5$ is now known by
+\item Platform booted through Controller -- $PCR_5$ and $ID_{con}$ now known by
   the vTPM Manager
 \item A new Long Term Name is generated for the new vTPM
 \item The new vTPM is built using the Domain Builder -- $PCR_6$ is now
@@ -287,8 +291,61 @@ Manager:\footnote{Note that we use the PVS notation $X(ID_{vtpm}$ to
 \section{Startup Sequence}
 
 Establishing an operational vTPM involves getting the vTPM up and
-running, then installing its data.  These are outlined in the
-following to subsections.
+running, then installing its data.  All vTPM's must have an associated
+Controller running before they can start.  Like vTPM information,
+Controller information is maintained by the vTPM Manager.  The process
+of registering a Controller with the vTPM Manager and starting a new
+vTPM are outlined in the following to subsections.
+
+\subsection{Controller Running}
+
+Figure~\ref{fig:data-controller} describes the sequence of events
+necessary for a Controller to initialize it's data in the vTPM
+Manager's vTPM information table.  When a Controller is started by
+either the SVP Controller (documented) or by the Domain Builder as a
+part of the SVP boot process, information in the vTPM Manager must be
+updated to record the hash associated with the Controller's ID.
+Following is a textual description of the process:
+
+\begin{enumerate}
+  \squeeze
+%  \parskip=0pt\itemsep=0pt
+\item Controller (UVP) or Domain Builder (SVP) requests a build by
+  sending a manifest identifying the Controller image and its Long
+  Term Name to the Domain Builder.
+\item Domain Builder hashes the Controller image and Long Term Name
+\item Domain Builder starts the Controller VM resulting in a new
+  Domain ID
+\item Domain Builder sends the Long Term Name, hash, and Controller
+  Name to the vTPM Manager
+\item vTPM Manager updates data associated with all entries
+  referencing the Controller Name in the vTPM information table
+\item Domain Builder returns the new Controller measurement to the
+  initiating controller
+\end{enumerate}
+
+Note that this sequence differs modestly when the SVP controller is
+started.  The Domain Builder initiates the process itself and there is
+no Controller to receive the resulting hash.
+
+\begin{figure}[hbtp]
+  \centering
+  \begin{sequencediagram}
+  \newthread[white]{controller}{Controller}
+  \newinst[2.0]{db}{Domain Builder} 
+  \newinst[2.0]{manager}{vTPM Manager}
+ \begin{call}{controller}{$I_{con},ID_{con}$}{db}{$\hash{(I_{con}+ID_{con})}$}
+   \begin{callself}{db}{build $I_{con},ID_{con}$}{$\hash{(I_{con}+ID_{con})}$}
+   \end{callself}
+   \begin{call}{db}{$ID_{con},\hash{(I_{con}+ID_{con})}$}{manager}{}
+     \begin{callself}{manager}{Update $ID_{con}$ entry}{}
+     \end{callself}
+   \end{call}
+ \end{call}
+  \end{sequencediagram}
+  \caption{Controller data initialization.}
+  \label{fig:data-controller}
+\end{figure}
 
 \subsection{vTPM Running}
 
@@ -303,11 +360,11 @@ of the process:
 \item Controller requests a build by sending a manifest identifying
   the vTPM image and its Long Term Name to the Domain Builder
 \item Domain Builder hashes the vTPM image and Long Term Name
-\item Domain Builder starts the vTPM VM resulting in a Domain ID
-\item Domain Builder sends the Long Term Name, Hash, and Domain ID to
-  the vTPM Manager
-\item vTPM Manager updates data associated with the Long Term Name in
-  the vTPM information table
+\item Domain Builder starts the vTPM VM resulting in a new Domain ID
+\item Domain Builder sends the Long Term Name, Hash, Domain ID, and
+  Controller Name to the vTPM Manager
+\item vTPM Manager updates data associated with the Long Term Name and
+  Controller Name in the vTPM information table
 \end{enumerate}
 
 \begin{figure}
@@ -317,7 +374,7 @@ of the process:
   \newinst[4.5]{manager}{vTPM Manager}
   
   \begin{call}{controller}{$I_{vtpm}$,$ID_{vtpm}$}{db}{$\hash{(I_{vtpm}+ID_{vtpm})}$}
-    \begin{callself}{db}{build vTPM,$ID_{vtpm}$}{$\hash{(I_{vtpm}+ID_{vtpm}),ID_{dom}}$}\end{callself}
+    \begin{callself}{db}{build $I_{vtpm},ID_{vtpm}$}{$\hash{(I_{vtpm}+ID_{vtpm}),ID_{dom}}$}\end{callself}
     \begin{call}{db}{$\hash{(I_{vtpm}+ID_{vtpm})}$,$ID_{vtpm}$,$ID_{dom}$}{manager}{}
       \begin{callself}{manager}{Update $ID_{vtpm}$ entry}{}\end{callself}
     \end{call}
@@ -330,10 +387,10 @@ of the process:
 
 \subsection{vTPM Data Initialization}
 
-Figure~\ref{fig:data-vtpm} describes the sequence of events
-necessary for a vTPM to load its data.  The result of this sequence is a vTPM
-ready to provide TPM services to its associated virtual platform.  Following is a textual description
-of the process:
+Figure~\ref{fig:data-vtpm} describes the sequence of events necessary
+for a vTPM to load its data.  The result of this sequence is a vTPM
+ready to provide TPM services to its associated virtual platform.
+Following is a textual description of the process:
 
 \begin{enumerate}
   \parskip=0pt\itemsep=0pt
