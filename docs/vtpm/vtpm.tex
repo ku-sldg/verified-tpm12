@@ -77,8 +77,10 @@
    \marginpar{\raggedright\footnotesize{#1}}
                }}
 
-\parskip=\medskipamount
-\parindent=0pt
+\newcommand{\squeeze}{\parskip=0pt\itemsep=0pt}
+
+%\parskip=\medskipamount
+%\parindent=0pt
 
 \bibliographystyle{abbrvnat}
 
@@ -129,11 +131,13 @@ vTPM Data key and vTPM Data hash.
     $ID_{vtpm}$ & The persistent name of the vTPM & provisioning &
     never \\
     $ID_{dom}$ & Domain ID of vTPM VM & build & build \\
-    $\hash{D}$ & vTPM data hash value & provisioning & vTPM sleep \\
+    $ID_{con}$ & The persistent name of the vTPM's controller &
+    provisioning & never \\
+    $\hash{\encrypt{D_{vtpm}}{K_3}}$ & vTPM data hash value & provisioning & vTPM sleep \\
     $PCR_6$ & Hash of the vTPM + Long Term Name & provisioning & boot
     \\
     $PCR_5$ & Hash of the platform controller & provisioning & boot \\
-    $\seal{K_D}{PCR_5,PCR_6}$ & Sealed symmetric key encrypting vTPM data &
+    $\seal{K_{3}}{PCR_5,PCR_6}$ & Sealed symmetric key encrypting vTPM data &
     provisioning & vTPM sleep \\
   \end{tabular}
   \caption{vTPM Information Table contents}
@@ -151,7 +155,7 @@ what is stored in the vTPM Manager.
   \begin{tabular}{lllll}
     \emph{Data} & \emph{Description} & \emph{Location} &
     \emph{Initialized} & \emph{Modified} \\ \hline
-    $\encrypt{D}{K_D}$ & Encrypted vTPM data & Host Storage &
+    $\encrypt{D_{vtpm}}{K_{3}}$ & Encrypted vTPM data & Host Storage &
     provisioning & vTPM sleep \\
     $I_{vtpm}$ & \emph{vTPM Image} & Host Storage & provisioning & never
     \\
@@ -172,7 +176,7 @@ command can be used to generate an $SRK$ after startup.  What else is
 initialized?  Monotonic counter values and other stuff not specified here.
 
 \begin{enumerate}
-\item Platform booted through Controller -- $PCR_5$ is now known by
+\item Platform booted through Controller -- $PCR_5$ and $ID_{con}$ now known by
   the vTPM Manager
 \item A new Long Term Name is generated for the new vTPM
 \item The new vTPM is built using the Domain Builder -- $PCR_6$ is now
@@ -183,11 +187,15 @@ initialized?  Monotonic counter values and other stuff not specified here.
 
 \subsection*{Pre-conditions for Provisioning}
 
-\begin{pre}[MLE Measurements]
-  hTPM logical $PCR_{0-4}$ contain hashes of MLE components.
+\begin{pre}[MLE Correctness]
+  Running MLE components are the anticipated components.
 \end{pre}
 
-\begin{pre}
+\begin{pre}[MLE Measurements]
+  hTPM logical $PCR_{0-4}$ contain hashes of running MLE components.
+\end{pre}
+
+\begin{pre}[vTPM Data Hash]
   hTPM logical $PCR_5$ contains a hash of the controller/schema pair
   uniquely identifying the vTPM's virtual platform.\footnote{The
     controller and schema may be hashed separately with the schema
@@ -222,11 +230,12 @@ Manager:\footnote{Note that we use the PVS notation $X(ID_{vtpm}$ to
 \begin{post}[vTPM Data Existence]
   The vTPM's initial data exists and is available through its table entry.
 
-  \[\forall i:ID_{vtpm} \cdot \exists d:D \cdot \encrypt{d}{K_{d}(ID_{vtpm})}\]
+  \[\forall i:ID_{vtpm} \cdot \exists d:D_{vtpm} \cdot \encrypt{d}{K_{d}(ID_{vtpm})}\]
 \end{post}
 
 \begin{post}[vTPM Data Seal]
-  The vTPM's data will be sealed to hTPM logical $PCR_{0-6}$
+  The vTPM data session key will be sealed to hTPM logical $PCR_{0-6}$
+  indirectly sealing the vTPM data to logical $PCR_{0-6}$.
 \end{post}
 
 \begin{post}[vTPM Data Hash]
@@ -238,7 +247,7 @@ Manager:\footnote{Note that we use the PVS notation $X(ID_{vtpm}$ to
   binding it to its vTPM is available.
 
   \[\exists k:KEY \cdot EK(ID_{vtpm})=k\] 
-  \[\exists \cert{EK(D)}{CA}:cert \cdot TRUE\]
+  \[\exists \cert{EK(D_{vtpm})}{CA}:cert \cdot TRUE\]
 \end{post}
 
 \begin{post}[Unique vTPM Name]
@@ -259,21 +268,21 @@ Manager:\footnote{Note that we use the PVS notation $X(ID_{vtpm}$ to
   sleep is sealed to $PCR_0$ through $PCR_6$ that contain measurements
   of MLE and SVP components that boot before the vTPM:
 
-  \[\seal{K_D}{PCR_0\ldots PCR_6}\]
+  \[\seal{K_{3}}{PCR_0\ldots PCR_6}\]
 
   Given the key is initially sealed during provisioning to $PCR$s
-  resulting from hashing correct components, $K_D$ will not unseal
+  resulting from hashing correct components, $K_{3}$ will not unseal
   unless: (i) the unsealing TPM is the same as the sealing TPM; and
   (ii) hashes in sealing $PCR$s must match hashes of those in the TPM
   at provisioning.  Assumption (i) and a certificate binding the
-  sealing TPM to a system ensures that the $K_D$ will only unseal on
+  sealing TPM to a system ensures that the $K_{3}$ will only unseal on
   the hardware it was sealed on.  Assumption (ii) and the assumptions
   that the hash function is injective and the MLE is correct ensures
-  that $K_D$ will only unseal if the correct Domain Builder, vTPM
+  that $K_{3}$ will only unseal if the correct Domain Builder, vTPM
   Manager, Controller and Schema, and vTPM were started during system
   boot.
 
-  The assumption that $ID_{vtpm}$ values are unique ensures that $K_D$
+  The assumption that $ID_{vtpm}$ values are unique ensures that $K_{3}$
   will not unseal unless the correct vTPM makes the unseal request.
   The vTPM Manager resets $PCR_5$ and $PCR_6$ based on the domain ID
   ($ID_{dom}$) of vTPM initiating communication.
@@ -282,8 +291,61 @@ Manager:\footnote{Note that we use the PVS notation $X(ID_{vtpm}$ to
 \section{Startup Sequence}
 
 Establishing an operational vTPM involves getting the vTPM up and
-running, then installing its data.  These are outlined in the
-following to subsections.
+running, then installing its data.  All vTPM's must have an associated
+Controller running before they can start.  Like vTPM information,
+Controller information is maintained by the vTPM Manager.  The process
+of registering a Controller with the vTPM Manager and starting a new
+vTPM are outlined in the following to subsections.
+
+\subsection{Controller Running}
+
+Figure~\ref{fig:data-controller} describes the sequence of events
+necessary for a Controller to initialize it's data in the vTPM
+Manager's vTPM information table.  When a Controller is started by
+either the SVP Controller (documented) or by the Domain Builder as a
+part of the SVP boot process, information in the vTPM Manager must be
+updated to record the hash associated with the Controller's ID.
+Following is a textual description of the process:
+
+\begin{enumerate}
+  \squeeze
+%  \parskip=0pt\itemsep=0pt
+\item Controller (UVP) or Domain Builder (SVP) requests a build by
+  sending a manifest identifying the Controller image and its Long
+  Term Name to the Domain Builder.
+\item Domain Builder hashes the Controller image and Long Term Name
+\item Domain Builder starts the Controller VM resulting in a new
+  Domain ID
+\item Domain Builder sends the Long Term Name, hash, and Controller
+  Name to the vTPM Manager
+\item vTPM Manager updates data associated with all entries
+  referencing the Controller Name in the vTPM information table
+\item Domain Builder returns the new Controller measurement to the
+  initiating controller
+\end{enumerate}
+
+Note that this sequence differs modestly when the SVP controller is
+started.  The Domain Builder initiates the process itself and there is
+no Controller to receive the resulting hash.
+
+\begin{figure}[hbtp]
+  \centering
+  \begin{sequencediagram}
+  \newthread[white]{controller}{Controller}
+  \newinst[2.0]{db}{Domain Builder} 
+  \newinst[2.0]{manager}{vTPM Manager}
+ \begin{call}{controller}{$I_{con},ID_{con}$}{db}{$\hash{(I_{con}+ID_{con})}$}
+   \begin{callself}{db}{build $I_{con},ID_{con}$}{$\hash{(I_{con}+ID_{con})}$}
+   \end{callself}
+   \begin{call}{db}{$ID_{con},\hash{(I_{con}+ID_{con})}$}{manager}{}
+     \begin{callself}{manager}{Update $ID_{con}$ entry}{}
+     \end{callself}
+   \end{call}
+ \end{call}
+  \end{sequencediagram}
+  \caption{Controller data initialization.}
+  \label{fig:data-controller}
+\end{figure}
 
 \subsection{vTPM Running}
 
@@ -298,11 +360,11 @@ of the process:
 \item Controller requests a build by sending a manifest identifying
   the vTPM image and its Long Term Name to the Domain Builder
 \item Domain Builder hashes the vTPM image and Long Term Name
-\item Domain Builder starts the vTPM VM resulting in a Domain ID
-\item Domain Builder sends the Long Term Name, Hash, and Domain ID to
-  the vTPM Manager
-\item vTPM Manager updates data associated with the Long Term Name in
-  the vTPM information table
+\item Domain Builder starts the vTPM VM resulting in a new Domain ID
+\item Domain Builder sends the Long Term Name, Hash, Domain ID, and
+  Controller Name to the vTPM Manager
+\item vTPM Manager updates data associated with the Long Term Name and
+  Controller Name in the vTPM information table
 \end{enumerate}
 
 \begin{figure}
@@ -312,7 +374,7 @@ of the process:
   \newinst[4.5]{manager}{vTPM Manager}
   
   \begin{call}{controller}{$I_{vtpm}$,$ID_{vtpm}$}{db}{$\hash{(I_{vtpm}+ID_{vtpm})}$}
-    \begin{callself}{db}{build vTPM,$ID_{vtpm}$}{$\hash{(I_{vtpm}+ID_{vtpm}),ID_{dom}}$}\end{callself}
+    \begin{callself}{db}{build $I_{vtpm},ID_{vtpm}$}{$\hash{(I_{vtpm}+ID_{vtpm}),ID_{dom}}$}\end{callself}
     \begin{call}{db}{$\hash{(I_{vtpm}+ID_{vtpm})}$,$ID_{vtpm}$,$ID_{dom}$}{manager}{}
       \begin{callself}{manager}{Update $ID_{vtpm}$ entry}{}\end{callself}
     \end{call}
@@ -325,10 +387,10 @@ of the process:
 
 \subsection{vTPM Data Initialization}
 
-Figure~\ref{fig:data-vtpm} describes the sequence of events
-necessary for a vTPM to load its data.  The result of this sequence is a vTPM
-ready to provide TPM services to its associated virtual platform.  Following is a textual description
-of the process:
+Figure~\ref{fig:data-vtpm} describes the sequence of events necessary
+for a vTPM to load its data.  The result of this sequence is a vTPM
+ready to provide TPM services to its associated virtual platform.
+Following is a textual description of the process:
 
 \begin{enumerate}
   \parskip=0pt\itemsep=0pt
@@ -337,15 +399,15 @@ of the process:
 \item vTPM Manager resets $PCR_5$ and $PCR_6$ with table entry
   values\footnote{This happens whenever the vTPM Manager communicates
     with a vTPM.}
-\item vTPM Manager attempts to unseal $K_D$
+\item vTPM Manager attempts to unseal $K_{3}$
   \begin{enumerate}
     \parskip=0pt\itemsep=0pt
   \item On failure abort the request response
-  \item On success return $K_D$ and $\hash{D}$ to vTPM
+  \item On success return $K_{3}$ and $\hash{\encrypt{D_{vtpm}}{K_3}}$ to vTPM
   \end{enumerate}
 \item vTPM requests its encrypted data from Host Storage
-\item vTPM decrypts its data with $K_D$ and checks hash against
-  $\hash{D}$
+\item vTPM decrypts its data with $K_{3}$ and checks hash against
+  $\hash{\encrypt{D_{vtpm}}{K_3}}$
 \item vTPM installs data and begins providing services.
 \end{enumerate}
 
@@ -355,18 +417,18 @@ of the process:
   \newinst[2.0]{manager}{vTPM Manager}
   \newinst[2.5]{tpm}{hTPM}
   \newinst[2.0]{store}{Host Storage}
-  \begin{call}{vtpm}{$ID_{dom}$}{manager}{$K_D$}
+  \begin{call}{vtpm}{$ID_{dom}$}{manager}{$K_{3}$}
     \begin{call}{manager}{Reset $PCR_5$}{tpm}{}
     \end{call}
     \begin{call}{manager}{Reset $PCR_6$}{tpm}{}
     \end{call}
-    \begin{call}{manager}{$\seal{K_D}{PCR_5,PCR_6}$}{tpm}{$K_D$}
-      \begin{callself}{tpm}{$unseal$}{$K_D$}\end{callself}
+    \begin{call}{manager}{$\seal{K_{3}}{PCR_5,PCR_6}$}{tpm}{$K_{3}$}
+      \begin{callself}{tpm}{$unseal$}{$K_{3}$}\end{callself}
     \end{call}
   \end{call}
-  \begin{call}{vtpm}{Request Data}{store}{$\encrypt{D}{K_D}$}
+  \begin{call}{vtpm}{Request Data}{store}{$\encrypt{D_{vtpm}}{K_{3}}$}
   \end{call}
-  \begin{callself}{vtpm}{$\encrypt{D}{K_D}$}{D}\end{callself}
+  \begin{callself}{vtpm}{$\encrypt{D_{vtpm}}{K_{3}}$}{$D_{vtpm}$}\end{callself}
 \end{sequencediagram}
 \caption{Command sequence to load vTPM data.}
 \label{fig:data-vtpm}
@@ -382,17 +444,17 @@ data hash.  Following is a textual description of the process:
 
 \begin{enumerate}
   \parskip=0pt\itemsep=0pt
-\item vTPM generates a fresh session key, $K_D$
-\item vTPM hashes its data, $\hash{D}$ and encrypts with $K_D$
-\item vTPM stores $\encrypt{D}{K_D}$ in Host Storage
-\item vTPM sends sleep request to vTPM manager with $K_D$ and
-  $\hash{D}$
+\item vTPM generates a fresh session key, $K_{3}$
+\item vTPM hashes its data, $\hash{\encrypt{D_{vtpm}}{K_3}}$ and encrypts with $K_{3}$
+\item vTPM stores $\encrypt{D_{vtpm}}{K_{3}}$ in Host Storage
+\item vTPM sends sleep request to vTPM manager with $K_{3}$ and
+  $\hash{\encrypt{D_{vtpm}}{K_3}}$
 \item vTPM Manager uses vTPM Domain ID to find table entry
 \item vTPM Manager resets and loads $PCR_5$ and $PCR_6$ from table
   entry
-\item vTPM Manager seals $K_D$ to TPM state
+\item vTPM Manager seals $K_{3}$ to TPM state
 \item vTPM Manager updates its table with
-  $\seal{K_D}{PCR_5,PCR_6}$ and $\hash{K_D}$
+  $\seal{K_{3}}{PCR_5,PCR_6}$ and $\hash{\encrypt{D_{vtpm}}{K_3}}$
 \item vTPM Manager clears Domain ID\footnote{I'm not certain of this,
     but it seems reasonable}
 \end{enumerate}
@@ -403,20 +465,20 @@ data hash.  Following is a textual description of the process:
   \newinst[2.0]{manager}{vTPM Manager}
   \newinst[2.5]{tpm}{hTPM}
   \newinst[2.0]{store}{Host Storage}
-  \begin{callself}{vtpm}{Generate $K_D'$}{$K_D'$}\end{callself}
-  \begin{callself}{vtpm}{Hash $D$}{$\hash{D}$}\end{callself}
-  \begin{callself}{vtpm}{Encrypt $D$}{$\encrypt{D}{K_D'}$}\end{callself}  
-  \begin{call}{vtpm}{$ID_{dom},K_D,\hash{D}$}{manager}{}
+  \begin{callself}{vtpm}{Generate $K_{3}'$}{$K_{3}'$}\end{callself}
+  \begin{callself}{vtpm}{Hash $D_{vtpm}$}{$\hash{\encrypt{D_{vtpm}}{K_3}}$}\end{callself}
+  \begin{callself}{vtpm}{Encrypt $D_{vtpm}$}{$\encrypt{D_{vtpm}}{K_{3}'}$}\end{callself}  
+  \begin{call}{vtpm}{$ID_{dom},K_{3},\hash{\encrypt{D_{vtpm}}{K_3}}$}{manager}{}
     \begin{call}{manager}{Reset $PCR_5$}{tpm}{}
     \end{call}
     \begin{call}{manager}{Reset $PCR_6$}{tpm}{}
     \end{call}
-    \begin{call}{manager}{$K_D'$}{tpm}{$\seal{K_D'}{PCR_5,PCR_6}$}
-      \begin{callself}{tpm}{$seal$}{$\seal{K_D'}{PCR_5,PCR_6}$}\end{callself}
+    \begin{call}{manager}{$K_{3}'$}{tpm}{$\seal{K_{3}'}{PCR_5,PCR_6}$}
+      \begin{callself}{tpm}{$seal$}{$\seal{K_{3}'}{PCR_5,PCR_6}$}\end{callself}
     \end{call}
     \begin{callself}{manager}{Update $ID_{dom}$ entry}{}\end{callself}
   \end{call}
-  \begin{call}{vtpm}{\encrypt{D}{K_{D}'}}{store}{}
+  \begin{call}{vtpm}{\encrypt{D_{vtpm}}{K_{3}'}}{store}{}
   \end{call}
 \end{sequencediagram}
 \caption{Command sequence to put a vTPM to sleep.}
