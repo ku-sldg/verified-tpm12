@@ -1,5 +1,6 @@
 ---
 layout: frontpage
+title: Verified TPM
 ---
 
 Verified TPM is specifying the TPM 1.2 formally in PVS.
