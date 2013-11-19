@@ -3,7 +3,7 @@ layout: frontpage
 title: Administration
 ---
 
-# Administrative Flotsum
+# Administrative Flotsam
 
 ## Weekly Meeting Notes
 
