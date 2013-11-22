@@ -1,3 +1,5 @@
 baseurl: http://ku-sldg.github.io
 account: ku-sldg
 repo: verified-tpm12
+maintitle: Verified TPM
+subtitle: Formal Specification of the TPM 1.2
