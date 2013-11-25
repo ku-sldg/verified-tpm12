@@ -3,16 +3,23 @@ layout: frontpage
 title: Verified TPM
 ---
 
-Verified TPM is specifying the TPM 1.2 formally in PVS.
+The goal of the Verified TPM is specifying and verifying the TPM 1.2 formally in
+PVS.  We specify the TPM as a state transformation system with each
+instruction modifying the TPM state.  We then use a state monad to
+sequence instruction execution, threading state through a sequence of
+instructions.
 
 ## Recent Activities
 
-* Coming Soon
+* Submitted a new paper on protocol verification to FM'14
+* Presented Privacy CA Attestation Protocol Verification results at NFM'13
+* Presented initial results at MVD'12
 
 ## Team
 
-Verified TPM is run by The Information and Telecommunication
-Technology Center at The University of Kansas.
+Verified TPM is run by [System-Level Design Group](ku-sldg.github.io)
+in The Information and Telecommunication Technology Center at The
+University of Kansas.
 
 ### Faculty
 
@@ -24,4 +31,4 @@ Technology Center at The University of Kansas.
 
 ## Sponsors
 
-Verified TPM was sponsored by The Battelle Memorial Trust
+Verified TPM is sponsored by The Battelle Memorial Trust
