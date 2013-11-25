@@ -3,7 +3,7 @@ layout: frontpage
 title: Software Releases
 ---
 
-# Software
+# Software and Model Releases
 
 <ul>
 {% for release in site.data.releases %}
@@ -11,3 +11,4 @@ title: Software Releases
 {% endfor %}
 </ul>
 
+Visit {{ site.maintitle }} on [github](http://gitub.com/{{ site.account }}/{{ site.repo }})
