@@ -1,0 +1,4 @@
+- name: PVS TPM Model
+  version: 0.0
+  description: PVS source
+  file: pvs.tgz

@@ -1,9 +1,15 @@
 ---
 layout: frontpage
-title: Documenation
+title: Software Releases
 ---
 
 # Software
 
-Software downloads coming soon...
+<ul>
+{% for release in site.data.releases %}
+<li> <a href="{{ site.baseurl }}/resources/{{ release.file }}">{{
+release.name }}</a>, version {{ release.version }} - {{
+release.description }}</li>
+{% endfor %}
+</ul>
 

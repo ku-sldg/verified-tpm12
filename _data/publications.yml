@@ -1,0 +1,9 @@
+- author: Halling, B., and P. Alexander
+  title: "Verifying a Privacy CA Remote Attestation Protocol"
+  where: NASA Formal Methods Conference (NFM'13), LNCS 7871, Mountain View, CA, May 2013.
+  pdf: nfm13.pdf
+
+- author: Halling, B. and P. Alexander
+  title: Verifying TPM Protocols Using a State Monad
+  where: submitted to The 19th International Symposium on Formal Methods (FM'14), Singapore, May 14–16, 2014
+  pdf: fm14.pdf
