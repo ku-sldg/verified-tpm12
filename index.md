@@ -11,9 +11,11 @@ instructions.
 
 ## Recent Activities
 
-* Submitted a new paper on protocol verification to FM'14
-* Presented Privacy CA Attestation Protocol Verification results at NFM'13
-* Presented initial results at MVD'12
+<ul>
+{% for activity in site.data.activities %}
+<li>{{ activity.description }}</li>
+{% endfor %}
+</ul>
 
 ## Team
 
