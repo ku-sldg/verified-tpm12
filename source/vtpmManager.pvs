@@ -1,0 +1,267 @@
+%%
+%% Basic vTPM Manager Table using Sets
+%%
+%% Author: Perry Alexander, Alessandro Coglio
+%%  
+%% The following theory models
+%& a vTPM Manager for the DoD's TRP (Trusted Research Platform).
+%% The model is work in progress.
+%%
+%% Todo:
+
+vtpmManager[
+ HASH,    % cryptographic hashes (e.g. SHA)
+ KEY,     % (TPM-sealed) symmetric cryptographic keys
+ ID_dom,  % hypervisor domain IDs
+ LTN_vtpm % long-term names of vTPMs
+ :TYPE+]
+:THEORY
+
+  BEGIN
+
+  % Domain ID lifted into a type with a no-ID value.
+  liftedID_dom: TYPE = lift[ID_dom]
+
+  % The state of the vTPM Manager includes a table,
+  % with one entry (row) for each vTPM.
+  % The following type models such an entry.
+
+  vtpmStatic: TYPE =
+  [# ltn_vtpm:LTN_vtpm
+  #]
+
+  vtpmDynamic: TYPE =
+  [# domid_vtpm:liftedID_dom  % hypervisor ID of the vTPM domain
+   , domid_controller:liftedID_dom % hypervisor ID of the Controller domain
+                                     % of the Virtual Platform of the vTPM
+   , k_D:KEY % (TPM-sealed) symmetric key to decrypt vTPM dynamic data
+   , hash_vtpm % hash of the vTPM image + vTPM static data
+   , hash_controller:HASH % hash of the Controller image + Controller Schema
+                          % of the Virtual Platform of the vTPM
+    #]
+
+  vtpmEntry: TYPE = [# static:vtpmStatic, dynamic:vtpmDynamic #]
+
+  % vTPM entry lifted into a type with a no-entry value.
+  liftedVtpmEntry: TYPE = lift[vtpmEntry]
+
+  % For now the state of the vTPM Manager
+  % is modeled as just consisting of the table mentioned above.
+  % The relative order of the vTPM entries is immaterial,
+  % and thus a set is used.
+  vtpmManState: TYPE = set[vtpmEntry]
+
+  % Check whether the table includes an entry with the given long-term name.
+  findLTN?(ltn:LTN_vtpm, s:vtpmManState) : bool =
+    EXISTS(x:(s)): ltn_vtpm(static(x))=ltn;
+
+  % Check whether vTPM long-term names are unique within the table.
+  uniqueLTNs?(s:vtpmManState) : bool =
+    FORALL(x:(s)): NOT findLTN?(ltn_vtpm(static(x)),remove(x,s));
+
+  % Alternative definition of the function above.
+  uniqueLTNs?_alt_def: LEMMA
+    FORALL(s:vtpmManState):
+      uniqueLTNs?(s) IFF
+      (FORALL(x1,x2:(s)): ltn_vtpm(static(x1)) = ltn_vtpm(static(x2)) IMPLIES x1 = x2)
+
+  % Find entry for vTPM with the given long-term name.
+  % Return bottom if no such entry is found ('l' stands for 'lifted').
+  lfindLTN(ltn:LTN_vtpm, s:(uniqueLTNs?)) : liftedVtpmEntry =
+    IF findLTN?(ltn,s)
+    THEN up (the!(x:(s)): ltn_vtpm(static(x)) = ltn)
+    ELSE bottom
+    ENDIF;
+
+  % Find entry for vTPM with the given long-term name.
+  findLTN(ltn:LTN_vtpm, s:(uniqueLTNs?) | findLTN?(ltn,s)) : vtpmEntry =
+    the!(x:(s)): ltn_vtpm(static(x)) = ltn;
+
+  % Check whether the table includes an entry with the given vTPM domain ID.
+  findVtpmDomID?(id:ID_dom, s:vtpmManState) : bool =
+    EXISTS(x:(s)): domid_vtpm(dynamic(x))=up(id);
+
+  % Check whether vTPM domain IDs are unique within the table.
+  % Only up(...) values count; there may be multiple bottom values.
+  uniqueVtpmDomID?(s:vtpmManState) : bool =
+    FORALL(x:(s)):
+      CASES domid_vtpm(dynamic(x)) OF
+        bottom: TRUE,
+	up(y): NOT findVtpmDomID?(y,remove(x,s))
+      ENDCASES;
+
+  % Alternative definition of the function above.
+  uniqueVtpmDomID?_alt_def: LEMMA
+    FORALL(s:vtpmManState):
+      uniqueVtpmDomID?(s) IFF
+      (FORALL(x1,x2:(s)):
+        domid_vtpm(dynamic(x1)) = domid_vtpm(dynamic(x2)) AND up?(domid_vtpm(dynamic(x1))) IMPLIES x1 = x2)
+
+  % Find entry for vTPM with the given vTPM domain ID.
+  % Return bottom is no such entry is found ('l' stands for 'lifted').
+  lfindVtpmDomID(id:ID_dom, s:(uniqueVtpmDomID?)) : liftedVtpmEntry =
+    IF findVtpmDomID?(id,s)
+    THEN up (the!(x:(s)): domid_vtpm(dynamic(x)) = up(id))
+    ELSE bottom
+    ENDIF;
+
+  % Find entry for vTPM with the given vTPM domain ID.
+  findVtpmDomID
+   (id:ID_dom, s:(uniqueVtpmDomID?) | findVtpmDomID?(id,s)): vtpmEntry =
+    the!(x:(s)): domid_vtpm(dynamic(x)) = up(id)
+
+  % Check whether the table includes an entry with the given key.
+  findKey?(k:KEY, s:vtpmManState): bool =
+    EXISTS(x:(s)): k_D(dynamic(x)) = k;
+
+  % Check whether the keys are unique within the table.
+  uniqueKeys?(s:vtpmManState): bool =
+    FORALL(x:(s)): NOT findKey?(k_D(dynamic(x)),remove(x,s));
+
+  % Alternative definition of the function above.
+  uniqueKeys?_alt_def: LEMMA
+    FORALL(s:vtpmManState):
+      uniqueKeys?(s) IFF
+      (FORALL(x1,x2:(s)): k_D(dynamic(x1)) = k_D(dynamic(x2)) IMPLIES x1 = x2)
+
+  % Find entry for vTPM with the given key.
+  % Return bottom if no such entry is found ('l' stands for 'lifted').
+  lfindKey(k:KEY, s:(uniqueKeys?)): liftedVtpmEntry =
+    IF findKey?(k,s)
+    THEN up (the!(x:(s)): k_D(dynamic(x)) = k)
+    ELSE bottom
+    ENDIF;
+
+  % Find entry for vTPM with the given key.
+  findKey(k:KEY, s:(uniqueKeys?) | findKey?(k,s)): vtpmEntry =
+    the!(x:(s)): k_D(dynamic(x)) = k;
+
+  % Check whether the table includes an entry with the given vTPM hash.
+  findVtpmHash?(h:HASH, s:vtpmManState): bool =
+    EXISTS(x:(s)): hash_vtpm(dynamic(x)) = h
+
+  % Check whether the vTPM hashes are unique within the table.
+  uniqueVtpmHashes?(s:vtpmManState): bool =
+    FORALL(x:(s)): NOT findVtpmHash?(hash_vtpm(dynamic(x)),remove(x,s));
+
+  % Alternative definition of the function above.
+  uniqueVtpmHashes?_alt_def: LEMMA
+    FORALL(s:vtpmManState):
+      uniqueVtpmHashes?(s) IFF
+      (FORALL(x1,x2:(s)): hash_vtpm(dynamic(x1)) = hash_vtpm(dynamic(x2)) IMPLIES x1 = x2)
+
+  % Find entry for vTPM with the given vTPM hash.
+  % Return bottom if no such entry is found ('l' stands for 'lifted').
+  lfindVtpmHash(h:HASH, s:(uniqueVtpmHashes?)): liftedVtpmEntry =
+    IF findVtpmHash?(h,s)
+    THEN up (the!(x:(s)): hash_vtpm(dynamic(x)) = h)
+    ELSE bottom
+    ENDIF;
+
+  % Find entry for vTPM with the given vTPM hash.
+  findVtpmHash(h:HASH, s:(uniqueVtpmHashes?) | findVtpmHash?(h,s)): vtpmEntry =
+    the!(x:(s)): hash_vtpm(dynamic(x)) = h;
+
+  % A table is well-formed iff it has unique
+  % long-term names, vTPM domain IDs, keys, and vTPM hashes.
+  % Controller domain IDs and Controller hashes need not be unique,
+  % as a Virtual Platform (identified by a Controller)
+  % may contain multiple vTPMs.
+  % We define the wellFormed...? synonyms of the unique...? functions
+  % to ease potential extensions
+  % (e.g. if well-formedness turns out to involve more than uniqueness).
+
+  wellFormedLTNs?(s:vtpmManState): bool = uniqueLTNs?(s);
+
+  wellFormedVtpmDomIDs?(s:vtpmManState): bool = uniqueVtpmDomID?(s);
+
+  wellFormedKeys?(s:vtpmManState):boolean = uniqueKeys?(s);
+
+  wellFormedVtpmHashes?(s:vtpmManState): bool = uniqueVtpmHashes?(s);
+
+  wellFormed?(s:vtpmManState): bool =
+    wellFormedLTNs?(s) AND
+    wellFormedVtpmDomIDs?(s) AND
+    wellFormedKeys?(s) AND
+    wellFormedVtpmHashes?(s)
+
+  % Extending a table that has unique (non-null) vTPM domain IDs,
+  % with an entry with a null vTPM domain IDs,
+  % results in a new table that has unique (non-null) vTPM domain IDs.
+  wellFormedVtpmDomID_add_null: LEMMA
+    FORALL(v:vtpmEntry, s:(wellFormedVtpmDomIDs?)):
+      bottom?(domid_vtpm(dynamic(v))) IMPLIES wellFormedVtpmDomIDs?(add(v,s));
+
+  % The empty table is well-formed.
+  wellFormed_empty: LEMMA
+    wellFormed?(emptyset);
+
+  % A table with one entry is well-formed.
+  wellFormed_single: LEMMA
+    FORALL(v:vtpmEntry): wellFormed?(add(v,emptyset));
+
+  % A table with two entries with all different components is well-formed.
+  % The premise of this theorem is slightly stronger than needed:
+  % the vTPM domain ID components need to be different only if non-null.
+  % TODO: State and prove the stronger theorem (i.e. with the weaker premise).
+  wellFormed_double: LEMMA
+    FORALL(v1,v2:vtpmEntry):
+      LET v1s=static(v1),v2s=static(v2),v1d=dynamic(v1),v2d=dynamic(v2) IN
+        ltn_vtpm(v1s) /= ltn_vtpm(v2s) AND
+        domid_vtpm(v1d) /= domid_vtpm(v2d) AND
+        k_D(v1d) /= k_D(v2d) AND
+        hash_vtpm(v1d) /= hash_vtpm(v2d) IMPLIES
+        wellFormed?(add(v1,add(v2,emptyset)));
+
+  % WORK IN PROGRESS FROM HERE
+
+  % Provisioning is adding a vTPM entry
+  provisionVtpm(v:LTN_vtpm
+                , p:ID_dom
+		, hvtpm,hcont:HASH
+		, k:KEY
+		, s:(wellFormed?)):(wellFormed?) =
+     IF NOT findLTN?(v,s) AND NOT findKey?(k,s) AND NOT findVtpmHash?(hvtpm,s)
+       THEN add((# static:=(# ltn_vtpm := v #),
+                   dynamic:=(# domid_vtpm := bottom
+		   	       , domid_controller := up(p)
+		   	       , hash_vtpm := hvtpm
+		   	       , hash_controller := hcont
+		   	       , k_D := k 
+			     #)
+			    #),s)
+       ELSE s
+     ENDIF
+
+  %% Basic startup commands with no checks for well-formedness at all.
+  startVtpm(ltn:LTN_vtpm
+            , vdom:ID_dom
+            , pdom:ID_dom
+	    , hvtpm,hcont:HASH
+	    , k:KEY
+	    , s:(wellFormed?)):(wellFormed?) =
+    IF NOT (findKey?(k,s) OR findVtpmHash?(hvtpm,s) OR findVtpmDomID?(vdom,s))
+      THEN
+        CASES lfindLTN(ltn,s) OF
+          up(vtpm) : LET d=dynamic(vtpm),s=static(vtpm) IN
+                       add(vtpm WITH [ dynamic:=d WITH [ k_D:=k,
+		                                       hash_controller:=hcont,
+						       hash_vtpm:=hvtpm,
+						       domid_controller:=up(pdom),
+						       domid_vtpm:=up(vdom) ]] 
+		           , remove(vtpm,s)),
+          bottom : s
+        ENDCASES
+      ELSE s
+    ENDIF
+
+  %% Invariant over vTPM startup
+  startVtpmInvariant: LEMMA FORALL (ltn:LTN_vtpm
+				    , vdom,pdom:ID_dom
+				    , hvtpm,hcont:HASH
+				    , k:KEY
+				    , s:(wellFormed?)):
+    LET t=startVtpm(ltn,vdom,pdom,hvtpm,hcont,k,s) IN %start the vTPM
+      findLTN?(ltn,s) IFF findLTN?(ltn,t) % LTNs conserved over add
+
+  END vtpmManager

@@ -1,45 +1,241 @@
-vtpm[ HASH:TYPE+,PCR:TYPE+,KEY:TYPE+,ID_dom:TYPE+,ID_vtpm:TYPE+ ]
-		: THEORY
+%%
+%% Basic vTPM Manager Table
+%%
+%% Author: Perry Alexander
+%% 
 
+vtpm[ HASH,KEY,ID_dom,LTN_vtpm:TYPE+ ] : THEORY
   BEGIN
 
-  % ASSUMING
-   % assuming declarations
-  % ENDASSUMING
+  % Return value for functions returning a running domain ID or nothing
 
-  vtpmEntry : TYPE = [# id_vtpm:ID_vtpm,id_dom:ID_dom,k_D:KEY,hash_D:HASH #]
+  liftedID_dom : TYPE = lift[ID_dom]
+
+  % A vtpm entry is an ID, domain ID, platform ID, session key and hash
+  vtpmEntry : TYPE =
+    [# ltn_vtpm:LTN_vtpm
+       , domid_vtpm:liftedID_dom 
+       , domid_controller:liftedID_dom
+       , k_D:KEY
+       , hash_vtpm
+       , hash_controller:HASH #]
  
-  vtpmManState : TYPE = ARRAY[ID_vtpm->vtpmEntry]
+  % Empty domain predicate
+  emptyDomID?(id:liftedID_dom):boolean = (id = bottom)
 
-  wellFormedK_D?(s:vtpmManState):boolean =
-    FORALL (x,y:ID_vtpm) : x/=y => k_D(s(x))/=k_D(s(y))
+  % The vtpm manager state is empty or a collection of vtpm entries
+  vtpmManState : DATATYPE
+  BEGIN
+    empty : empty?
+    add(vtpm:vtpmEntry,rest:vtpmManState) : add?
+  END vtpmManState;
 
-  wellFormedHash_D?(s:vtpmManState):boolean =
-    FORALL (x,y:ID_vtpm) : x/=y => hash_D(s(x))/=hash_D(s(y))
+  % Return value for functions returning a vtpm entry or nothing
 
-  wellFormedId_dom?(s:vtpmManState):boolean =
-    FORALL (x,y:ID_vtpm) : x/=y => id_dom(s(x))/=id_dom(s(y))
+  liftedVTPMEntry : TYPE = lift[vtpmEntry]
 
-  % This condition is too strong.  Induction is not useful.  Pretty easy to 
-  % go left to right, but not possile to go right to left except for the
-  % the third clause that's trivial
-  wellFormed?(s:vtpmManState):boolean =
-%    wellFormedK_D?(s)
-%    AND wellFormedId_dom?(s)
-    FORALL (x,y:ID_vtpm) : 
-      k_D(s(x))=k_D(s(y)) <=> x=y
-      AND id_dom(s(x))=id_dom(s(y)) <=> x=y
+  % Nonempty vTPM manager state predicate
+  nonempty?(s:vtpmManState) : bool = NOT(empty?(s))
 
-  % This is not a good function - why would we assume wellFormed? before
-  % provisioning?
-  provisionVtpm(l:ID_vtpm,d:ID_dom,h:HASH,k:KEY,s:(wellFormed?)):(wellFormed?) =
-    IF (FORALL (i:ID_vtpm) : i/=l =>
-        id_dom(s(i)) /= d
-	AND k_D(s(i)) /= k)
-      THEN s WITH [(l) := (s(l) WITH [id_dom := d, hash_D := h, k_D := k])]
-      ELSE s
+  % Find entry by vTPM ID
+  findID(s:vtpmManState,id:LTN_vtpm): RECURSIVE liftedVTPMEntry =
+    IF empty?(s)
+    THEN bottom
+    ELSE IF id=ltn_vtpm(vtpm(s))
+         THEN up(vtpm(s))
+	 ELSE findID(rest(s),id)
+	 ENDIF
     ENDIF
+    MEASURE s BY <<
 
-      
+  % Is a vTPM ID present in the table?
+  findID?(s:vtpmManState,id:LTN_vtpm): bool =
+    CASES findID(s,id) OF
+      bottom : FALSE,
+      up(x) : TRUE
+    ENDCASES;
+
+  % Find entry by domain ID
+  findDomID(s:vtpmManState,id:ID_dom): RECURSIVE liftedVTPMEntry =
+    IF empty?(s)
+    THEN bottom
+    ELSE CASES domid_vtpm(vtpm(s)) OF
+           bottom : findDomID(rest(s),id),
+           up(x) : IF id=x
+                    THEN up(vtpm(s))
+	            ELSE findDomID(rest(s),id)
+	           ENDIF
+         ENDCASES
+    ENDIF
+    MEASURE s BY <<
+
+  % Is a domain ID present in the table?
+  findDomID?(s:vtpmManState,id:ID_dom): bool =
+    CASES findDomID(s,id) OF
+      bottom : FALSE,
+      up(x) : TRUE
+    ENDCASES;
+
+  % Find entry by platform ID
+  findPlatID(s:vtpmManState,id:ID_dom): RECURSIVE liftedVTPMEntry =
+    IF empty?(s)
+    THEN bottom
+    ELSE CASES domid_vtpm(vtpm(s)) OF
+           bottom : findPlatID(rest(s),id),
+	   up(x) : IF id=x
+                   THEN up(vtpm(s))
+	           ELSE findPlatID(rest(s),id)
+	 	   ENDIF
+         ENDCASES
+    ENDIF
+    MEASURE s BY <<
+
+  % Is a platform ID present in the table?  Note that platforms may
+  % have multiple vtpms.  Thus, this might not be a useful function.
+  findPlatID?(s:vtpmManState,id:ID_dom): bool =
+    CASES findPlatID(s,id) OF
+      bottom : FALSE,
+      up(x) : TRUE
+    ENDCASES;
+
+  % Find an entry by session key.  Not sure we ever search for a
+  % session key, but useful for uniqueness.
+  findSessKey(s:vtpmManState,k:KEY): RECURSIVE liftedVTPMEntry =
+    IF empty?(s)
+    THEN bottom
+    ELSE IF k=k_D(vtpm(s))
+         THEN up(vtpm(s))
+	 ELSE findSessKey(rest(s),k)
+	 ENDIF
+    ENDIF
+    MEASURE s BY <<
+
+  % Is a session key present in the table?
+  findSessKey?(s:vtpmManState,k:KEY): bool =
+    CASES findSessKey(s,k) OF
+      bottom : FALSE,
+      up(x) : TRUE
+    ENDCASES;
+
+  % Is every ID in the table unique?
+  uniqueID?(s:vtpmManState): RECURSIVE bool =
+    IF empty?(s)
+    THEN TRUE
+    ELSE NOT findID?(rest(s),ltn_vtpm(vtpm(s))) AND uniqueID?(rest(s))
+    ENDIF    
+    MEASURE s BY << 
+
+  % Is every domain ID in the table unique?
+  uniqueDomID?(s:vtpmManState): RECURSIVE bool =
+    IF empty?(s)
+    THEN TRUE
+    ELSE CASES domid_vtpm(vtpm(s)) OF
+           bottom : TRUE,
+	   up(x) : NOT findDomID?(rest(s),down(domid_vtpm(vtpm(s))))
+	 ENDCASES
+	 AND uniqueDomID?(rest(s))
+    ENDIF    
+    MEASURE s BY << 
+
+  % Is every session key in the table unique?
+  uniqueSessKey?(s:vtpmManState): RECURSIVE bool =
+    IF empty?(s)
+    THEN TRUE
+    ELSE NOT findSessKey?(rest(s),k_D(vtpm(s))) AND uniqueSessKey?(rest(s))
+    ENDIF    
+    MEASURE s BY << 
+
+  % vTPM ID's in the table are unique.  
+  wellFormedID?(s:vtpmManState):boolean = uniqueID?(s);
+
+  % Domain ID's in the table are unique
+  wellFormedDomID?(s:vtpmManState):boolean = uniqueDomID?(s);
+
+  % Platform ID's need not be unique, thus the well-formedness check is true
+  % for now and this is a placekeeper
+  wellFormedPlatID?(s:vtpmManState):boolean = TRUE;
+
+  % Session Keys in the table are unit
+  wellFormedSessKey?(s:vtpmManState):boolean = uniqueSessKey?(s);
+
+  % Well-formedness for vTPM Manager tables
+  wellFormed?(s:vtpmManState):boolean =
+    wellFormedID?(s)		      % ID is well-formed
+    AND wellFormedDomID?(s)           % Domain ID is well-formed
+    AND wellFormedPlatID?(s)	      % Platform ID is well-formed
+    AND wellFormedSessKey?(s)	      % Session Key is well-formed
+
+  %% Some sanity theorems
+
+  % Empty is well formed
+  wellFormed_empty: THEOREM wellFormed?(empty);
+
+  % A table with a single entry is well-formed
+  wellFormed_single: THEOREM FORALL (v:vtpmEntry) : 
+    wellFormed?(add(v,empty));
+
+  % A table with two entries is well-formed if the second entry differs
+  % from the first with respect to ID and K_D.  Note that the K_D condition
+  % is not necessary right now.
+  wellFormed_double: THEOREM FORALL (v1,v2:vtpmEntry) :
+    ltn_vtpm(v1)/=ltn_vtpm(v2)
+    AND domid_vtpm(v1)/=domid_vtpm(v2)
+    AND k_D(v1)/=k_D(v2) =>
+      wellFormed?(add(v1,add(v2,empty)));
+
+  % wellFormedId_dom?(s:vtpmManState):boolean =
+  %   FORALL (x,y:LTN_vtpm) : x/=y => domid_vtpm(s(x))/=domid_vtpm(s(y))
+
+  % Operations on the vTPM manager data table.
+
+  % Add a vtpm entry to a table.  If the table is originally well-formed
+  % and the new ID and Session Key are unique, the new table is well-formed.
+  addv(v:vtpmEntry,s:(wellFormed?)):(wellFormed?) =
+    IF NOT (findID?(s,ltn_vtpm(v))
+            OR CASES domid_vtpm(v) OF
+	         bottom : TRUE,
+	         up(x) : findDomID?(s,down(domid_vtpm(v)))
+	       ENDCASES
+	    OR findSessKey?(s,k_D(v)))
+    THEN add(v,s)
+    ELSE s
+    ENDIF;
+  
+  % Provision is addv specifying the pieces as individual elements.  addv is
+  % doing the real work.  Uniqueness conditions must be satisfied for the
+  % new ID
+  provisionVtpm(v:LTN_vtpm
+               , p:ID_dom
+	       , hvtpm,hcont:HASH
+	       , k:KEY
+	       , s:(wellFormed?)):(wellFormed?) =
+     IF NOT findID?(s,v)
+       THEN addv((# ltn_vtpm := v
+                    , domid_vtpm := bottom
+		    , domid_controller := up(p)
+		    , hash_vtpm := hvtpm
+		    , hash_controller := hcont
+		    , k_D := k #),s)
+       ELSE s
+     ENDIF
+
+  % Note that there should be a check for a non-null new ID in here somewhere
+  % Should also check that the dom ID being replaced is null.  Significant
+  % additional stuff here.  This function is currently a mess and has not 
+  % been checked.
+  replaceDomID(s:(wellFormed?),id:LTN_vtpm,newid:ID_dom): RECURSIVE (wellFormed?) =
+    IF empty?(s) AND (NOT findDomID?(s,newid)) THEN s
+    ELSIF empty?(rest(s)) THEN s
+    ELSE IF id=ltn_vtpm(vtpm(rest(s)))
+         THEN add(vtpm(rest(s)) WITH [domid_vtpm:=up(newid)],rest(rest(s)))
+	 ELSE add(vtpm(s),replaceDomID(rest(s),id,newid))
+	 ENDIF
+    ENDIF
+    MEASURE s BY <<
+
+  % If a vTPM is present, then replace its domain ID with a new domain
+  % ID representing the running vTPM.  This function has not been checked
+  startVtpm(s:(wellFormed?),idv:LTN_vtpm,idd:ID_dom):(wellFormed?) =
+    IF findID?(s,idv) THEN s ELSE replaceDomID(s,idv,idd) ENDIF
 
   END vtpm
