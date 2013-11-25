@@ -54,12 +54,14 @@ BEGIN
 	  ABS_RevokeTrust?(c)) =>
         srk(s) = srk(executeCom(s,c));
 
+  %% A TPM SHALL NOT install an EK unless generated on the TPM by execution of
+  %%  TPM_CreateEndorsementKeyPair or TPM_CreateRevocableEK
   ek_unchanged: THEOREM 
     FORALL (s:tpmAbsState,c:tpmAbsInput) :
       not(ABS_Startup?(c) OR ABS_Init?(c) OR
           ABS_CreateEndorsementKeyPair?(c) OR
 	  ABS_CreateRevocableEK?(c) OR
-	  ABS_RevokeTrust?(c) ) =>
+	  ABS_RevokeTrust?(c)) =>
         ek(s) = ek(executeCom(s,c));
 
   keyGenCnt_unchanged: THEOREM
@@ -87,11 +89,12 @@ BEGIN
   % d. TPM_PCR_Reset
   pcrs_unchanged: THEOREM 
     FORALL (s:tpmAbsState,c:tpmAbsInput) :
-      not(ABS_Startup?(c) OR ABS_Init?(c) OR
+      not(ABS_Startup?(c) OR ABS_Init?(c) OR		% c
 	  ABS_sinit?(c) OR 
 	  ABS_senter?(c) OR 
-	  ABS_Extend?(c) OR
-	  ABS_PCR_Reset?(c)) =>
+	  ABS_Extend?(c) OR				% a
+	  ABS_SHA1CompleteExtend?(c) OR			% b
+	  ABS_PCR_Reset?(c)) =>				% d
       pcrs(s) = pcrs(executeCom(s,c));
 
   %% Monotonicity of locality
@@ -115,6 +118,12 @@ BEGIN
 	  ABS_ResetEstablishmentBit?(c) OR
 	  ABS_CreateEndorsementKeyPair?(c) OR
 	  ABS_CreateRevocableEK?(c) OR
+	  ABS_SetOwnerInstall?(c) OR
+ 	  ABS_OwnerSetDisable?(c) OR
+ 	  ABS_PhysicalEnable?(c) OR
+ 	  ABS_PhysicalDisable?(c) OR
+ 	  ABS_PhysicalSetDeactivated?(c) OR
+	  ABS_SetOperatorAuth?(c) OR
 	  ABS_RevokeTrust?(c)) =>
         permFlags(s) = permFlags(executeCom(s,c));
 
@@ -123,6 +132,10 @@ BEGIN
       not(ABS_Startup?(c) OR ABS_Init?(c) OR
 	  ABS_ForceClear?(c) OR
 	  ABS_OwnerClear?(c) OR 
+ 	  ABS_OwnerSetDisable?(c) OR
+ 	  ABS_PhysicalEnable?(c) OR
+ 	  ABS_PhysicalDisable?(c) OR
+ 	  ABS_PhysicalSetDeactivated?(c) OR
 	  ABS_RevokeTrust?(c)) =>
         s`permFlags`disable = executeCom(s,c)`permFlags`disable
 
@@ -131,6 +144,7 @@ BEGIN
       not(ABS_Startup?(c) OR ABS_Init?(c) OR
 	  ABS_ForceClear?(c) OR
 	  ABS_OwnerClear?(c) OR 
+	  ABS_SetOwnerInstall?(c) OR
 	  ABS_RevokeTrust?(c)) =>
         s`permFlags`ownership = executeCom(s,c)`permFlags`ownership
 
@@ -213,6 +227,7 @@ BEGIN
       not(ABS_Startup?(c) OR ABS_Init?(c) OR
 	  ABS_ForceClear?(c) OR
 	  ABS_OwnerClear?(c) OR 
+	  ABS_SetOperatorAuth?(c) OR
 	  ABS_RevokeTrust?(c)) =>
         s`permFlags`operator = executeCom(s,c)`permFlags`operator;
 
@@ -268,6 +283,8 @@ BEGIN
 	  ABS_TakeOwnership?(c) OR 
 	  ABS_RevokeTrust?(c) OR
 	  ABS_ForceClear?(c) OR
+	  ABS_SetOperatorAuth?(c) OR
+	  ABS_CMK_SetRestrictions?(c) OR
 	  ABS_OwnerClear?(c)) =>
         permData(s) = permData(executeCom(s,c));
 
@@ -300,6 +317,7 @@ BEGIN
       not(ABS_Startup?(c) OR ABS_Init?(c) OR
 	  ABS_RevokeTrust?(c) OR
 	  ABS_ForceClear?(c) OR
+	  ABS_SetOperatorAuth?(c) OR
 	  ABS_OwnerClear?(c)) =>
         s`permData`operatorAuth = executeCom(s,c)`permData`operatorAuth;
 

@@ -29,7 +29,7 @@ startupData[K,HV:TYPE+] : THEORY
 
   IMPORTING PermanentFlags;
   IMPORTING PermanentData[HV];
-  IMPORTING StanyFlags[HV];
+  IMPORTING StanyFlags[HV]; 
   IMPORTING StanyData[HV];
   IMPORTING StclearFlags;
   IMPORTING StclearData[HV];
@@ -42,6 +42,10 @@ startupData[K,HV:TYPE+] : THEORY
     TPM_ST_STATE : TPM_ST_STATE?
     TPM_ST_DEACTIVATED : TPM_ST_DEACTIVATED?
   END TPM_STARTUP_TYPE  
+
+  ekInit : (tpmKey?)
+  srkInit : (tpmKey?)
+  keyGenCntInit : K
 
   %% Record containing state data to be stored on TPM_SaveState invocation
   %% and restored when using TPM_ST_STATE flag.  The valid? flag indicates
@@ -65,10 +69,18 @@ startupData[K,HV:TYPE+] : THEORY
 			  stclearData: StclearData
 			#];
 
+
+  tpmRestoreStateData : restoreStateData
+
+  tpmRestoreUnknown : restoreStateData = 
+    tpmRestoreStateData WITH [`valid?:=FALSE]
+   
+
   wellFormedRestore?(r:restoreStateData) : bool =
     valid?(r) =>
     FORALL (i:PCRINDEX) :
       pcrReset(pcrAttrib(permData(r))(i)) => pcrs(r)(i) = resetOne;
+
 
   %% Create a save record with keys, pcrs, and pcr flags.  Throw out pcr
   %% values if they are resettable
@@ -104,23 +116,20 @@ startupData[K,HV:TYPE+] : THEORY
   %% Initial value for saved data.  The only field that matters is the valid?
   %% field that must be false.
 
-  ekInit : (tpmKey?)
-  srkInit : (tpmKey?)
-  keyGenCntInit : K
 
   initSaveData : (wellFormedRestore?) =
     (# valid? := FALSE,
-       keys := emptyset,
+       keys := (#vals:=emptyset,keys:=emptyset#),
        ek := ekInit,
        srk := srkInit,
        keyGenCnt := keyGenCntInit,
        pcrs := pcrsPower,
        permFlags := permFlagsDefault,
-       permData := permDataInit,	
-       stanyFlags:= stanyFlagsInit,
-       stanyData := stanyDataInit,
-       stclearFlags:= stclearFlagsInit,
-       stclearData := stclearDataInit
+       permData := permDataDefault,	
+       stanyFlags:= stanyFlagsDefault,
+       stanyData := stanyDataDefault,
+       stclearFlags:= stclearFlagsDefault,
+       stclearData := stclearDataDefault
     #);
 
-  END startupData
+  End startupData

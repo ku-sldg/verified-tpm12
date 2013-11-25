@@ -55,7 +55,7 @@ StclearData[HV:TYPE+] : THEORY
 	   , deferredPhysicalPresence : int
   #];
 
-  stclearDataInit : StclearData = 
+  stclearDataDefault : StclearData = 
   	(# contextNonceKey:=tpmNonceZero
 	   %, countId : TPM_COUNT_ID
 	   , ownerReference:=key(TPM_KH_OWNER)

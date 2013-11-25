@@ -95,22 +95,6 @@ types : THEORY
     TRANSPORT : TRANSPORT? % The transport protocol
   END protocol;
 
-  %% This table defines the types of algorithms that may be supported by the TPM
-  %% TPM_ALG_AESxxx is used to represent any of TPM_ALG_AES128, TPM_ALG_AES192, 
-  %%  or TPM_ALG_AES256.
-  algo : DATATYPE	% TPM_ALGORITHM_ID				(4.8)
-  BEGIN
-    RSA : RSA?		% The RSA algorithm.
-    SHA : SHA? 		% The SHA1 algorithm
-    HMAC : HMAC? 	% The RFC 2104 HMAC algorithm
-    AES128 : AES128? 	% The AES algorithm, key size 128
-    MGF1 : MGF1?	% The XOR algorithm using MGF1 to create a string the 
-    	   		%  size of the encrypted block
-    AES192 : AES192? 	% AES, key size 192
-    AES256 : AES256? 	% AES, key size 256
-    ALG_XOR : ALG_XOR?	% XOR using the rolling nonces
-  END algo;
-
   physPres : DATATYPE	% TPM_PHYSICAL_PRESENCE				(4.9)
   BEGIN
     HW_DISABLE : HW_DISABLE? % Sets the physicalPresenceHWEnable to FALSE
@@ -125,6 +109,7 @@ types : THEORY
 
   PHYSPRES : TYPE = set[physPres]
 
+  %% TPM_ALGORITHM_ID (4.8) in keyData.pvs
   %% TPM_MIGRATE_SCHEME (4.10) in keyData.pvs
   %% TPM_EK_TYPE (4.11) in data.pvs
   %% TPM_PLATFORM_SPECIFIC (4.12) TODO?

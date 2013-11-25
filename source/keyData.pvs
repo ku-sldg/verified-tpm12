@@ -17,13 +17,16 @@ keydata : THEORY
 
   BEGIN
 
-  KEYDATA : TYPE;
-  
   %% Keys are integers.
-  KVAL : TYPE = integer;
+  KVAL : TYPE = nat;
+  privKVAL : TYPE = {r:integer | r <= 0};
+
+%   %% A keyset is a set of key values
+%   KEYSET : TYPE = set[privKVAL];
 
   %% The inverse of a key its negation
-  inverse(k:KVAL):KVAL = -k;
+%  inverse(k:KVAL):privKVAL = -k;
+   inverse(k:integer) : integer = -k;
 
   %% The bad key value is 0
   badkey:KVAL = 0;
@@ -45,6 +48,50 @@ keydata : THEORY
     migrate : migrate?
   END KEY_USAGE;
 
+  %% TPM_ENC_SCHEME							(5.8.1)
+  ENC_SCHEME : DATATYPE							
+  BEGIN
+    none : none?
+    RSAESOAEP_SHA1_MGF1 : SHA1_MGF1?
+    RSAESPVCS : PVCS?
+    SYM_CTR : SYM_CTR?
+    SYM_OFB : SYM_OFB?
+  END ENC_SCHEME
+
+  %% TPM_SIG_SCHEME							(5.8.1)
+  SIG_SCHEME : DATATYPE							
+  BEGIN
+    none : none?
+    RSASSAPCKS1_SHA1 : SHA1?
+    RSASSAPCKS1_DER : DER?
+    RSASSAPCKS1_INFO : INFO?
+  END SIG_SCHEME
+  
+  validEncScheme(u:KEY_USAGE,e:ENC_SCHEME) : bool = 
+    CASES u OF
+      signing    : none?(e),
+      storage    : SHA1_MGF1?(e),
+      identity   : none?(e),
+      authChange : SHA1_MGF1?(e),
+      bind 	 : SHA1_MGF1?(e) OR PVCS?(e),
+      legacy 	 : SHA1_MGF1?(e) OR PVCS?(e),
+      migrate 	 : SHA1_MGF1?(e)
+    ENDCASES
+
+  validSigScheme(u:KEY_USAGE,s:SIG_SCHEME) : bool = 
+    CASES u OF
+      signing    : SHA1?(s) OR DER?(s) OR INFO?(s),
+      storage    : none?(s),
+      identity   : SHA1?(s),
+      authChange : none?(s),
+      bind 	 : none?(s),
+      legacy 	 : SHA1?(s) OR DER?(s),
+      migrate 	 : none?(s)
+    ENDCASES
+
+
+  keyUsage : KEY_USAGE;
+
   %% Flags for defining key properties					(5.10)
   KEY_FLAGS : TYPE = [#redirection : bool
 		     , migratable : bool
@@ -53,6 +100,8 @@ keydata : THEORY
 		     , migrateAuthority : bool
   	      	     #];
 
+  keyFlags : KEY_FLAGS;
+
   %% All key flags false
   keyFlagsF : KEY_FLAGS = (#redirection:= FALSE
      	      		  , migratable := FALSE
@@ -60,23 +109,35 @@ keydata : THEORY
 	     		  , pcrIgnoredOnRead := FALSE
 	     		  , migrateAuthority := FALSE #)
   
-  ALGO_ID : DATATYPE
+  %% This table defines the types of algorithms that may be supported by the TPM
+  %% TPM_ALG_AESxxx is used to represent any of TPM_ALG_AES128, TPM_ALG_AES192, 
+  %%  or TPM_ALG_AES256.
+  ALGO_ID : DATATYPE	% TPM_ALGORITHM_ID				(4.8)
   BEGIN
-    RSA : RSA?
-    SHA : SHA?
-    HMAC : HMAC?
+    RSA : RSA?		% The RSA algorithm.
+    SHA : SHA? 		% The SHA1 algorithm
+    HMAC : HMAC? 	% The RFC 2104 HMAC algorithm
     AESxxx : AES?
-    MGF1 : MGF1?
+%     AES128 : AES128? 	% The AES algorithm, key size 128
+%     AES192 : AES192? 	% AES, key size 192
+%     AES256 : AES256? 	% AES, key size 256
+    MGF1 : MGF1?	% The XOR algorithm using MGF1 to create a string the 
+    	   		%  size of the encrypted block
+    ALG_XOR : ALG_XOR?	% XOR using the rolling nonces
   END ALGO_ID;
 
   KEY_PARMS : TYPE = [#algoId : ALGO_ID
-% 		     , encScheme : 
-% 		     , sigScheme : 
+		     , encScheme : ENC_SCHEME
+		     , sigScheme : SIG_SCHEME
 % 		     , parms :
   	      	     #];
-  keyParmsDef : KEY_PARMS = (#algoId:=RSA#)
+  keyParmsDef : KEY_PARMS = (#algoId:=RSA
+  	      		     ,encScheme:=none
+			     ,sigScheme:=none#);
+
+  keyParms : KEY_PARMS;
   	     
-  %% Migragion scheme indicator						(4.10)
+  %% Migragion scheme indicator (TPM_MIGRATE_SCHEME)			(4.10)
   migrateScheme : DATATYPE
   BEGIN 
     migrate : migrate?
@@ -85,16 +146,5 @@ keydata : THEORY
     restrictMigrate : restrictMigrate?
     restrictApprove : restrictApprove?
   END migrateScheme;
-
-  %% Type indicating crypographic status - clear, encrypted, signed, wrapped,
-  %% sealed.  Type is recursive allowing multiple operations on the same
-  %% element.
-%   CRYPTOSTATUS : DATATYPE
-%   BEGIN
-%     clear : clear?
-% %     encrypted(key:KVAL) : encrypted?
-% %     signed(key:KVAL) : signed?
-% %     sealed(key:KVAL) : sealed?
-%   END CRYPTOSTATUS;
 
 END keydata

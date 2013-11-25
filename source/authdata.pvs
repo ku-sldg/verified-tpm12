@@ -28,5 +28,7 @@ authdata : THEORY
     always : always?
     never : never?
   END AUTH_DATA_USAGE;
-  
+
+  authDataUsage : AUTH_DATA_USAGE;
+
 END authdata

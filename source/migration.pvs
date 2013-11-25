@@ -1,0 +1,335 @@
+%%
+%% ----
+%% Migration Protocols Theory
+%%
+%% Author: Brigid Halling
+%% Date: Mon Jul 17 01:09:39 CST 2013
+%%
+%% Description: Modeling TPM key migration protocols 
+%% 
+%% Dependencies:
+%%  tpm.pvs
+%%  StateMonad.pvs
+%%  ReturnCodes.pvs
+%%  memory.pvs 
+%%  StclearFlags.pvs
+%%  startupData.pvs
+%%  PermanentData.pvs
+%%  StanyData.pvs
+%%  StanyFlags.pvs
+%%  key.pvs
+%%  data.pvs
+%%  keyData.pvs
+%%  pcr.pvs	
+%%  authdata.pvs
+%%  PermanentFlags.pvs
+%%
+%% Todo: (key - => pending, + => done)
+%% ----
+
+migration[HV:TYPE+] : THEORY
+
+BEGIN
+
+  IMPORTING tpm[HV];
+
+  %TODO: FIX THIS... not really what we want!
+  makeKey(storeasym:tpmData) : (tpmKey?) = 
+   CASES storeasym OF
+   encrypted(e,k) : CASES e OF 
+   	 tpmStoreAsymkey(u,m,d,p) : tpmKey(inverse(p),keyUsage,keyFlags,
+					authDataUsage,keyParms,
+					pcrInfoLongDefault,storeasym)
+         ELSE tpmKey(0,keyUsage,keyFlags,authDataUsage,keyParms,
+		pcrInfoLongDefault,encrypted(cryptoError(3),0))	%INVALID TYPE
+   	ENDCASES
+   ELSE badData
+   ENDCASES
+
+
+  
+  %%Theorem derived from Figure 2 of Exercise 6:TPM Key Management and Key 
+  %%  Replication Mechanisms from RHUR-University Bochum 2009
+  rewrap_scheme : THEOREM 
+   FORALL(state1:(afterStartup?) %Destination 
+   	 ,state2:(afterStartup?) %Source
+      %TPM_AuthorizeMigrationKey
+	 ,m:(tpmMigScheme?) %type of migration operation that is to be permitted
+	 ,storage:(tpmKey?) %public key to be authorized
+      %TPM_CreateMigrationBlob
+	 ,par:(tpmKey?) %handle of parent key that can decrypt mig
+	 %,m:(tpmMigScheme?) %migration type REWRAP (same as TPM_AuthMigKey)
+	 %,mKA:(tpmMigKeyAuth?)%mig pubkey and its authSess dig (OUT_AuthMigKey)
+	 ,mig:(tpmKey?) %encrypted entity to be modified (outData:storeasymk)
+	 ,i1,i2,i3,i4:authIn
+	 ,w:nat):
+    rewrap?(migScheme(m)) AND
+    member(private(storage),vals(state1`keys)) AND 
+    member(private(mig),vals(state2`keys)) AND 
+    member(private(par),vals(state2`keys)) AND
+    checkDecrypt?(encDat(mig),private(par),state2`keys) =>
+    LET (a2,s2)=runState(
+		TPM_AuthorizeMigrationKey(storage,m,i1) % -> (mKA,o1,m)
+		>>= CPU_saveOutput(w)
+		>>= LAMBDA (a:tpmAbsOutput) : 
+		    CASES a OF
+		    	  OUT_AuthorizeMigrationKey(ticket,o1,m) : 
+			  	TPM_CreateMigrationBlob(par,m,ticket,
+							encDat(mig),i2,i3)
+							% -> (r,e,o2,m)
+			  ELSE TPM_Noop(a)
+		    ENDCASES
+		)(state2) IN
+    LET d1:(tpmStoreAsymkey?)=decrypt(encDat(mig),private(par),state2`keys) IN
+	OUT_AuthorizeMigrationKey?(s2`memory(w)) =>
+    LET mka:(tpmMigKeyAuth?)=autData(s2`memory(w)) IN
+        createMigBlob?(state2,par,m,mka,encDat(mig)) =>
+    LET keyBlob=makeKey(blobData(a2)) IN 
+    LET (a1,s1)=runState(
+		TPM_LoadKey2(storage,keyBlob,i4)
+		)(state1) IN
+      	LET o1:authOut=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+			resAuth:=usageAuth(encData(encDat(par)))#),
+    	    o2:authOut=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+			resAuth:=usageAuth(encData(encDat(key(mka))))#),
+    	    o4:authOut=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+			resAuth:=ownerAuth(i4)#) IN
+	loadKey2?(state1,storage,keyBlob) =>
+         % a2 contains a private key (mig), encrypted using storage
+       	 a2=OUT_CreateMigrationBlob(RNG(0),encrypted(encData(encDat(mig)),
+					key(storage)),
+		o1,o2,TPM_SUCCESS)
+       	 AND key(key(mka))=key(storage)
+       	 AND s2=state2 WITH [`memory:=s2`memory
+	     	       	    ,`outData:=s2`outData]
+ 	 % a1 contains the key that has been loaded
+ 	 AND a1=OUT_LoadKey2(tpmKey(key(mig),keyUsage,keyFlags,
+					authDataUsage,keyParms,
+					pcrInfoLongDefault,
+					encrypted(encData(encDat(mig)),
+					key(storage)))
+			,o4,TPM_SUCCESS) AND
+	 s1=state1 WITH [`keys:=addKey(mig,keys(state1))
+	 	   	,`outData:=s1`outData]
+
+;
+
+
+  %%Theorem derived from 1.4.1 of Exercise 6:TPM Key Management and Key 
+  %%  Replication Mechanisms from RHUR-University Bochum 2009
+  migrate_scheme : THEOREM 
+   FORALL(plat1 % Destination
+	 ,plat2:(afterStartup?) % Source
+	%TPM_AuthorizeMigrationKey
+	 ,ma:(tpmKey?) %public key to be authorized
+	 ,m:(tpmMigScheme?) %type of migration operation that is to be permitted
+	%TPM_CreateMigrationBlob
+	 ,par:(tpmKey?)
+	 %,m:(tpmMigScheme?) %migration type MIGRATE (same as TPM_AuthMigKey)
+	 %,mKA:(tpmMigKeyAuth?)%mig pubkey and its authSess dig (OUT_AuthMigKey)
+	 ,mig:(tpmKey?) %encr entity to be modified (only use encDat)
+	%TPM_MigrateKey
+	 %,ma %handle of key used to migrate key (same as from TPM_MigAuthKey)
+	 ,storage:(tpmKey?) %public key to which blob is to be migrated
+	 %,inData:(encrypted?) %input blob (OUT_CreateMigBlob)
+	%TPM_ConvertMigrationBlob
+	 %,parent:(tpmKey?) %loaded key that can decrypt keys (same as storage)
+	 %,inData:(encrypted?) %xor'd and encrypted key (OUT_MigrateKey)
+	 %,random:int %random value used to hide key data (OUT_CreateMigBlob)
+	%TPM_LoadKey2
+	 %,parent:(tpmKey?) %handle of parent key (same as )
+	 %,inKey:(tpmKey?) %incoming key structure, encr priv and clear public 
+	 ,i1,i2,i3,i4,i5,i6:authIn
+	 ,w,x,y:nat):
+    migrate?(migScheme(m)) AND 
+    member(private(storage),vals(plat1`keys)) AND 
+    member(private(ma),vals(plat2`keys)) AND 
+    member(private(mig),vals(plat2`keys)) AND 
+    member(private(par),vals(plat2`keys)) AND
+    w/=x AND w/=y AND x/=y AND
+    checkDecrypt?(encDat(mig),private(par),plat2`keys) AND
+    migrateKey?(ma)
+    =>
+    LET (a2,s2)=runState(
+		TPM_AuthorizeMigrationKey(ma,m,i1)
+		>>= CPU_saveOutput(w)
+		>>= LAMBDA (a:tpmAbsOutput) : 
+		    CASES a OF
+		    	  OUT_AuthorizeMigrationKey(ticket,o1,r) :
+			  	TPM_CreateMigrationBlob(par,m,ticket,
+							encDat(mig),i2,i3)
+		    	  ELSE TPM_Noop(a)
+		    ENDCASES
+		>>= CPU_saveOutput(x)
+		>>= LAMBDA (a:tpmAbsOutput) : 
+		    CASES a OF
+		    	  OUT_CreateMigrationBlob(random,migBlob,o2,o3,r) :
+			  	TPM_MigrateKey(ma,storage,migBlob,i4)
+		    	  ELSE TPM_Noop(a)
+		    ENDCASES
+		)(plat2),
+        o4:authOut=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+			resAuth:=usageAuth(encData(encDat(ma)))#),
+        o6:authOut=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+			resAuth:=ownerAuth(i6)#),
+	d=encData(encDat(mig)) IN
+    createMigBlob?(plat2,par,m,autData(s2`memory(w)),encDat(mig))
+    =>
+    a2=OUT_MigrateKey(
+		encrypted(tpmXOR(OAEP(tpmMigrateAsymkey(usageAuth(d),
+						pubDataDigest(d),privKey(d)),
+		     		      migrationAuth(d),privKey(d)),
+	 			 RNG(s2`randCnt-1)),
+			  key(storage)),
+		o4,TPM_SUCCESS) 
+		AND 
+    s2=plat2 WITH [`memory:=s2`memory
+ 		  ,`outData:=s2`outData
+		  ,`randCnt:=randCnt(plat2)+1] AND
+    OUT_CreateMigrationBlob?(s2`memory(x)) AND
+%     LET o2:authOut=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+% 				resAuth:=usageAuth(encData(encDat(par)))#),
+%     	o3:authOut=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+% 	     resAuth:=usageAuth(encData(encDat(key(autData(s2`memory(w))))))#),
+%         d1=decrypt(encDat(mig),private(par),plat2`keys) IN 
+%     s2`memory(x)=OUT_CreateMigrationBlob(RNG(plat2`randCnt),
+% 				encrypted(tpmXOR(OAEP(tpmMigrateAsymkey(
+% 							usageAuth(d1),
+% 							pubDataDigest(d1),
+% 							privKey(d1)),
+% 						migrationAuth(d1),
+% 						privKey(d1)),
+% 						RNG(plat2`randCnt-2)),
+% 					key(key(autData(s2`memory(w))))),
+% 				o2,o3,TPM_SUCCESS) 
+    LET (a1,s1)=runState(
+		TPM_ConvertMigrationBlob(storage,migData(a2),
+						random(s2`memory(x)),i5)
+		>>= CPU_saveOutput(y)
+		>>= LAMBDA (a:tpmAbsOutput) : 
+		    CASES a OF
+		    	  OUT_ConvertMigrationBlob(keyBlob,o5,r) :
+			  	TPM_LoadKey2(storage,
+					makeKey(keyBlob),i6)
+		    	  ELSE TPM_Noop(a)
+		    ENDCASES
+		)(plat1) IN
+    convertMigBlob?(plat1,storage,migData(a2),random(s2`memory(x))) AND
+    OUT_ConvertMigrationBlob?(s1`memory(y)) AND
+%     LET aOut:authOut=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+% 		resAuth:=usageAuth(encData(encDat(storage)))#) IN
+%     a1=OUT_ConvertMigrationBlob(encrypted(
+% 			tpmStoreAsymkey(usageAuth(d),tpmSecret(1),
+% 						pubDataDigest(d),privKey(d)),
+% 		     		      key(storage))
+% 		,aOut,TPM_SUCCESS) 
+   loadKey2?(plat1,storage,makeKey(convertData(s1`memory(y)))) 
+    =>
+   a1=OUT_LoadKey2(makeKey(convertData(s1`memory(y))),o6,TPM_SUCCESS) 
+AND
+    s1=plat1 WITH [`memory:=s1`memory
+    	     	  ,`keys:=(# vals:=add(private(mig),vals(keys(plat1))),keys:=add(makeKey(convertData(s1`memory(y))),keys(keys(plat1)))#)
+%				,keys(plat1)
+		  ,`outData:=s1`outData]
+	;
+%TODO:::: FIX MAKE KEY!!!!
+	
+%   %% From "A Practical Guide..."
+%   upgrade_system_migration : THEOREM 
+%    FORALL(state:(afterStartup?)
+% 	%TPM_CMK_ApproveMA
+% 	 ,migAD:(tpmDigest?) % the digest of a tpmMSAComposite structure 
+% 	 		     % (itself one or more digests of pub keys belonging
+% 			     %  to migration authorities)
+% 	%TPM_CMK_CreateKey
+% 	 ,par:(tpmKey?) %handle of key that can perform key wrapping
+% 	 ,dUA:(tpmEncAuth?) %encrypted usage AuthData for the key
+% 	 ,k:(tpmKey?) %key to be created
+% 	 %,mAA:(tpmDigest?) % ticket created by tpmOwner using CMK_ApproveMA, 
+% 	       		    % approving a tpmMSAComposite structure
+% 	 %same as from abs_cmk_createBlob:
+% 	 %,maD:(tpmDigest?) % the digest of a tpmMSACompositeStructure.
+% 	%TPM_CMK_CreateTicket
+% 	 ,vKey:(tpmKey?) % pub key to be used to check sigVal !!
+% 	 ,signedData:(tpmDigest?) % data to be verified
+% 	 ,sigVal:tpmData %(signed?) % signatureValue to be verified.
+% 	%TPM_CMK_CreateBlob
+% 	 ,p:(tpmKey?) %handle of parent key that can decrypt e !!
+% 	 ,t:(tpmMigScheme?) % migration type 
+% 	 		    % either RESTRICT_MIGRATE or RESTRICT_APPROVE
+%    	 ,ma:(tpmMigKeyAuth?) % migration public key and its auth sess digest
+% 	 ,psk:(tpmDigest?) % dig of the tpmPubkey of the entity to be migrated
+% 	 ,l:(tpmMSAComposite?) % one + digests of pub keys belonging to MAs
+% 	 ,r:(tpmCMKAuth?) % if t is RESTRICT_APPROVE, a tpmCMKAuth structure,
+% 	 		  % containing the digests of the pub keys belonging to 
+% 			  % the MA, the dest parent key, the key to be migrated
+% 	 %from out_cmk_createTicket:
+% 	 %,sig:(tpmDigest?) % if t is RESTRICT_APPROVE, a tpmHMAC structure,
+% 	 		    % generated by the TPM, signaling a valid signature
+% 			    % over r
+% 	 ,e:(encrypted?) % encrypted entity that is to be modified. !!
+% 	% TPM_MigrateKey
+% 	 ,maKey:(tpmKey?) % handle of key to be used to migrate key !!
+% 	 ,pub:(tpmPubkey?) % public key to which the blob is to be migrated !!
+% 	 %from out_cmk_createBlob:
+% 	 %,inData:(encrypted?) % the input blob 
+% 	%TPM_CMK_ConvertMigration
+% 	 ,parentH:(tpmKey?) % handle of loaded key that can decrypt keys !!
+% 	 %same as from abs_cmk_createBlob:
+% 	 %,r:(tpmCMKAuth?) % digests of public keys belonging to 
+% 	 		   % the MA, the dest parent key, key to be migrated
+% 	 %from out_cmk_createTicket:
+% 	 %,sig:(tpmDigest?) % a sig ticket generated by TPM signaling valid 
+% 	 		    % signature over r
+% 	 ,migKey:(tpmKey?) % the pub key of the key to be migrated. Priv portion
+% 	 		   % MUST be tpmMigrateAsymkey properly XOR'd !!
+% 	 %same as from abs_cmk_createBlob:
+% 	 %,l:(tpmMSAComposite?) % one+ digests of public keys belonging to MAs
+% 	 %from out_cmk_createBlob:
+% 	 %,random:int %random value used to hide key data
+% 	 ,w,x,y,z:nat
+% 	 ,i0,i1,i2,i3:authIn) :
+%     LET (a,s) = runState(
+% 		TPM_CMK_ApproveMA() % -> (mAA,o0,m)
+% 		>> CPU_SaveOutput(w)
+% 		>>= LAMBDA (a:tpmAbsOutput) : 
+% 		    CASES a OF
+% 		    	  OUT_CMK_ApproveMA(mAA,o0,m) : 
+% 			  	TPM_CMK_CreateKey(par,dUA,k,mAA,,i1)
+% 			  ELSE TPM_Noop(a)
+% 		    ENDCASES
+% 		>> TPM_CMK_CreateKey(par,dUA,k,mAA,mAd,i0) % -> (wk,o0,m)
+% 		>> CPU_SaveOutput(x)
+% 		>> TPM_CMK_CreateBlob(p,t,ma,psk,l,r,sig,e,i1) 
+% 						% -> (rand,enc,o1,m)
+% 		>>= CPU_saveOutput(y)
+% 		>>= LAMBDA (a:tpmAbsOutput) : 
+% 		    CASES a OF
+% 		    	  OUT_CMK_CreateBlob(rand,encr,o1,m) : 
+% 			  	TPM_MigrateKey(_,_,encr,i2) % -> (data,o2,m)
+% 			  ELSE TPM_Noop(a)
+% 		    ENDCASES
+% 		>>= CPU_saveOutput(z)
+% 		>>= LAMBDA (a:tpmAbsOutput) : 
+% 		    CASES a OF
+% 		    	  OUT_MigrateKey(encr,o2,m) : 
+% 			  	TPM_CMK_ConvertMigration(p,r,sig,_,l,rand,i3)
+% 							% -> (data,o3,m)
+% 			  ELSE TPM_Noop(a)
+% 		    ENDCASES)
+% 		(state) IN
+%     OUT_CMK_CreateBlob?(s`memory(y)) AND
+%     OUT_MigrateKey?(s`memory(z))
+%     AND let rando=random(s`memory(y))
+%     CMKCreateBlob?(state,p,t,ma,psk,l,e,i) AND
+%     migrateKey?(_) AND
+%     CMKConvertMigration?(state,p,r,_,l,rand)
+%     => 
+%     OUT_CMK_ConvertMigration?(a)
+%     AND s=state;
+
+
+
+  
+END migration
+

@@ -41,14 +41,14 @@ pcr[PCRVAL:TYPE+] : THEORY
   PCRVALUES : TYPE = ARRAY[PCRINDEX->PCR];
 
   %% (8.2)
-  PCR_COMPOSITE : TYPE = [#
-  		% The indication of which PCR values are active
-  		  select : PCR_SELECTION 
-		% Array of PCRVALUE structures. 
-		% The values come in the order specified by the select parameter
-		%  and are concatenated into a single blob.
-		, pcrValue : PCRVALUES
-  		#];
+%   PCR_COMPOSITE : TYPE = [#
+%   		% The indication of which PCR values are active
+%   		  select : PCR_SELECTION 
+% 		% Array of PCRVALUE structures. 
+% 		% The values come in the order specified by the select parameter
+% 		%  and are concatenated into a single blob.
+% 		, pcrValue : PCRVALUES
+%   		#];
 
 
 %   %% (8.3)

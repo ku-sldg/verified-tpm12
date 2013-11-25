@@ -1,60 +1,52 @@
 (data
- (encStoreAsymkey?_TCC1 0
-  (encStoreAsymkey?_TCC1-1 nil 3579274802 ("" (subtype-tcc) nil nil)
-   nil nil))
- (keyEncDatStoreAsymkey 0
-  (keyEncDatStoreAsymkey-1 nil 3579274888
-   ("" (grind) (("" (postpone) nil nil)) nil) nil shostak))
- (tpmNull_TCC1 0
-  (tpmNull_TCC1-1 nil 3566921310
-   (""
-    (inst 1 "tpmSealedData(tpmSecret(1),
-tpmSecret(0),
-tpmDigest(null,clear),tpmSessKey(1,clear),clear)")
-    nil nil)
-   ((tpmSessKey adt-constructor-decl "[KVAL -> (tpmSessKey?)]" data
-     nil)
-    (tpmSessKey? adt-recognizer-decl "[tpmData -> boolean]" data nil)
-    (KVAL type-eq-decl nil keydata nil) nil nil
-    (null adt-constructor-decl "(null?)" list_adt nil)
-    (null? adt-recognizer-decl "[list -> boolean]" list_adt nil)
-    (tpmDigest adt-constructor-decl "[list[tpmData] -> (tpmDigest?)]"
-     data nil)
-    (list type-decl nil list_adt nil)
-    (tpmSecret adt-constructor-decl "[int -> (tpmSecret?)]" data nil)
-    (int nonempty-type-eq-decl nil integers nil)
-    (integer_pred const-decl "[rational -> boolean]" integers nil)
-    (rational nonempty-type-from-decl nil rationals nil)
-    (rational_pred const-decl "[real -> boolean]" rationals nil)
-    (real nonempty-type-from-decl nil reals nil)
-    (real_pred const-decl "[number_field -> boolean]" reals nil)
-    (number_field nonempty-type-from-decl nil number_fields nil)
-    (number_field_pred const-decl "[number -> boolean]" number_fields
-     nil)
-    (number nonempty-type-decl nil numbers nil)
-    (tpmSealedData adt-constructor-decl
-     "[[(tpmSecret?), (tpmSecret?), (tpmDigest?), tpmData] -> (tpmSealedData?)]"
-     data nil)
-    nil
-    (tpmDigest? adt-recognizer-decl "[tpmData -> boolean]" data nil)
-    (tpmSecret? adt-recognizer-decl "[tpmData -> boolean]" data nil)
-    (tpmSealedData? adt-recognizer-decl "[tpmData -> boolean]" data
-     nil)
+ (unXOR_tpmXOR 0
+  (unXOR_tpmXOR-1 nil 3582460617 ("" (grind) nil nil)
+   ((boolean nonempty-type-decl nil booleans nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (NOT const-decl "[bool -> bool]" booleans nil)
+    (tpmData type-decl nil data nil)
+    (OAEP? adt-recognizer-decl "[tpmData -> boolean]" data nil)
+    (RNG? adt-recognizer-decl "[tpmData -> boolean]" data nil)
+    (unXOR const-decl "tpmData" data nil))
+   shostak))
+ (NOTunXOR_tpmXOR 0
+  (NOTunXOR_tpmXOR-1 nil 3582460726 ("" (grind) nil nil)
+   ((unXOR const-decl "tpmData" data nil)
+    (/= const-decl "boolean" notequal nil)
+    (RNG? adt-recognizer-decl "[tpmData -> boolean]" data nil)
+    (OAEP? adt-recognizer-decl "[tpmData -> boolean]" data nil)
+    (tpmData type-decl nil data nil)
+    (NOT const-decl "[bool -> bool]" booleans nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (boolean nonempty-type-decl nil booleans nil))
+   shostak))
+ (validEKBlob 0
+  (validEKBlob-1 nil 3588425165 ("" (postpone) nil nil) nil shostak))
+ (pubInversePriv_TCC1 0
+  (pubInversePriv_TCC1-1 nil 3583085780
+   ("" (skosimp)
+    (("" (lemma keyEncDatStoreAsymkey) (("" (grind) nil nil)) nil))
+    nil)
+   ((keyEncDatStoreAsymkey formula-decl nil data nil)
+    (tpmKey? adt-recognizer-decl "[tpmData -> boolean]" data nil)
     (boolean nonempty-type-decl nil booleans nil)
-    (tpmData type-decl nil data nil))
+    (tpmData type-decl nil data nil)
+    (encStoreAsymkey? const-decl "bool" data nil))
    nil))
  (pcrInfoLongDefault_TCC1 0
   (pcrInfoLongDefault_TCC1-1 nil 3566921310
    (""
     (inst 1
-     "tpmPCRInfoLong(0, 0, null, null, tpmCompositeHash((#select:=null,pcrValue:=pcrsPower#)), tpmCompositeHash((#select:=null,pcrValue:=pcrsPower#)))")
+     "tpmPCRInfoLong(0, 0, null, null, tpmCompositeHash(tpmPCRComposite(null,pcrsPower)), tpmCompositeHash(tpmPCRComposite(null,pcrsPower)))")
     nil nil)
    ((pcrsPower const-decl "PCRVALUES" pcr nil)
-    (PCR type-decl nil pcr nil)
+    (tpmPCRComposite adt-constructor-decl
+     "[[PCR_SELECTION, PCRVALUES] -> (tpmPCRComposite?)]" data nil)
+    (PCRVALUES type-eq-decl nil pcr nil) (PCR type-decl nil pcr nil)
     (tpmCompositeHash adt-constructor-decl
-     "[PCR_COMPOSITE -> (tpmCompositeHash?)]" data nil)
-    (PCR_COMPOSITE type-eq-decl nil pcr nil)
-    (PCRVALUES type-eq-decl nil pcr nil)
+     "[(tpmPCRComposite?) -> (tpmCompositeHash?)]" data nil)
+    (tpmPCRComposite? adt-recognizer-decl "[tpmData -> boolean]" data
+     nil)
     (null adt-constructor-decl "(null?)" list_adt nil)
     (null? adt-recognizer-decl "[list -> boolean]" list_adt nil)
     (PCRINDEX type-eq-decl nil pcr nil)
@@ -66,7 +58,6 @@ tpmDigest(null,clear),tpmSessKey(1,clear),clear)")
      nil)
     (PCR_SELECTION type-eq-decl nil pcr nil)
     (AND const-decl "[bool, bool -> bool]" booleans nil)
-    (every adt-def-decl "boolean" list_adt nil)
     (PRED type-eq-decl nil defined_types nil)
     (list type-decl nil list_adt nil)
     (LOCALITY type-eq-decl nil pcr nil)
@@ -90,9 +81,9 @@ tpmDigest(null,clear),tpmSessKey(1,clear),clear)")
     (boolean nonempty-type-decl nil booleans nil)
     (tpmData type-decl nil data nil))
    nil))
- (invalidAuth?_TCC1 0
-  (invalidAuth?_TCC1-1 nil 3579274882 ("" (subtype-tcc) nil nil) nil
-   nil))
+ (storeAsymkeyDefault_TCC1 0
+  (storeAsymkeyDefault_TCC1-1 nil 3587926408 ("" (subtype-tcc) nil nil)
+   ((inverse const-decl "integer" keydata nil)) nil))
  (encryptADIP_TCC1 0
   (encryptADIP_TCC1-1 nil 3567428896 ("" (cases-tcc) nil nil)
    ((boolean nonempty-type-decl nil booleans nil)
@@ -100,5 +91,198 @@ tpmDigest(null,clear),tpmSessKey(1,clear),clear)")
     (NOT const-decl "[bool -> bool]" booleans nil)
     (tpmData type-decl nil data nil)
     (tpmAuthData? const-decl "bool" data nil))
-   nil)))
+   nil))
+ (checkBadData_TCC1 0
+  (checkBadData_TCC1-1 nil 3592247252 ("" (cases-tcc) nil nil) nil
+   nil))
+ (checkBadData_TCC2 0
+  (checkBadData_TCC2-1 nil 3592310084 ("" (monotonicity-tcc) nil nil)
+   nil nil))
+ (typeBadData 0
+  (typeBadData-1 nil 3593825017
+   ("" (split)
+    (("1" (postpone) nil nil) ("2" (postpone) nil nil)
+     ("3" (postpone) nil nil) ("4" (postpone) nil nil)
+     ("5" (postpone) nil nil) ("6" (postpone) nil nil)
+     ("7" (postpone) nil nil) ("8" (postpone) nil nil)
+     ("9" (postpone) nil nil) ("10" (postpone) nil nil)
+     ("11" (postpone) nil nil) ("12" (postpone) nil nil)
+     ("13" (postpone) nil nil) ("14" (postpone) nil nil)
+     ("15" (postpone) nil nil) ("16" (postpone) nil nil)
+     ("17" (postpone) nil nil) ("18" (postpone) nil nil)
+     ("19" (postpone) nil nil) ("20" (postpone) nil nil)
+     ("21" (postpone) nil nil) ("22" (postpone) nil nil)
+     ("23" (postpone) nil nil) ("24" (postpone) nil nil)
+     ("25" (postpone) nil nil) ("26" (postpone) nil nil)
+     ("27" (postpone) nil nil) ("28" (postpone) nil nil)
+     ("29" (postpone) nil nil) ("30" (postpone) nil nil)
+     ("31" (postpone) nil nil) ("32" (postpone) nil nil)
+     ("33" (postpone) nil nil) ("34" (postpone) nil nil)
+     ("35" (postpone) nil nil) ("36" (postpone) nil nil)
+     ("37" (postpone) nil nil) ("38" (postpone) nil nil)
+     ("39" (postpone) nil nil) ("40" (postpone) nil nil))
+    nil)
+   nil shostak))
+ (test_badData?_TCC1 0
+  (test_badData?_TCC1-1 nil 3593868012 ("" (subtype-tcc) nil nil) nil
+   nil))
+ (test_badData? 0
+  (test_badData?-1 nil 3593825366
+   ("" (grind) (("" (lemma typeBadData) (("" (grind) nil nil)) nil))
+    nil)
+   ((badData? const-decl "bool" data nil)
+    (typeBadData formula-decl nil data nil))
+   shostak))
+ (badQuote1_TCC1 0
+  (badQuote1_TCC1-1 nil 3593868012 ("" (subtype-tcc) nil nil) nil nil))
+ (test_checkBadData 0
+  (test_checkBadData-2 "" 3593868652
+   ("" (grind)
+    (("" (rewrite checkBadData)
+      (("" (rewrite checkBadData)
+        (("1" (rewrite checkBadData)
+          (("1" (grind)
+            (("1" (lemma typeBadData)
+              (("1" (grind)
+                (("1" (rewrite checkBadData)
+                  (("1" (rewrite checkBadData) nil nil)) nil))
+                nil))
+              nil))
+            nil))
+          nil)
+         ("2" (grind)
+          (("2" (rewrite checkBadData)
+            (("2" (rewrite checkBadData)
+              (("2" (rewrite checkBadData)
+                (("2" (grind) (("2" (rewrite checkBadData) nil nil))
+                  nil))
+                nil))
+              nil))
+            nil))
+          nil))
+        nil))
+      nil))
+    nil)
+   nil shostak)
+  (test_checkBadData-1 nil 3593868084
+   ("" (grind)
+    (("" (rewrite checkBadData)
+      (("" (rewrite checkBadData)
+        (("" (rewrite checkBadData)
+          (("" (grind)
+            (("1" (lemma typeBadData) (("1" (grind) nil nil)) nil)
+             ("2" (lemma typeBadData) (("2" (grind) nil nil)) nil)
+             ("3" (lemma typeBadData) (("3" (grind) nil nil)) nil)
+             ("4" (lemma typeBadData)
+              (("4" (grind) (("4" (rewrite checkBadData) nil nil))
+                nil))
+              nil)
+             ("5" (rewrite checkBadData)
+              (("5" (lemma typeBadData) (("5" (grind) nil nil)) nil))
+              nil))
+            nil))
+          nil))
+        nil))
+      nil))
+    nil)
+   ((badQuote2 const-decl "(tpmQuote?)" data nil)
+    (badEncryption const-decl "(encrypted?)" data nil)
+    (tpmKey? adt-recognizer-decl "[tpmData -> boolean]" data nil)
+    (tpmData type-decl nil data nil)
+    (NOT const-decl "[bool -> bool]" booleans nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (boolean nonempty-type-decl nil booleans nil)
+    (typeBadData formula-decl nil data nil)
+    (badData? const-decl "bool" data nil)
+    (key adt-accessor-decl "[(tpmKey?) -> KVAL]" data nil)
+    (badData const-decl "tpmData" data nil)
+    (pcrsPower const-decl "PCRVALUES" pcr nil)
+    (null adt-constructor-decl "(null?)" list_adt nil)
+    (null? adt-recognizer-decl "[list -> boolean]" list_adt nil)
+    (tpmPCRComposite adt-constructor-decl
+     "[[PCR_SELECTION, PCRVALUES] -> (tpmPCRComposite?)]" data nil)
+    (PCRVALUES type-eq-decl nil pcr nil) (PCR type-decl nil pcr nil)
+    (PCRINDEX type-eq-decl nil pcr nil)
+    (nat nonempty-type-eq-decl nil naturalnumbers nil)
+    (PCR_SELECTION type-eq-decl nil pcr nil)
+    (HV formal-nonempty-type-decl nil data nil)
+    (<= const-decl "bool" reals nil)
+    (AND const-decl "[bool, bool -> bool]" booleans nil)
+    (PRED type-eq-decl nil defined_types nil)
+    (list type-decl nil list_adt nil)
+    (tpmCompositeHash adt-constructor-decl
+     "[(tpmPCRComposite?) -> (tpmCompositeHash?)]" data nil)
+    (tpmPCRComposite? adt-recognizer-decl "[tpmData -> boolean]" data
+     nil)
+    (tpmQuote adt-constructor-decl
+     "[[(tpmCompositeHash?), (tpmNonce?)] -> (tpmQuote?)]" data nil)
+    (tpmQuote? adt-recognizer-decl "[tpmData -> boolean]" data nil)
+    (tpmNonce? adt-recognizer-decl "[tpmData -> boolean]" data nil)
+    (tpmCompositeHash? adt-recognizer-decl "[tpmData -> boolean]" data
+     nil)
+    (encrypted adt-constructor-decl "[[tpmData, KVAL] -> (encrypted?)]"
+     data nil)
+    (encrypted? adt-recognizer-decl "[tpmData -> boolean]" data nil)
+    (KVAL type-eq-decl nil keydata nil)
+    (>= const-decl "bool" reals nil)
+    (int nonempty-type-eq-decl nil integers nil)
+    (integer_pred const-decl "[rational -> boolean]" integers nil)
+    (rational nonempty-type-from-decl nil rationals nil)
+    (rational_pred const-decl "[real -> boolean]" rationals nil)
+    (real nonempty-type-from-decl nil reals nil)
+    (real_pred const-decl "[number_field -> boolean]" reals nil)
+    (number_field nonempty-type-from-decl nil number_fields nil)
+    (number_field_pred const-decl "[number -> boolean]" number_fields
+     nil)
+    (number nonempty-type-decl nil numbers nil)
+    (checkBadData inductive-decl "bool" data nil))
+   shostak))
+ (badDataSet0_TCC1 0
+  (badDataSet0_TCC1-1 nil 3593956958 ("" (subtype-tcc) nil nil) nil
+   nil))
+ (badDataSet1_TCC1 0
+  (badDataSet1_TCC1-1 nil 3593869200 ("" (subtype-tcc) nil nil) nil
+   nil))
+ (badDataSet3_TCC1 0
+  (badDataSet3_TCC1-1 nil 3593869200 ("" (subtype-tcc) nil nil) nil
+   nil))
+ (goodDataSet0_TCC1 0
+  (goodDataSet0_TCC1-1 nil 3593870197 ("" (subtype-tcc) nil nil) nil
+   nil))
+ (goodDataSet0_TCC2 0
+  (goodDataSet0_TCC2-1 nil 3593870197 ("" (subtype-tcc) nil nil) nil
+   nil))
+ (goodDataSet0_TCC3 0
+  (goodDataSet0_TCC3-1 nil 3593870197 ("" (subtype-tcc) nil nil) nil
+   nil))
+ (goodDataSet2_TCC1 0
+  (goodDataSet2_TCC1-1 nil 3593869200 ("" (subtype-tcc) nil nil) nil
+   nil))
+ (badDataSetA_TCC1 0
+  (badDataSetA_TCC1-1 nil 3593957160 ("" (subtype-tcc) nil nil) nil
+   nil))
+ (test_existsBadData 0
+  (test_existsBadData-1 nil 3593869270
+   ("" (rewrite existsBadData)
+    (("" (rewrite some)
+      (("" (grind)
+        (("" (rewrite checkBadData) (("" (grind) nil nil)) nil)) nil))
+      nil))
+    nil)
+   ((existsBadData const-decl "bool" data nil)
+    (tpmData type-decl nil data nil)
+    (boolean nonempty-type-decl nil booleans nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (set type-eq-decl nil sets nil)
+    (badDataSetB const-decl "set[tpmData]" data nil)
+    (member const-decl "bool" sets nil)
+    (empty? const-decl "bool" sets nil)
+    (singleton_elt const-decl "T" sets nil)
+    (add const-decl "(nonempty?)" sets nil)
+    (badData const-decl "tpmData" data nil)
+    (badData? const-decl "bool" data nil)
+    (checkBadData inductive-decl "bool" data nil)
+    (PRED type-eq-decl nil defined_types nil)
+    (some const-decl "bool" sets nil))
+   shostak)))
 

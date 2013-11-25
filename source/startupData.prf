@@ -1,4 +1,147 @@
 (startupData
+ (ekInit_TCC1 0
+  (ekInit_TCC1-1 nil 3586706756
+   (""
+    (inst 1 "tpmKey(
+0,
+bind, 
+keyFlagsF, 
+never, 
+(#algoId:=RSA#), 
+tpmPCRInfoLong(0,0, null, null,tpmCompositeHash((#select:=null,pcrValue:=pcrsPower#)), tpmCompositeHash((#select:=null, pcrValue:=pcrsPower#))),
+storeAsymkeyDefault(0,0))")
+    nil nil)
+   ((storeAsymkeyDefault const-decl "(encrypted?)" data nil)
+    (pcrsPower const-decl "PCRVALUES" pcr nil)
+    (PCR type-decl nil pcr nil)
+    (tpmCompositeHash adt-constructor-decl
+     "[PCR_COMPOSITE -> (tpmCompositeHash?)]" data nil)
+    (PCR_COMPOSITE type-eq-decl nil pcr nil)
+    (PCRVALUES type-eq-decl nil pcr nil)
+    (null adt-constructor-decl "(null?)" list_adt nil)
+    (null? adt-recognizer-decl "[list -> boolean]" list_adt nil)
+    (PCRINDEX type-eq-decl nil pcr nil)
+    (tpmPCRInfoLong adt-constructor-decl
+     "[[LOCALITY, LOCALITY, PCR_SELECTION, PCR_SELECTION, (tpmCompositeHash?),
+  (tpmCompositeHash?)] ->
+   (tpmPCRInfoLong?)]" data nil)
+    (tpmCompositeHash? adt-recognizer-decl "[tpmData -> boolean]" data
+     nil)
+    (PCR_SELECTION type-eq-decl nil pcr nil)
+    (AND const-decl "[bool, bool -> bool]" booleans nil)
+    (every adt-def-decl "boolean" list_adt nil)
+    (PRED type-eq-decl nil defined_types nil)
+    (list type-decl nil list_adt nil)
+    (LOCALITY type-eq-decl nil pcr nil)
+    (<= const-decl "bool" reals nil)
+    (nat nonempty-type-eq-decl nil naturalnumbers nil)
+    (RSA adt-constructor-decl "(RSA?)" keydata nil)
+    (RSA? adt-recognizer-decl "[ALGO_ID -> boolean]" keydata nil)
+    (never adt-constructor-decl "(never?)" authdata nil)
+    (never? adt-recognizer-decl "[AUTH_DATA_USAGE -> boolean]" authdata
+     nil)
+    (keyFlagsF const-decl "KEY_FLAGS" keydata nil)
+    (bind adt-constructor-decl "(bind?)" keydata nil)
+    (bind? adt-recognizer-decl "[KEY_USAGE -> boolean]" keydata nil)
+    (tpmKey adt-constructor-decl
+     "[[KVAL, KEY_USAGE, KEY_FLAGS, AUTH_DATA_USAGE, KEY_PARMS,
+  (tpmPCRInfoLong?), (encrypted?)] ->
+   (tpmKey?)]" data nil)
+    (encrypted? adt-recognizer-decl "[tpmData -> boolean]" data nil)
+    (tpmPCRInfoLong? adt-recognizer-decl "[tpmData -> boolean]" data
+     nil)
+    (KEY_PARMS type-eq-decl nil keydata nil)
+    (ALGO_ID type-decl nil keydata nil)
+    (AUTH_DATA_USAGE type-decl nil authdata nil)
+    (KEY_FLAGS type-eq-decl nil keydata nil)
+    (KEY_USAGE type-decl nil keydata nil)
+    (KVAL type-eq-decl nil keydata nil)
+    (>= const-decl "bool" reals nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (int nonempty-type-eq-decl nil integers nil)
+    (integer_pred const-decl "[rational -> boolean]" integers nil)
+    (rational nonempty-type-from-decl nil rationals nil)
+    (rational_pred const-decl "[real -> boolean]" rationals nil)
+    (real nonempty-type-from-decl nil reals nil)
+    (real_pred const-decl "[number_field -> boolean]" reals nil)
+    (number_field nonempty-type-from-decl nil number_fields nil)
+    (number_field_pred const-decl "[number -> boolean]" number_fields
+     nil)
+    (number nonempty-type-decl nil numbers nil)
+    (tpmKey? adt-recognizer-decl "[tpmData -> boolean]" data nil)
+    (boolean nonempty-type-decl nil booleans nil)
+    (tpmData type-decl nil data nil)
+    (HV formal-nonempty-type-decl nil startupData nil))
+   nil))
+ (tpmRestoreStateData_TCC1 0
+  (tpmRestoreStateData_TCC1-1 nil 3586703971
+   (""
+    (inst 1 "    (# valid? := FALSE,
+       keys := (#vals:=emptyset,keys:=emptyset#),
+       ek := ekInit,
+       srk := srkInit,
+       keyGenCnt := keyGenCntInit,
+       pcrs := pcrsPower,
+       permFlags := permFlagsDefault,
+       permData := permDataDefault,	
+       stanyFlags:= stanyFlagsDefault,
+       stanyData := stanyDataDefault,
+       stclearFlags:= stclearFlagsDefault,
+       stclearData := stclearDataDefault
+    #)")
+    nil nil)
+   ((stclearDataDefault const-decl "StclearData" StclearData nil)
+    (stclearFlagsDefault const-decl "StclearFlags" StclearFlags nil)
+    (stanyDataDefault const-decl "StanyData" StanyData nil)
+    (stanyFlagsDefault const-decl "StanyFlags" StanyFlags nil)
+    (LOCALITY type-eq-decl nil pcr nil)
+    (permDataDefault const-decl "PermData" PermanentData nil)
+    (tpmCMKDelegate? adt-recognizer-decl "[tpmData -> boolean]" data
+     nil)
+    (PCR_ATTRIBUTES type-eq-decl nil pcr nil)
+    (tpmSecret? adt-recognizer-decl "[tpmData -> boolean]" data nil)
+    (tpmNonce? adt-recognizer-decl "[tpmData -> boolean]" data nil)
+    (permFlagsDefault const-decl "PermFlags" PermanentFlags nil)
+    (pcrsPower const-decl "PCRVALUES" pcr nil)
+    (PCR type-decl nil pcr nil) (PCRINDEX type-eq-decl nil pcr nil)
+    (nat nonempty-type-eq-decl nil naturalnumbers nil)
+    (>= const-decl "bool" reals nil)
+    (int nonempty-type-eq-decl nil integers nil)
+    (keyGenCntInit const-decl "K" startupData nil)
+    (srkInit const-decl "(tpmKey?)" startupData nil)
+    (ekInit const-decl "(tpmKey?)" startupData nil)
+    (emptyset const-decl "set" sets nil)
+    (set type-eq-decl nil sets nil)
+    (privKVAL type-eq-decl nil keydata nil)
+    (<= const-decl "bool" reals nil)
+    (integer nonempty-type-from-decl nil integers nil)
+    (integer_pred const-decl "[rational -> boolean]" integers nil)
+    (rational nonempty-type-from-decl nil rationals nil)
+    (rational_pred const-decl "[real -> boolean]" rationals nil)
+    (real nonempty-type-from-decl nil reals nil)
+    (real_pred const-decl "[number_field -> boolean]" reals nil)
+    (number_field nonempty-type-from-decl nil number_fields nil)
+    (number_field_pred const-decl "[number -> boolean]" number_fields
+     nil)
+    (number nonempty-type-decl nil numbers nil)
+    (FALSE const-decl "bool" booleans nil)
+    (restoreStateData type-eq-decl nil startupData nil)
+    (bool nonempty-type-eq-decl nil booleans nil)
+    (StclearFlags type-eq-decl nil StclearFlags nil)
+    (StclearData type-eq-decl nil StclearData nil)
+    (StanyFlags type-eq-decl nil StanyFlags nil)
+    (StanyData type-eq-decl nil StanyData nil)
+    (PermFlags type-eq-decl nil PermanentFlags nil)
+    (PermData type-eq-decl nil PermanentData nil)
+    (PCRVALUES type-eq-decl nil pcr nil)
+    (KEYSET type-eq-decl nil key nil)
+    (K formal-nonempty-type-decl nil startupData nil)
+    (tpmKey? adt-recognizer-decl "[tpmData -> boolean]" data nil)
+    (boolean nonempty-type-decl nil booleans nil)
+    (tpmData type-decl nil data nil)
+    (HV formal-nonempty-type-decl nil startupData nil)
+    (finite_emptyset name-judgement "finite_set" finite_sets nil))
+   nil))
  (saveState_TCC1 0
   (saveState_TCC1-1 nil 3575741940 ("" (subtype-tcc) nil nil)
    ((boolean nonempty-type-decl nil booleans nil)
@@ -23,86 +166,6 @@
     (PCRINDEX type-eq-decl nil pcr nil)
     (wellFormedRestore? const-decl "bool" startupData nil))
    nil))
- (ekInit_TCC1 0
-  (ekInit_TCC1-1 nil 3575741940
-   (""
-    (inst 1
-     "tpmKey(0,bind, keyFlagsF, never, (#algoId:=RSA#), tpmPCRInfoLong(0,0, null, null, tpmCompositeHash((#select:=null, pcrValue:=pcrsPower#)), tpmCompositeHash((#select:=null, pcrValue:=pcrsPower#))),tpmStoreAsymkey(tpmSecret(0), tpmSecret(0), tpmDigest(null,clear), 0, clear))")
-    nil nil)
-   ((clear adt-constructor-decl "(clear?)" keydata nil)
-    (clear? adt-recognizer-decl "[CRYPTOSTATUS -> boolean]" keydata
-     nil)
-    (tpmDigest adt-constructor-decl
-     "[[list[tpmData], CRYPTOSTATUS] -> (tpmDigest?)]" data nil)
-    (tpmSecret adt-constructor-decl "[int -> (tpmSecret?)]" data nil)
-    (tpmStoreAsymkey adt-constructor-decl
-     "[[(tpmSecret?), (tpmSecret?), (tpmDigest?), KVAL, CRYPTOSTATUS] ->
-   (tpmStoreAsymkey?)]" data nil)
-    (CRYPTOSTATUS type-decl nil keydata nil)
-    (tpmDigest? adt-recognizer-decl "[tpmData -> boolean]" data nil)
-    (tpmSecret? adt-recognizer-decl "[tpmData -> boolean]" data nil)
-    (pcrsPower const-decl "PCRVALUES" pcr nil)
-    (PCR type-decl nil pcr nil)
-    (tpmCompositeHash adt-constructor-decl
-     "[PCR_COMPOSITE -> (tpmCompositeHash?)]" data nil)
-    (PCR_COMPOSITE type-eq-decl nil pcr nil)
-    (PCRVALUES type-eq-decl nil pcr nil)
-    (null adt-constructor-decl "(null?)" list_adt nil)
-    (null? adt-recognizer-decl "[list -> boolean]" list_adt nil)
-    (PCRINDEX type-eq-decl nil pcr nil)
-    (tpmPCRInfoLong adt-constructor-decl
-     "[[LOCALITY, LOCALITY, PCR_SELECTION, PCR_SELECTION, (tpmCompositeHash?),
-  (tpmCompositeHash?)] ->
-   (tpmPCRInfoLong?)]" data nil)
-    (tpmCompositeHash? adt-recognizer-decl "[tpmData -> boolean]" data
-     nil)
-    (PCR_SELECTION type-eq-decl nil pcr nil)
-    (AND const-decl "[bool, bool -> bool]" booleans nil)
-    (every adt-def-decl "boolean" list_adt nil)
-    (PRED type-eq-decl nil defined_types nil)
-    (list type-decl nil list_adt nil)
-    (LOCALITY type-eq-decl nil pcr nil)
-    (<= const-decl "bool" reals nil)
-    (nat nonempty-type-eq-decl nil naturalnumbers nil)
-    (>= const-decl "bool" reals nil)
-    (int nonempty-type-eq-decl nil integers nil)
-    (RSA adt-constructor-decl "(RSA?)" keydata nil)
-    (RSA? adt-recognizer-decl "[ALGO_ID -> boolean]" keydata nil)
-    (never adt-constructor-decl "(never?)" authdata nil)
-    (never? adt-recognizer-decl "[AUTH_DATA_USAGE -> boolean]" authdata
-     nil)
-    (keyFlagsF const-decl "KEY_FLAGS" keydata nil)
-    (bind adt-constructor-decl "(bind?)" keydata nil)
-    (bind? adt-recognizer-decl "[KEY_USAGE -> boolean]" keydata nil)
-    (tpmKey adt-constructor-decl
-     "[[KVAL, KEY_USAGE, KEY_FLAGS, AUTH_DATA_USAGE, KEY_PARMS,
-  (tpmPCRInfoLong?), (tpmStoreAsymkey?)] ->
-   (tpmKey?)]" data nil)
-    (tpmStoreAsymkey? adt-recognizer-decl "[tpmData -> boolean]" data
-     nil)
-    (tpmPCRInfoLong? adt-recognizer-decl "[tpmData -> boolean]" data
-     nil)
-    (KEY_PARMS type-eq-decl nil keydata nil)
-    (ALGO_ID type-decl nil keydata nil)
-    (AUTH_DATA_USAGE type-decl nil authdata nil)
-    (KEY_FLAGS type-eq-decl nil keydata nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (KEY_USAGE type-decl nil keydata nil)
-    (KVAL type-eq-decl nil keydata nil)
-    (integer_pred const-decl "[rational -> boolean]" integers nil)
-    (rational nonempty-type-from-decl nil rationals nil)
-    (rational_pred const-decl "[real -> boolean]" rationals nil)
-    (real nonempty-type-from-decl nil reals nil)
-    (real_pred const-decl "[number_field -> boolean]" reals nil)
-    (number_field nonempty-type-from-decl nil number_fields nil)
-    (number_field_pred const-decl "[number -> boolean]" number_fields
-     nil)
-    (number nonempty-type-decl nil numbers nil)
-    (tpmKey? adt-recognizer-decl "[tpmData -> boolean]" data nil)
-    (boolean nonempty-type-decl nil booleans nil)
-    (tpmData type-decl nil data nil)
-    (HV formal-nonempty-type-decl nil startupData nil))
-   nil))
  (initSaveData_TCC1 0
   (initSaveData_TCC1-1 nil 3575741940 ("" (subtype-tcc) nil nil)
    ((disableDef const-decl "bool" PermanentFlags nil)
@@ -123,11 +186,16 @@
     (permFlagsDefault const-decl "PermFlags" PermanentFlags nil)
     (HV formal-nonempty-type-decl nil startupData nil)
     (tpmCMKDelegateDefault const-decl "(tpmCMKDelegate?)" data nil)
-    (permDataInit const-decl "PermData" PermanentData nil)
-    (stanyFlagsInit const-decl "StanyFlags" StanyFlags nil)
-    (stanyDataInit const-decl "StanyData" StanyData nil)
-    (stclearFlagsInit const-decl "StclearFlags" StclearFlags nil)
-    (stclearDataInit const-decl "StclearData" StclearData nil)
+    (permDataDefault const-decl "PermData" PermanentData nil)
+    (stanyFlagsDefault const-decl "StanyFlags" StanyFlags nil)
+    (stanyDataDefault const-decl "StanyData" StanyData nil)
+    (stclear_deactivatedDef const-decl "bool" StclearFlags nil)
+    (disableForceClearDef const-decl "bool" StclearFlags nil)
+    (physicalPresenceDef const-decl "bool" StclearFlags nil)
+    (physicalPresenceLockDef const-decl "bool" StclearFlags nil)
+    (bGlobablLockDef const-decl "bool" StclearFlags nil)
+    (stclearFlagsDefault const-decl "StclearFlags" StclearFlags nil)
+    (stclearDataDefault const-decl "StclearData" StclearData nil)
     (wellFormedRestore? const-decl "bool" startupData nil)
     (finite_emptyset name-judgement "finite_set" finite_sets nil))
    nil)))

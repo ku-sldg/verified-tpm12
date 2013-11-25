@@ -38,20 +38,20 @@ BEGIN
 		    ENDCASES))
 		(state) IN
     makeIdentity?(state,idk) AND 
-     OUT_MakeIdentity?(s`memory(x)) AND 
-     certify?(idKey(s`memory(x)),idBinding(s`memory(x))) 
+    OUT_MakeIdentity?(s`memory(x)) AND 
+    certify?(idKey(s`memory(x)),idBinding(s`memory(x))) 
     =>
-     a=OUT_Certify(idKey(s`memory(x)),
+    a=OUT_Certify(idKey(s`memory(x)),
 		encrypted(tpmAsymCAContents(tpmSessKey(keyGenCnt(state)+1),
-				digest(idBinding(s`memory(x)))),
+				digest(signData(idBinding(s`memory(x))))),
 			key(ekVal)),
 		CPU_SUCCESS) 
-     AND s=state WITH [`keyGenCnt:=state`keyGenCnt+2
-       	       	      ,`memory:=s`memory]
+     AND 
+     s=state WITH [`keyGenCnt:=state`keyGenCnt+2
+       	       	  ,`memory:=s`memory]
 
   cert_activate : THEOREM
-    FORALL(state:(afterStartup?),aik:(tpmKey?),c:(signed?),i1,i2:authIn,
-		x:nat):
+    FORALL(state:(afterStartup?),aik:(tpmKey?),c:(signed?),i1,i2:authIn,x:nat):
       LET (a,s) = runState(
       	  	  CA_certify(aik,c)
 		  >>= CPU_saveOutput(x)
@@ -62,23 +62,74 @@ BEGIN
 		       ENDCASES))
 		  (state) IN
     LET o1=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
-			resAuth:=usageAuth(data(encDat(aik)))#),
+			resAuth:=usageAuth(encData(encDat(aik)))#),
 	o2=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
 			resAuth:=ownerAuth(i2)#) IN
     certify?(aik,c) AND
-     OUT_Certify?(s`memory(x)) AND
-     activateIdentity?(s,k(s`memory(x)),dat(s`memory(x)))
+    OUT_Certify?(s`memory(x)) AND
+    activateIdentity?(s,k(s`memory(x)),dat(s`memory(x))) AND
+    member(private(ekVal),vals(state`keys))
     =>
-    a=OUT_ActivateIdentity(sessK(data(dat(s`memory(x)))),o1,o2,TPM_SUCCESS) AND
-     s=state WITH [`keyGenCnt:=1+keyGenCnt(state)
-              	  ,`memory:=updateLoc(state`memory,x,
+    a=OUT_ActivateIdentity(sessK(encData(dat(s`memory(x)))),o1,o2,TPM_SUCCESS) 
+    AND
+    s=state WITH [`keyGenCnt:=1+keyGenCnt(state)
+              	 ,`memory:=updateLoc(state`memory,x,
                              OUT_Certify(aik,
 				encrypted(tpmAsymCAContents(
 						tpmSessKey(keyGenCnt(state)),
-                                        	digest(c)),
+                                        	digest(signData(c))),
                                           key(ekVal)),
-                                         CPU_SUCCESS))]
+                                CPU_SUCCESS))]
+;
 
+
+  makeCertActivate(state:tpmAbsState,k:(tpmKey?),e:(tpmEncAuth?),
+	d:(tpmDigest?),i1,i2,i3,i4:authIn,x,y:nat) : tpmAbsState =
+   LET key=tpmKey(%-keyGenCnt(state),
+		  -privKey(encData(encDat(k))),
+                  keyUsage(k),
+                  keyFlags(k),
+                  authDataUsage(k),
+                  algoParms(k),
+		  tpmPCRInfoLong(makeIdentityLocality,
+                                 locAtRelease(PCRInfo(k)),
+                                 creationPCRSelect(PCRInfo(k)),
+                                 releasePCRSelect(PCRInfo(k)),
+                                 tpmCompositeHash(
+				    tpmPCRComposite(
+					creationPCRSelect(PCRInfo(k)),
+                                    	state`pcrs)),
+                                 digAtRelease(PCRInfo(k))),
+                  encrypted(tpmStoreAsymkey(tpmSecret(authData(e)),
+                                  state`permData`tpmProof,
+                                  pubDataDigest(encData(encDat(k))),
+                                  privKey(encData(encDat(k)))),
+			key(state`srk))) IN
+   state WITH[
+  	`keyGenCnt := 2+keyGenCnt(state),
+        `memory := updateLoc(
+		updateLoc(state`memory,x,
+			OUT_MakeIdentity(key,
+				signed(tpmIdContents(d,key),
+					%keyGenCnt(state)),
+					privKey(encData(encDat(k)))),
+				(#nonceEven:=EVEN,nonceOdd:=ODD,
+				  contAuthSess:=FALSE,
+                                  resAuth:=usageAuth(encData(encDat(state`srk)))
+				#),
+				(#nonceEven:=EVEN,nonceOdd:=ODD,
+				  contAuthSess:=FALSE,resAuth:=ownerAuth(i2)#),
+				TPM_SUCCESS)),
+		y,
+                OUT_Certify(key,
+			encrypted(tpmAsymCAContents(
+					tpmSessKey(1-
+						%keyGenCnt(state)
+						privKey(encData(encDat(k)))),
+					d),
+				key(ekVal)),
+			CPU_SUCCESS))]
+;
 
   make_cert_activate_identity: THEOREM 
    FORALL (state:(afterStartup?)
@@ -103,226 +154,68 @@ BEGIN
 		    ENDCASES))
 		(state) IN
     makeIdentity?(state,k) AND 
-    	OUT_MakeIdentity?(s`memory(x)) AND
+    OUT_MakeIdentity?(s`memory(x)) AND
     certify?(idKey(s`memory(x)),idBinding(s`memory(x))) AND
-    	OUT_Certify?(s`memory(y)) AND
-	wellFormedRestore?(s`restore) AND
-    activateIdentity?(tpmRestore(s`restore),idKey(s`memory(x)),
-	dat(s`memory(y))) 
+    OUT_Certify?(s`memory(y)) AND
+    wellFormedRestore?(s`restore) AND
+    activateIdentity?(s,idKey(s`memory(x)),dat(s`memory(y))) AND
+    member(private(ekVal),vals(state`keys))
     => 
-    LET o3=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
-			resAuth:=usageAuth(data(encDat(idKey(s`memory(x)))))#),
-	o4=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
-			resAuth:=ownerAuth(i4)#) IN
-    a=OUT_ActivateIdentity(sessK(data(dat(s`memory(y)))),o3,o4,TPM_SUCCESS) AND
-    s=state WITH [`memory:=s`memory
-    	    	 ,`keyGenCnt:=state`keyGenCnt+2]
-
-  makeCertActivate(state:tpmAbsState,k:(tpmKey?),e:(tpmEncAuth?),
-	d:(tpmDigest?),i1,i2,i3,i4:authIn) : tpmAbsState =
-   LET key=tpmKey(-keyGenCnt(state),
-                  keyUsage(k),
-                  keyFlags(k),
-                  authDataUsage(k),
-                  algoParms(k),
-		  tpmPCRInfoLong(makeIdentityLocality,
-                                 locAtRelease(PCRInfo(k)),
-                                 creationPCRSelect(PCRInfo(k)),
-                                 releasePCRSelect(PCRInfo(k)),
-                                 tpmCompositeHash((# 
-				    select := creationPCRSelect(PCRInfo(k)),
-                                    pcrValue := pcrs(state) #)),
-                                 digAtRelease(PCRInfo(k))),
-                  tpmStoreAsymkey(tpmSecret(authData(e)),
-                                  state`permData`tpmProof,
-                                  pubDataDigest(encDat(k)),
-                                  privKey(encDat(k)),
-				  clear)) IN
-   state WITH[
-  	`keyGenCnt := 2+keyGenCnt(state),
-        `memory := updateLoc(updateLoc(state`memory,
-                                       0,
-                                       OUT_MakeIdentity
-                                       (key,
-                                        tpmIdContents
-                                        (d,
-                                         key,
-                                         signed(--keyGenCnt(state))),
-                                        (# nonceEven:=EVEN,
-                                           nonceOdd:=ODD,
-                                           contAuthSess:=FALSE,
-                                           resAuth:=usageAuth(encDat(state`srk))
-					 #),
-                                        (# nonceEven:=EVEN,
-                                           nonceOdd:=ODD,
-                                           contAuthSess:=FALSE,
-                                           resAuth:=ownerAuth(i2) #),
-                                        TPM_SUCCESS)),
-                             1,
-                             OUT_Certify(key,
-                                         tpmAsymCAContents(
-					  tpmSessKey(1+-keyGenCnt(state),clear),
-                                          d,
-                                          encrypted(1)),
-                                         CPU_SUCCESS))]
+    LET o3:authOut=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+		resAuth:=usageAuth(encData(encDat(idKey(s`memory(x)))))#),
+	o4:authOut=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+		resAuth:=ownerAuth(i4)#) IN
+    a=OUT_ActivateIdentity(sessK(encData(dat(s`memory(y)))),o3,o4,TPM_SUCCESS)
+    AND
+%     s=state WITH [`memory:=s`memory
+%     	    	 ,`keyGenCnt:=state`keyGenCnt+2]
+    s=makeCertActivate(state,k,e,d,i1,i2,i3,i4,x,y)
+;
 
   %% Note that the identity is not used in building the final
   %% appraiser's quote
   %% proved Sat Jul 14 11:19:56 CDT 2012
   cert_and_quote_with_prev_key: THEOREM
     FORALL (state:(afterStartup?)
-%state:tpmAbsState
-%      	     aik:(asymKey?),
-%              n:BLOB,
-% 	     pm:PCRMASK,
-% 	     k:(symKey?),
-% 	     sml:SML,
-% 	     auth:AUTHDATA) :
    	  ,n:(tpmNonce?)
 	  ,pm:PCR_SELECTION
 	  ,e:(tpmEncAuth?)
 	  ,idKey:(tpmKey?)
 	  ,caDig:(tpmDigest?)
-	  ,i1,i2,i3,i4,i5:authIn) :
+	  ,i1,i2,i3,i4,i5:authIn
+	  ,x,y,z:nat) :
+    x/=y AND y/=z AND z/=x AND y/=x =>
+    LET startState=makeCertActivate(state,idKey,e,caDig,i1,i2,i3,i4,x,y) IN
     LET (a,s) = runState(
-                % Start by initializing the TPM and runnining startup
-		% to generate a clear TPM
-%                TPM_Init
-		% Startup initialized resettable PCRs to -1
-% 		>> TPM_Startup(TPM_ST_CLEAR)
-		% Call SENTER to start a measured launch
-		% environment. This will result in PCR(0) being
-		% reset to 0.  Only SENTER causes this reset to occur
-% 		>> CPU_senter
-		% Call SINIT to measure the MLE and extend PCR(0)
-% 		>> CPU_sinit
-		% At this point the MLE would start running.
-		   
-		% We've reached a point where PCR(0) is reset and has been
-		% extended with the SINIT hash and the MLE hash.  This
-		% value will indicate to an appraiser that: (i) SENTER
-		% was called; (ii) the right SINIT ran; and (iii) the right
-		% MLE was started.
-		   
-		% We're ready to run the CA based attestation
-		% protocol.  Assume that the TSS has received a
-		% request for a quote containing PCR(0).
-
-		% Create a new identity by generating a new AIK value.
-		% The output is a wrapped key and a CR.  The CR contains
-		% a fresh assymetric key used as the new AIK and a fresh
-		% summetric key used as a session key, both signed by the
-		% TPM's EK.
-%%  		>> TPM_MakeIdentity(aik,k,auth) % identity is output
-%		>> TPM_MakeIdentity(e,caDig,idKey,i1,i2) % identity is output
-		% Save the CR to use at a later time.
-%		>>= CPU_saveOutput(0)
-		% Ask an external CA to sign the new AIK by sending it
-		% the CR generated by MakeIdentity.  The CA checks the
-		% signature on the CR and if it is valid, returns an
-		% activation record that includes a session key and the
-		% AIK signed by the CA encrypted with the TPM's EK.
-% 		>>= (LAMBDA (a:tpmAbsOutput) :
-% 		     CASES a OF
-% 		     	OUT_MakeIdentity(ik,bind,o1,o2,m) : CA_certify(ik,bind)
-% 			ELSE TPM_Noop(a)
-% 		     ENDCASES)
-		% Save the CR for use again later.
-% 	        >>= CPU_saveOutput(1)
-		% At this piont, the TSS holds an activation record
-		% encrypted by an EK.  If it is encrypted with its TPM's EK
-		% it can decrypt the signed AIK and session key.  The
-		% ActivateIdentity command does this.  Note that that is all
-		% ActivateIdentity does.  Nothing is installed and the TPM
-		% state is not modified in any way.
-% 	        >>= (LAMBDA (a:tpmAbsOutput) :
-% 		     CASES a OF
-% %			outIdentActivation(actc,sk,actek,rc) : TPM_ActivateIdentity(wkey(actc),k)
-% 			OUT_Certify(j,d,m) : TPM_ActivateIdentity(j,d,i3,i4)
-% 			ELSE TPM_Noop(a)
-% 		     ENDCASES)
-% 		>> 
-		CPU_read(0)
-		% Only the correct TPM can decrypt the certificate
-		% and session key.  This is critical as it links the
-		% certificate and session key to the TPM.  Now the TPM
-		% generates a quote signed by the AIK using the Quote
-		% command.
+		CPU_read(x)
 		>>= (LAMBDA (a:tpmAbsOutput) :
 		     CASES a OF 
 			OUT_MakeIdentity(ik,b,o1,o2,m) : TPM_Quote(ik,n,pm,i5)
 			ELSE TPM_Noop(a)
 		     ENDCASES)
-		>>= CPU_saveOutput(2) % Quote is saved in 2 Now the
-		% TSS is ready to build the appraiser's quote.  It
-		% has the generated TPM quote signed by the AIK
-		% that only the TPM can generate. It has the
-		% certificate from the CA that only the TPM could
-		% decrypt.  It now ships the certificate and the quote
-		% back to the appraiser 
-		>> CPU_BuildQuoteFromMem(2,0) % Build the quote
-		)
-		% When the appraiser recieves the quote, it can check the
-		% AIK signature and the AIK cert to ensure that the TPM
-		% quote came from a legitimate TPM associated with the AIK.
-		% However, it cannot collude with other appraisers to
-		% learn more about the target as they all can use different
-		% AIK values.
- 		(makeCertActivate(state,idKey,e,caDig,i1,i2,i3,i4)) IN
-% 		LET wk:wrapKey = (# parentKey:= private(asymKey(srkKeyVal)),
-%                                     childKey := aik #)
-% 				    IN
-LET key:(tpmKey?)=idKey(s`memory(0))
-		  IN
-%TODO: FIX KEY STUFF!!
+		>>= CPU_saveOutput(z)  
+		>> CPU_BuildQuoteFromMem(z,x)
+		)(startState) IN
+    OUT_MakeIdentity?(s`memory(x)) AND
+    LET key:(tpmKey?)=idKey(s`memory(x)) IN
     makeIdentity?(state,idKey) AND 
-    	OUT_MakeIdentity?(s`memory(0)) AND
-    certify?(idKey(s`memory(0)),idBinding(s`memory(0))) AND
-    	OUT_Certify?(s`memory(1)) AND
-	wellFormedRestore?(s`restore) 
-    AND
-    activateIdentity?(tpmRestore(s`restore),idKey(s`memory(0)),dat(s`memory(1)))
-    AND
+    certify?(idKey(s`memory(x)),idBinding(s`memory(x))) AND
+    OUT_Certify?(s`memory(y)) AND
+    wellFormedRestore?(s`restore) AND
+    activateIdentity?(s,idKey(s`memory(x)),dat(s`memory(y))) AND
     quote?(key) AND
-        OUT_Quote?(s`memory(2)) 
-%AND key=idKey
-
-	 =>
-         % The protocol works if the object being output is what we believe
-	 % shoud be output.
-         a = OUT_FullQuote(
-% 			   % Certificate from the CA over the AIK
-% 	                    certBlob(private(asymKey(caKeyVal)),wk),
-% 			    % Stored measurement list (unused)
-%                                sml,
-			    % TPM quote
-                            tpmQuote(
-				tpmCompositeHash((#select:=pm,
-					pcrValue:=s`pcrs#)),
-				n,
-				signed(private(key))),
-				tpmIdContents(caDig,key,signed(private(key))),
-				CPU_SUCCESS) AND
-      s = state WITH[`keyGenCnt := 2+keyGenCnt(state),
-      	     	     `memory := s`memory]
-
-% 					%Signed by the AIK
-% 			                private(aik),
-% 					% includes a nonce from the appraiser
-%                                         n,
-% 					% includes requested PCR values
-%                                         map
-%                                         ((pcrsSenter(pcrsReset(pcrAttrib(permData(s))),pcrAttrib(permData(s)))
-% 					% This is the PCR generated by the
-% 					% init, senter, sinit sequence.
-%                                           WITH [(0)
-%                                                 := extend
-%                                                    (extend
-%                                                     (reset, hash(sinit)),
-%                                                     hash(mle))]),
-%                                          pm),
-% 					 TPM_SUCCESS),
-% 				TPM_SUCCESS)	    
+    OUT_Quote?(s`memory(z)) AND
+    tpmQuote?(sig(s`memory(z)))
+   =>
+    a=OUT_FullQuote(
+                tpmQuote(tpmCompositeHash(tpmPCRComposite(pm,s`pcrs)),n),
+		signed(tpmIdContents(caDig,key),
+			private(key)),
+		CPU_SUCCESS)
+    AND
+    s=state WITH[`keyGenCnt := 2+keyGenCnt(state)
+      	     	,`memory := s`memory]
+;
 
    ca_protocol:THEOREM
    FORALL (state:(afterStartup?)
@@ -333,12 +226,14 @@ LET key:(tpmKey?)=idKey(s`memory(0))
 	  ,p:PCR_SELECTION
 	  ,i1,i2,i3,i4,i5:authIn
 	  ,x,y,z:nat) :
+    x/=y AND y/=z AND z/=x AND y/=x 
+    =>
     LET (a,s) = runState(
  		TPM_MakeIdentity(e,d,k,i1,i2)
 		>>= CPU_saveOutput(x)
 		>>= (LAMBDA (a:tpmAbsOutput) :
 		    CASES a OF
-		    	  OUT_MakeIdentity(k,i,o1,o2,m) : CA_certify(k,i)
+		    	  OUT_MakeIdentity(ok,i,o1,o2,m) : CA_certify(ok,i)
 			  ELSE TPM_Noop(a)
 		    ENDCASES)
 		>>= CPU_saveOutput(y)
@@ -357,26 +252,153 @@ LET key:(tpmKey?)=idKey(s`memory(0))
 		>> CPU_BuildQuoteFromMem(z,x) % Build the quote
 		)
 		(state) IN
-     LET key=idKey(s`memory(x)) IN
-
+    OUT_MakeIdentity?(s`memory(x)) AND
+    LET key=idKey(s`memory(x)) IN
     makeIdentity?(state,k) AND 
-    	OUT_MakeIdentity?(s`memory(x)) AND
     certify?(key,idBinding(s`memory(x))) AND
-    	OUT_Certify?(s`memory(y)) AND
-	wellFormedRestore?(s`restore) AND
-    activateIdentity?(tpmRestore(s`restore),key,
-	dat(s`memory(y))) AND
+    OUT_Certify?(s`memory(y)) AND
+    wellFormedRestore?(s`restore) AND
+    activateIdentity?(s,key,dat(s`memory(y))) AND
     quote?(key) AND
-        OUT_Quote?(s`memory(z)) 
+    OUT_Quote?(s`memory(z)) AND
+    tpmQuote?(sig(s`memory(z))) AND
+    member(private(ekVal),vals(state`keys))
     => 
-         a = OUT_FullQuote(
-		tpmQuote(tpmCompositeHash((#select:=p,pcrValue:=s`pcrs#)),
-			 n,
-			 signed(private(key))),
-			 tpmIdContents(d,key,signed(private(key))),
-		CPU_SUCCESS) AND
+    a=OUT_FullQuote(
+	tpmQuote(tpmCompositeHash(tpmPCRComposite(p,s`pcrs)),n),
+	signed(tpmIdContents(d,key),private(key)),
+	CPU_SUCCESS) AND
     s=state WITH [`memory:=s`memory
-    	    	 ,`keyGenCnt:=state`keyGenCnt+2]
+    	    	 ,`keyGenCnt:=state`keyGenCnt+1
+		 ,`outData:=s`outData]
 
+%TODO: partial notes for cert_and_quote... 
+%   cert_and_quote_with_prev_key: THEOREM
+%     FORALL (state:(afterStartup?)
+% %state:tpmAbsState
+% %      	     aik:(asymKey?),
+% %              n:BLOB,
+% % 	     pm:PCRMASK,
+% % 	     k:(symKey?),
+% % 	     sml:SML,
+% % 	     auth:AUTHDATA) :
+%    	  ,n:(tpmNonce?)
+% 	  ,pm:PCR_SELECTION
+% 	  ,e:(tpmEncAuth?)
+% 	  ,idKey:(tpmKey?)
+% 	  ,caDig:(tpmDigest?)
+% 	  ,i1,i2,i3,i4,i5:authIn
+% 	  ,x,y,z:nat) :
+%     x/=y AND y/=z AND z/=x AND y/=x =>
+%     LET startState=makeCertActivate(state,idKey,e,caDig,i1,i2,i3,i4,x,y) IN
+%     LET (a,s) = runState(
+%                 % Start by initializing the TPM and runnining startup
+% 		% to generate a clear TPM
+% %                TPM_Init
+% 		% Startup initialized resettable PCRs to -1
+% % 		>> TPM_Startup(TPM_ST_CLEAR)
+% 		% Call SENTER to start a measured launch
+% 		% environment. This will result in PCR(0) being
+% 		% reset to 0.  Only SENTER causes this reset to occur
+% % 		>> CPU_senter
+% 		% Call SINIT to measure the MLE and extend PCR(0)
+% % 		>> CPU_sinit
+% 		% At this point the MLE would start running.
+		   
+% 		% We've reached a point where PCR(0) is reset and has been
+% 		% extended with the SINIT hash and the MLE hash.  This
+% 		% value will indicate to an appraiser that: (i) SENTER
+% 		% was called; (ii) the right SINIT ran; and (iii) the right
+% 		% MLE was started.
+		   
+% 		% We're ready to run the CA based attestation
+% 		% protocol.  Assume that the TSS has received a
+% 		% request for a quote containing PCR(0).
+
+% 		% Create a new identity by generating a new AIK value.
+% 		% The output is a wrapped key and a CR.  The CR contains
+% 		% a fresh assymetric key used as the new AIK and a fresh
+% 		% summetric key used as a session key, both signed by the
+% 		% TPM's EK.
+% %%  		>> TPM_MakeIdentity(aik,k,auth) % identity is output
+% %		>> TPM_MakeIdentity(e,caDig,idKey,i1,i2) % identity is output
+% 		% Save the CR to use at a later time.
+% %		>>= CPU_saveOutput(x)
+% 		% Ask an external CA to sign the new AIK by sending it
+% 		% the CR generated by MakeIdentity.  The CA checks the
+% 		% signature on the CR and if it is valid, returns an
+% 		% activation record that includes a session key and the
+% 		% AIK signed by the CA encrypted with the TPM's EK.
+% % 		>>= (LAMBDA (a:tpmAbsOutput) :
+% % 		     CASES a OF
+% % 		     	OUT_MakeIdentity(ik,bind,o1,o2,m) : CA_certify(ik,bind)
+% % 			ELSE TPM_Noop(a)
+% % 		     ENDCASES)
+% 		% Save the CR for use again later.
+% % 	        >>= CPU_saveOutput(y)
+% 		% At this piont, the TSS holds an activation record
+% 		% encrypted by an EK.  If it is encrypted with its TPM's EK
+% 		% it can decrypt the signed AIK and session key.  The
+% 		% ActivateIdentity command does this.  Note that that is all
+% 		% ActivateIdentity does.  Nothing is installed and the TPM
+% 		% state is not modified in any way.
+% % 	        >>= (LAMBDA (a:tpmAbsOutput) :
+% % 		     CASES a OF
+% % %			outIdentActivation(actc,sk,actek,rc) : TPM_ActivateIdentity(wkey(actc),k)
+% % 			OUT_Certify(j,d,m) : TPM_ActivateIdentity(j,d,i3,i4)
+% % 			ELSE TPM_Noop(a)
+% % 		     ENDCASES)
+% % 		>> 
+% 		CPU_read(x)
+% 		% Only the correct TPM can decrypt the certificate
+% 		% and session key.  This is critical as it links the
+% 		% certificate and session key to the TPM.  Now the TPM
+% 		% generates a quote signed by the AIK using the Quote
+% 		% command.
+% 		>>= (LAMBDA (a:tpmAbsOutput) :
+% 		     CASES a OF 
+% 			OUT_MakeIdentity(ik,b,o1,o2,m) : TPM_Quote(ik,n,pm,i5)
+% 			ELSE TPM_Noop(a)
+% 		     ENDCASES)
+% 		>>= CPU_saveOutput(z) % Quote is saved in 2 Now the
+% 		% TSS is ready to build the appraiser's quote.  It
+% 		% has the generated TPM quote signed by the AIK
+% 		% that only the TPM can generate. It has the
+% 		% certificate from the CA that only the TPM could
+% 		% decrypt.  It now ships the certificate and the quote
+% 		% back to the appraiser 
+% 		>> CPU_BuildQuoteFromMem(z,x) % Build the quote
+% 		)
+% 		% When the appraiser recieves the quote, it can check the
+% 		% AIK signature and the AIK cert to ensure that the TPM
+% 		% quote came from a legitimate TPM associated with the AIK.
+% 		% However, it cannot collude with other appraisers to
+% 		% learn more about the target as they all can use different
+% 		% AIK values.
+%  		(startState) IN
+%     =>
+%     % The protocol works if the object being output is what we believe
+%     % shoud be output.
+%     a=OUT_FullQuote(
+% 		% TPM quote
+%                 tpmQuote(
+%  			% includes requested PCR values
+% 			tpmCompositeHash((#select:=pm,pcrValue:=s`pcrs#)),
+% % 					% This is the PCR generated by the
+% % 					% init, senter, sinit sequence.
+% %                                           WITH [(0)
+% %                                                 := extend
+% %                                                    (extend
+% %                                                     (reset, hash(sinit)),
+% %                                                     hash(mle))],
+% 			% includes a nonce from the appraiser
+% 			n),
+% 		signed(tpmIdContents(caDig,key),
+% 			% Signed by the AIK
+% 			private(key)),
+% 		CPU_SUCCESS) 
+%     AND
+%     s=state WITH[`keyGenCnt := 2+keyGenCnt(state)
+%       	     	,`memory := s`memory]
 
 END caProtocol

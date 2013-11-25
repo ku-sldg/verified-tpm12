@@ -22,6 +22,10 @@ key[HV:TYPE+] : THEORY
 
   IMPORTING data[HV];
 
+  KEYSET: TYPE = [# vals: set[privKVAL]
+  	       	  , keys: set[(tpmKey?)]
+		 #];
+
   %% Reserved Key Handles - Should be moved to tpm.pvs
   TPM_KH_SRK : (tpmKey?) = tpmKey(2,storage,keyFlagsF,
 				  always,keyParmsDef,
@@ -40,21 +44,15 @@ key[HV:TYPE+] : THEORY
 
 
   %% Any tpmKey? with key value 0 is invalid.
+  invalidKey : (tpmKey?)
+
   invalidKey?(k:(tpmKey?)):bool = key(k)=0;
 
   %% Define private and public key accessors for tpmKey?. The public
   %% key is the key value while the private key is -key.
-  private(k:(tpmKey?)):KVAL = inverse(key(k))
+  private(k:(tpmKey?)) : privKVAL = privKey(encData(encDat(k)))
   public(k:(tpmKey?)):KVAL = key(k)
-
-  privateKey(k:(tpmKey?)):(tpmKey?) = tpmKey(inverse(key(k)),
-					     keyUsage(k),
-					     keyFlags(k),
-					     authDataUsage(k),
-					     algoParms(k),
-					     PCRInfo(k),
-					     encDat(k))
-  publicKey(k:(tpmKey?)):(tpmKey?) = k
+  publicAsymkey(k:(tpmStoreAsymkey?)):KVAL = inverse(privKey(k))
 
   %% Some theorems about key inverse, private and public.
 
@@ -75,13 +73,11 @@ key[HV:TYPE+] : THEORY
      inverse(k0) = inverse(k1) <=> k0=k1;
 
   % TODO: PROVE STUFF ABOUT
-  rewrap(k:(tpmKey?),w:KVAL) : (tpmKey?) = 
+  rewrap(k:(tpmKey?),par:KVAL) : (tpmKey?) = 
     CASES k OF 
-      tpmKey(v,u,f,d,g,p,e) : 
-      	tpmKey(v,u,f,d,g,p,CASES e OF 
-			   encrypted(d0,k0) : encrypted(d0,w)
-% 			     tpmStoreAsymkey(u0,m0,p0,k0,c0) : 
-% 			       tpmStoreAsymkey(u0,m0,p0,k0,encrypted(w))
+      tpmKey(v,u,f,d,g,r,e) : 
+      	tpmKey(v,u,f,d,g,r,CASES e OF 
+			   encrypted(d0,k0) : encrypted(d0,par)
 			   ENDCASES)
     ENDCASES;
    
@@ -92,46 +88,12 @@ key[HV:TYPE+] : THEORY
 		       authDataUsage(k),
 		       algoParms(k),
 		       PCRInfo(k),
-		       encrypted(data(encDat(k)),p))
+		       encrypted(encData(encDat(k)),p))
 
   %% Basic crypto functions operating on KVAL xStatus functions
   %% operate on status indicators while x functions operate on
   %% tpmData.  Users need only call encrypt, decrypt, sign, checkSig
   %% and friends.
-
-  % Data Encryption
-
-%   encryptStatus(k:KVAL,c:CRYPTOSTATUS) : (encrypted?) =
-%     encrypted(k);
-  
-%   encrypt(k:KVAL,d:tpmData) : tpmData =
-%     CASES d OF 
-%       tpmID(id0,crs0) : tpmID(id0,encryptStatus(k,crs0)),
-%       tpmEncAuth(authdata0,crs0) :
-%         tpmEncAuth(authdata0,encryptStatus(k,crs0)),
-%       tpmMigKeyAuth(k0,s0,d0,crs0) : 
-%         tpmMigKeyAuth(k0,s0,d0,encryptStatus(k,crs0)),
-%       tpmStoredData(s0,e0,crs0) : tpmStoredData(s0,e0,encryptStatus(k,crs0)),
-%       tpmSealedData(a0,p0,s0,d0,crs0) : 
-%       	tpmSealedData(a0,p0,s0,d0,encryptStatus(k,crs0)),
-%       tpmSessKey(k0,crs0) : tpmSessKey(k0,encryptStatus(k,crs0)),
-%       tpmBoundData(p0,crs0) : tpmBoundData(p0,encryptStatus(k,crs0)),
-%       tpmStoreAsymkey(u0,m0,p0,k0,crs0) : 
-%       	tpmStoreAsymkey(u0,m0,p0,k0,encryptStatus(k,crs0)),
-%       tpmQuote(n0,p0,crs0) : tpmQuote(n0,p0,encryptStatus(k,crs0)),
-%       tpmEKBlob(b0,crs0) : tpmEKBlob(b0,encryptStatus(k,crs0)),
-%       tpmIdContents(digest0,aik0,crs0) :
-%         tpmIdContents(digest0,aik0,encryptStatus(k,crs0)),
-%       tpmAsymCAContents(s0,i0,crs0) : 
-%       	tpmAsymCAContents(s0,i0,encryptStatus(k,crs0))
-%       ELSE d
-%     ENDCASES;
-
-  encrypt(d:tpmData,k:KVAL) : tpmData = 
-    IF encrypted?(d) OR cryptoError?(d)
-    THEN cryptoError(1)
-    ELSE encrypted(d,k)
-    ENDIF
 
   noCrypto?(d:tpmData) : bool =
     CASES d OF
@@ -155,264 +117,215 @@ key[HV:TYPE+] : THEORY
       ELSE FALSE
     ENDCASES;
 
+
+  % Data Encryption
+
+  checkEncrypt?(d:tpmData) : bool =
+%    not(encrypted?(d)) 
+     TRUE
+
+  encrypt(d:tpmData,k:KVAL) : tpmData = 
+    encrypted(d,k)
+%     IF checkEncrypt?(d)
+%     THEN encrypted(d,k)
+%     ELSE badData
+%     ENDIF
+
+
   % Data decryption
-%   decryptStatus(k:KVAL,c:(encrypted?)) : CRYPTOSTATUS =
-%     IF k = inverse(key(c)) THEN clear ELSE c ENDIF;
 
-%   decrypt(k:KVAL,d:tpmData) : tpmData =
-%     CASES d OF
-%       tpmID(id0,crs0) : 
-%         IF encrypted?(crs0)
-%         THEN tpmID(id0,decryptStatus(k,crs0))
-% 	ELSE d	
-% 	ENDIF,
-%       tpmEncAuth(authdata0,crs0) :
-%         %tpmEncAuth is encrypted by definition 
-% 	IF encrypted?(crs0) AND clear?(decryptStatus(k,crs0))
-% 	THEN tpmSecret(authdata0)
-% 	ELSE tpmSecret(INVALIDAUTH)
-% 	ENDIF,
-%       tpmMigKeyAuth(k0,s0,d0,crs0) :
-%         IF encrypted?(crs0)
-%         THEN tpmMigKeyAuth(k0,s0,d0,decryptStatus(k,crs0)) 
-% 	ELSE d
-% 	ENDIF,
-%       tpmStoredData(s0,e0,crs0) : 
-%         IF encrypted?(crs0)
-%         THEN tpmStoredData(s0,e0,decryptStatus(k,crs0))
-% 	ELSE d
-% 	ENDIF,
-%       tpmSealedData(a0,p0,s0,d0,crs0) :
-%         IF encrypted?(crs0)
-%         THEN tpmSealedData(a0,p0,s0,d0,decryptStatus(k,crs0))
-% 	ELSE d
-% 	ENDIF,
-%       tpmSessKey(k0,crs0) : 
-%       	IF encrypted?(crs0)
-%         THEN tpmSessKey(k0,decryptStatus(k,crs0))
-% 	ELSE d
-% 	ENDIF,
-%       tpmBoundData(p0,crs0) : 
-%       	IF encrypted?(crs0)
-%       	THEN tpmBoundData(p0,decryptStatus(k,crs0))
-% 	ELSE d
-% 	ENDIF,
-%       tpmStoreAsymkey(u0,m0,p0,k0,crs0) :
-%         IF encrypted?(crs0)
-%         THEN tpmStoreAsymkey(u0,m0,p0,k0,decryptStatus(k,crs0))
-% 	ELSE d
-% 	ENDIF,
-%       tpmQuote(n0,p0,crs0) :
-%         IF encrypted?(crs0)
-%         THEN tpmQuote(n0,p0,decryptStatus(k,crs0))
-% 	ELSE d
-% 	ENDIF,
-%       tpmEKBlob(b0,crs0) : 
-%         IF encrypted?(crs0)
-% 	THEN tpmEKBlob(b0,decryptStatus(k,crs0))
-% 	ELSE d
-% 	ENDIF,
-%       tpmIdContents(digest0,aik0,crs0) :
-%         IF encrypted?(crs0)
-%         THEN tpmIdContents(digest0,aik0,decryptStatus(k,crs0)) 
-% 	ELSE d
-% 	ENDIF,
-%       tpmAsymCAContents(k0,d0,crs0) :
-%         IF encrypted?(crs0)
-% 	THEN tpmAsymCAContents(k0,d0,decryptStatus(k,crs0))
-% 	ELSE d
-% 	ENDIF
-%       ELSE d
-%     ENDCASES;
-
-  
-
-  decrypt(k:KVAL,d:(encrypted?)) : tpmData =
-    IF k=inverse(key(d))
-    THEN CASES data(d) OF 
+  checkDecrypt?(d:(encrypted?),k:privKVAL,ks:KEYSET) : bool = 
+    k=inverse(ekey(d)) AND member(k,vals(ks))
+ 
+  decrypt(d:(encrypted?),k:privKVAL,ks:KEYSET) : tpmData =
+    IF checkDecrypt?(d,k,ks)
+    THEN CASES encData(d) OF 
 	   tpmEncAuth(a0) : tpmSecret(a0)
-	   ELSE data(d)
+	   ELSE encData(d)
 	 ENDCASES
-    ELSE cryptoError(1) 
+    ELSE badData %TODO: DECRYPT_ERROR
     ENDIF
 
-%   decryptStatus(k:KVAL,c:(encrypted?)) : CRYPTOSTATUS =
-%     IF k = inverse(key(c)) THEN clear ELSE c ENDIF;
-
-
- 
   % Lemmas on decryption and encryption
 
+  %% Encrypted data can not be encrypted TODO: Truly?
+  no_encrypt_encrypted : THEOREM FORALL (d:tpmData,k:KVAL,ks:KEYSET) : 
+    encrypted?(d) => cryptoError?(encrypt(d,k))
 
-  decrypt_encrypt : THEOREM FORALL (k:KVAL,d:tpmData) : 
-    not(encrypted?(d) OR cryptoError?(d)) =>
-    decrypt(inverse(k),encrypt(d,k)) = 
+  %% assuming: Data that is encrypted can't be encrypted again
+  noDoubleEncryption : LEMMA 
+    FORALL (d:(encrypted?)) : 
+      not(encrypted?(encData(d)));
+    
+  %% Data can't be double encrypted
+  %% lemma noDoubleEncryption
+  no_double_encryption : THEOREM FORALL (d:(encrypted?),k0:privKVAL,ks:KEYSET) :
+    LET d1=decrypt(d,k0,ks) IN
+    not encrypted?(badData) => not encrypted?(d1)
+
+  %% Definition of checkEncrypt?
+  check_encrypt : THEOREM FORALL (d:tpmData) : 
+    not(cryptoError?(d) OR encrypted?(d)) =>
+    	checkEncrypt?(d);
+
+  %% Using checkDecrypt? with encrypted data
+  check_decrypt : THEOREM FORALL (d:tpmData,k:privKVAL,ks:KEYSET) : 
+    not(encrypted?(d) OR cryptoError?(d)) AND
+    member(k,vals(ks)) =>
+    	checkDecrypt?(encrypt(d,inverse(k)),k,ks);
+
+  %% Definition of checkDecrypt?
+  check_decrypt2 : THEOREM FORALL (d:(encrypted?),k:privKVAL,ks:KEYSET) :
+    member(k,vals(ks)) AND k=inverse(ekey(d)) =>
+    checkDecrypt?(d,k,ks)
+
+  %% Definition of decrypt with checkDecrypt?
+  check_decrypt3 : THEOREM FORALL (d:(encrypted?),k:privKVAL,ks:KEYSET) :
+    checkDecrypt?(d,k,ks) => decrypt(d,k,ks)=encData(d) OR
+    			    decrypt(d,k,ks)=tpmSecret(authData(encData(d)))
+    
+  %% Definition of decrypt with checkEncrypt? and encrypt
+  decrypt_encrypt : THEOREM FORALL (d:tpmData,k:KVAL,ks:KEYSET) : 
+    checkEncrypt?(d) AND member(inverse(k),vals(ks)) =>
+    decrypt(encrypt(d,k),inverse(k),ks) = 
     	CASES d OF
-	  encrypted(d0,k0) : cryptoError(1),
-	  cryptoError(n) : cryptoError(1),
+%	  encrypted(d0,k0) : encrypted(d0,k0),
+	  cryptoError(n) : badData,
 	  tpmEncAuth(a) : tpmSecret(a)
 	  ELSE d
 	ENDCASES;
 
-  decrypt_equal_keys: THEOREM FORALL (k0,k1:KVAL,b:tpmData) :
-    not(encrypted?(b) OR cryptoError?(b)) AND
-    k0=k1 IMPLIES decrypt(inverse(k1),encrypt(b,k0)) = 
+  %% If two keys are equal, should be able to decrypt(encryption of one) 
+  %%  with the other
+  decrypt_equal_keys: THEOREM FORALL (b:tpmData,k0,k1:KVAL,ks:KEYSET) :
+    checkEncrypt?(b) AND member(inverse(k0),vals(ks)) AND 
+    k0=k1 IMPLIES decrypt(encrypt(b,k0),inverse(k1),ks) = 
     		     CASES b OF
 		     	encrypted(d,k) : cryptoError(1),
 			tpmEncAuth(a) : tpmSecret(a)
 			ELSE b
 		     ENDCASES;
 
-  no_decrypt_unequal_keys: THEOREM FORALL (k0,k1:KVAL,b:tpmData) :
-    not(encrypted?(b) OR cryptoError?(b)) AND
-    k0/=k1 IMPLIES decrypt(inverse(k1),encrypt(b,k0)) = cryptoError(1)
-    %encryptStatus(k0,b)
+  %% If two keys are not equal, should not be able to decrypt(encryption of one)
+  %%  with the other
+  no_decrypt_unequal_keys: THEOREM FORALL (b:tpmData,k0,k1:KVAL,ks:KEYSET) :
+    checkEncrypt?(b) AND member(inverse(k0),vals(ks)) AND
+    k0/=k1 IMPLIES decrypt(encrypt(b,k0),inverse(k1),ks) = badData
+
+  %% If a key is not installed, can not decrypt using it.
+  no_decrypt_uninstalled: THEOREM FORALL (b:tpmData,k0:privKVAL,ks:KEYSET) :
+    checkEncrypt?(b) AND 
+    not(member(k0,vals(ks))) IMPLIES 
+    		decrypt(encrypt(b,inverse(k0)),k0,ks) = badData;
+
 
   % Data signing
 
-%   signStatus(k:KVAL,c:CRYPTOSTATUS) : (signed?) =
-%     signed(k);
-
-%   sign(k:KVAL,d:tpmData) : tpmData =
-%     CASES d OF 
-%       tpmID(id0,crs0) : tpmID(id0,signStatus(k,crs0)),
-%       tpmEncAuth(authdata0,crs0) :
-%         tpmEncAuth(authdata0,signStatus(k,crs0)),
-%       tpmMigKeyAuth(k0,s0,d0,crs0) :
-%         tpmMigKeyAuth(k0,s0,d0,signStatus(k,crs0)),
-%       tpmStoredData(s0,e0,crs0) : 
-%       	tpmStoredData(s0,e0,signStatus(k,crs0)),
-%       tpmSealedData(a0,p0,s0,d0,crs0) :
-%       	tpmSealedData(a0,p0,s0,d0,signStatus(k,crs0)),
-%       tpmSessKey(k0,crs0) :
-%         tpmSessKey(k0,signStatus(k,crs0)),
-%       tpmBoundData(p0,crs0) : 
-%         tpmBoundData(p0,signStatus(k,crs0)),
-%       tpmStoreAsymkey(u0,m0,p0,k0,crs0) :
-%         tpmStoreAsymkey(u0,m0,p0,k0,signStatus(k,crs0)),
-%       tpmQuote(n0,p0,crs0) : tpmQuote(n0,p0,signStatus(k,crs0)),
-%       tpmEKBlob(b0,crs0) : tpmEKBlob(b0,signStatus(k,crs0)),
-%       tpmIdContents(digest0,aik0,crs0) :
-%         tpmIdContents(digest0,aik0,signStatus(k,crs0)),
-%       tpmAsymCAContents(k0,d0,crs0) :
-%         tpmAsymCAContents(k0,d0,signStatus(k,crs0))
-%       ELSE d
-%     ENDCASES;
-  sign(d:tpmData,k:KVAL) : tpmData = 
-    signed(d,k)
-
+  sign(d:tpmData,k:privKVAL,ks:KEYSET) : tpmData = 
+    IF cryptoError?(d) OR not(member(k,vals(ks)))
+    THEN cryptoError(2)
+    ELSE signed(d,k)
+    ENDIF
 
   % Data signature checking
 
-%   checkSigStatus(k:KVAL,c:CRYPTOSTATUS) : bool =
-%     CASES c OF
-%       signed(kq) : k = kq
-%       ELSE FALSE
-%     ENDCASES;
-
-%   checkSig(k:KVAL,d:tpmData) : bool =
-%     CASES d OF    
-%       tpmMigScheme(m0) : FALSE,
-%       tpmEKBlobActivate(k0,i0,p0) : FALSE,
-%       tpmEKBlobAuth(a0) : FALSE,
-%       tpmDigest(digest0) : FALSE,
-%       tpmCompositeHash(d0) : FALSE,
-%       tpmNonce(i0) : FALSE,
-%       tpmSecret(i0) : FALSE,
-%       tpmKey(k0,u0,f0,a0,ap0,p0,e0) : FALSE,
-%       tpmMSAComposite(i0,m0) : FALSE,
-%       tpmCMKDelegate(s0,s1,b0,l0,m0) : FALSE,
-%       tpmCMKMigAuth(m0,p0) : FALSE,
-%       tpmCMKSigTicket(v0,s0) : FALSE,
-%       tpmCMKMAApproval(m0) : FALSE,
-%       tpmPCRInfoLong(lc0,lr0,sc0,sr0,dc0,dr0) : FALSE,
-%       tpmPCRInfoShort(ps0,l0,d0) : FALSE,
-%       tpmPubkey(a0,k0) : FALSE,
-%       tpmMigrateAsymkey(u0,d0,p0) : FALSE,
-%       OAEP(m0,p0,s0) : FALSE,
-%       concat(f0,s0) : FALSE
-%       ELSE 
-%         IF signed?(crs(d))
-%       	THEN checkSigStatus(k,crs(d))
-% 	ELSE FALSE
-% 	ENDIF
-%    ENDCASES;
-  checkSig(k:KVAL,d:tpmData) : bool = 
+  checkSig?(k:KVAL,d:tpmData) : bool = 
     IF signed?(d)
-    THEN k = key(d)
+    THEN k = inverse(sigkey(d))
     ELSE FALSE
     ENDIF
 
 
   % Lemmas on data signing and signature checking
 
-  check_sign : THEOREM FORALL (k:KVAL,d:tpmData) : 
-    checkSig(k,sign(d,k));
+  check_sig : THEOREM FORALL (d:tpmData,k:KVAL,ks:KEYSET) : 
+    not cryptoError?(d) AND member(inverse(k),vals(ks)) =>
+    	checkSig?(k,sign(d,inverse(k),ks));
+
+  no_sign_uninstalled: THEOREM FORALL (b:tpmData,k0:privKVAL,ks:KEYSET) :
+    not(cryptoError?(b)) AND not(member(k0,vals(ks))) =>
+    	sign(b,k0,ks) = cryptoError(2);
+
   
   %%%% Key sets, installation, and use
 
-  %% A keyset is a set of key values
-  KEYSET : TYPE = set[KVAL];
   	 
   %% Is a key installed or the SRK?
   installedOrSRK?(k:(tpmKey?),ks:KEYSET):bool =
-    member(key(k),ks) OR key(k)=key(TPM_KH_SRK); 
+    member(private(k),vals(ks)) OR key(k)=key(TPM_KH_SRK); 
 
 
   %% There is no magic for SRK - use the TPM_KH_SRK handle if the wrapping
   %% key is the SRK.
-  addKey(k:(tpmKey?),ks:KEYSET):KEYSET = add(key(k),ks);
+  addKey(k:(tpmKey?),ks:KEYSET) : KEYSET =  
+  	(#vals:=add(private(k),vals(ks))
+  	 ,keys:=add(k,keys(ks))#);
     % IF (wrappingKey(k)=TPM_KH OR member(wrappingKey(k),ks)) AND d=PCRInfo(k)
     % THEN add(key(k),ks)
     % ELSE ks
     % ENDIF;
 
-  loadKey(k:(tpmKey?),wk:(tpmKey?),ks:KEYSET,d:PCRVALUES):KEYSET =  %d:list[PCR]
+  loadKey(k,p:(tpmKey?),ks:KEYSET,d:PCRVALUES):KEYSET =  %d:list[PCR]
     IF 
 %        getPCRs(d,releasePCRSelect(PCRInfo(k)))=digAtRelease(PCRInfo(k)) AND 
 %        getPCRs(d,creationPCRSelect(k))=digAtCreation(PCRInfo(k)) AND 
-       installedOrSRK?(wk,ks) %todo: should this be not?
+       installedOrSRK?(p,ks) %todo: should this be not?
     THEN addKey(k,ks)
     ELSE ks
     ENDIF
 
-  load_key :THEOREM FORALL(k,w:(tpmKey?),ks:KEYSET,d:PCRVALUES) :
-    loadKey(k,w,ks,d)=
-    IF member(key(w),ks)
-    THEN add(key(k),ks)
-    ELSIF key(w)=key(TPM_KH_SRK)
-    THEN add(key(k),ks)
+  load_key :THEOREM FORALL(k,p:(tpmKey?),ks:KEYSET,d:PCRVALUES) :
+    loadKey(k,p,ks,d)=
+    IF member(private(p),vals(ks))
+    THEN (#vals:=add(private(k),vals(ks)),keys:=add(k,keys(ks))#)
+    ELSIF key(p)=key(TPM_KH_SRK)
+    THEN (#vals:=add(private(k),vals(ks)),keys:=add(k,keys(ks))#)
     ELSE ks
     ENDIF
 
   %% Remove a key - this is not currently
-  revokeKey(k:(tpmKey?),ks:KEYSET):KEYSET = remove(key(k),ks);
+  %% Removes key from loaded key list, but keeps key structure stored.
+  revokeKey(k:(tpmKey?),ks:KEYSET):KEYSET = (#vals:=remove(private(k),vals(ks))
+  					     ,keys:=keys(ks)#);
 
-  child_if_parent:THEOREM FORALL(k,wk:(tpmKey?),srk:KVAL,ks:KEYSET,d:PCRVALUES):
-    privKey(data(encDat(k)))=key(wk) AND storage?(keyUsage(wk))
-    % AND d=PCRInfo(k)
-    AND (member(privKey(data(encDat(k))),ks) OR
-    	 privKey(data(encDat(k)))=key(TPM_KH_SRK))
-       => member(key(k),loadKey(k,wk,ks,d))
+  isParent?(p,c:(tpmKey?)) : bool = 
+    ekey(encDat(c))=key(p);
+  
+  % assuming: If p is the parent of k, then p must be installed
+  parentInstalled : LEMMA 
+    FORALL (k,p:(tpmKey?),ks:KEYSET) : isParent?(p,k) => 
+    	   member(private(p),vals(ks));
+
+  %% If isParent is true, then checkDecrypt? should also be true...
+  % lemma inverse_private, parentInstalled
+  is_parent_decrypt : THEOREM FORALL (k,p:(tpmKey?),ks:KEYSET):
+    isParent?(p,k) => checkDecrypt?(encDat(k),private(p),ks);
+
+
+  child_if_parent:THEOREM FORALL(k,p:(tpmKey?),srk:KVAL,ks:KEYSET,d:PCRVALUES):
+   %encrypted(encDat(k),p)
+    ekey(encDat(k))=key(p) AND
+    (member(private(p),vals(ks)) OR key(p)=key(TPM_KH_SRK))
+       => member(private(k),vals(loadKey(k,p,ks,d)))
 
 
   no_child_if_no_parent: THEOREM FORALL (k:(tpmKey?),ks:KEYSET) :
-    NOT(member(key(k),revokeKey(k,ks)));
+    NOT(member(private(k),vals(revokeKey(k,ks))));
 
   %% Crypto functions using TPM keys.  Public keys from TPM keys are
   %% public knowledge and require nothing for use - encrypt and
-  %% checkSig do not require a key set.  Private keys must be
+  %% checkSig? do not require a key set.  Private keys must be
   %% installed in the key set ks passed to each function - decrypt and
   %% sign require a key set.
 
   encryptWrapped(k:(tpmKey?),d:tpmData):tpmData = encrypt(d,key(k))
 
-  decryptWrapped(k:(tpmKey?),d:tpmData,ks:KEYSET):tpmData =
-    IF installedOrSRK?(k,ks) THEN decrypt(key(k),d) ELSE d ENDIF
+  decryptWrapped(k:(tpmKey?),d:(encrypted?),ks:KEYSET):tpmData =
+    IF installedOrSRK?(k,ks) THEN decrypt(d,private(k),ks) ELSE d ENDIF
 
   signWrapped(k:(tpmKey?),d:tpmData,ks:KEYSET):tpmData =
-    IF installedOrSRK?(k,ks) THEN sign(d,key(k)) ELSE d ENDIF
+    IF installedOrSRK?(k,ks) THEN sign(d,private(k),ks) ELSE d ENDIF
 
-  checkSigWrapped(k:(tpmKey?),d:tpmData):bool = checkSig(key(k),d)
+  checkSig?Wrapped(k:(tpmKey?),d:tpmData):bool = checkSig?(key(k),d)
 
 END key

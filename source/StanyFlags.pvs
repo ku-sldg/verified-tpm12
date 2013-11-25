@@ -42,7 +42,7 @@ StanyFlags[HV:TYPE+] : THEORY
 	   , TOSPresent : bool
   #];
 
-  stanyFlagsInit : StanyFlags = 
+  stanyFlagsDefault : StanyFlags = 
   		 (# postInitialize:=FALSE,
   	       	    localityModifier:=0, %TODO: NOT CORRECT!
 		    transportExclusive:=FALSE,

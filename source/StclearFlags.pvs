@@ -41,15 +41,21 @@ StclearFlags : THEORY
 	   , physicalPresenceLock : bool
 	   % Set to FALSE on each TPM_Startup(ST_CLEAR). Set to TRUE when a 
 	   %  write to NV_Index=0 is successful.
-	   , bGlobablLock : bool
+	   , bGlobalLock : bool
   #];
 
-  stclearFlagsInit : StclearFlags = 
-  		 (# deactivated:=TRUE % TODO: Correct?
-		  , disableForceClear:=FALSE
-	   	  , physicalPresence:=FALSE
-	   	  , physicalPresenceLock:=FALSE
-	   	  , bGlobablLock:=FALSE % TODO: Correct?
+  stclear_deactivatedDef:bool=TRUE % TODO: Correct?
+  disableForceClearDef:bool=FALSE
+  physicalPresenceDef:bool=FALSE
+  physicalPresenceLockDef:bool=FALSE
+  bGlobablLockDef:bool=FALSE % TODO: Correct?
+  
+  stclearFlagsDefault : StclearFlags = 
+  		 (# deactivated:=stclear_deactivatedDef
+		  , disableForceClear:=disableForceClearDef
+	   	  , physicalPresence:=physicalPresenceDef
+	   	  , physicalPresenceLock:=physicalPresenceLockDef
+	   	  , bGlobalLock:=bGlobablLockDef
 		  #);
 
 END StclearFlags

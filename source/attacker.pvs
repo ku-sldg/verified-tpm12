@@ -1,0 +1,378 @@
+%% ----
+%%
+%% Attacker Theory
+%%
+%% Author: Brigid Halling
+%% Date: 
+%%
+%% Description: 
+%% 
+%% Dependencies:
+%%  StateMonad.pvs
+%%  ReturnCodes.pvs
+%%  memory.pvs 
+%%  StclearFlags.pvs
+%%  startupData.pvs
+%%  PermanentData.pvs
+%%  PermanentFlags.pvs
+%%  StanyData.pvs
+%%  StanyFlags.pvs
+%%  key.pvs
+%%  data.pvs
+%%  keyData.pvs
+%%  pcr.pvs	
+%%  authdata.pvs
+%%
+%% Todo: (key - => pending, + => done)
+%% ----
+
+attacker[HV:TYPE+] : THEORY
+  BEGIN 
+
+  IMPORTING lemmas[HV];
+
+  %% What we want to generate with each command is a pair of type
+  %% [tpmAbsOut,tpmAbsState].  executeCom generates the the state
+  %% from a TPM state and command while the upcoming outputCom
+  %% generates the corresponding output.  Thus, to execute any
+  %% operation, both executeCom and outputCom must be used
+
+  %% Run if TPM_Init has run but TPM_Startup has not
+  executeComPostInit2(s:(afterInit?),c:tpmAbsInput) : tpmAbsState =
+    CASES c OF
+      ABS_Startup(t) : CASES t OF 
+      		        TPM_ST_CLEAR : tpmStartup(s),
+    			TPM_ST_STATE : restoreState(s),
+    			TPM_ST_DEACTIVATED : deactivateState(s)
+                       ENDCASES
+      ELSE s
+    ENDCASES;
+
+  %% Run if ABS_Startup has run after TPM_Init
+  executeComStartup2(s:(afterStartup?),c:tpmAbsInput) : tpmAbsState = 
+    CASES c OF
+      ABS_Init : tpmPostInit,
+      ABS_SaveState : saveState(s),
+      ABS_SetOwnerInstall(state) : setOwnerInstallState(s,state),
+      ABS_OwnerSetDisable(d,i) : ownerSetDisableState(s,d,i),
+      ABS_PhysicalEnable : physicalEnableState(s),
+      ABS_PhysicalDisable : physicalDisableState(s),
+      ABS_PhysicalSetDeactivated(st) : physicalSetDeactivatedState(s,st),
+      ABS_SetTempDeactivated(i) : setTempDeactivatedState(s,i),
+      ABS_SetOperatorAuth(opAuth) : setOperatorAuthState(s,opAuth),
+      ABS_TakeOwnership(oA,sA,srk,a) : takeOwnershipState(s,oA,sA,srk,a),
+      ABS_OwnerClear(a): ownerClearState(s,a),
+      ABS_ForceClear: forceClearState(s),
+      ABS_DisableOwnerClear(a): disableOwnerClearState(s,a),
+      ABS_DisableForceClear: disableForceClearState(s),
+      ABS_PhysicalPresence(p): physicalPresenceState(s,p),
+      ABS_ResetEstablishmentBit: resetEstablishmentBitState(s),
+      ABS_Seal(k,e,p,i,a) : sealState(s,k,e,p,i,a),
+%      ABS_Unseal(p,i,a,d) : unsealState(s,p,i,a,d),
+%      ABS_UnBind(k,i,a) : unBindState(s,k,i,a),
+%      ABS_CreateWrapKey(p,k,u,m,a) : createWrapKeyState(s,p,k,u,m,a),
+%      ABS_LoadKey2(p,k,a): loadKey2State(s,p,k,a), 
+      ABS_GetPubKey(k,a) : getPubKeyState(s,k,a),
+      ABS_CreateMigrationBlob(p,m,k,e,a,i) : createMigBlobState(s,p,m,k,e,a,i),
+      ABS_ConvertMigrationBlob(p,i,r,a) : convertMigBlobState(s,p,i,r,a),
+      ABS_AuthorizeMigrationKey(k,m,a) : authorizeMigKeyState(s,k,m,a),
+      ABS_MigrateKey(m,p,i,a) : migrateKeyState(s,m,p,i,a),
+      ABS_CMK_SetRestrictions(r,i) : CMKSetRestrState(s,r,i),
+      ABS_CMK_ApproveMA(m,i) : CMKApproveMAState(s,m,i),
+%      ABS_CMK_CreateKey(p,d,k,m,a,i) : CMKCreateKeyState(s,p,d,k,m,a,i),
+      ABS_CMK_CreateTicket(v,sd,g,i) : CMKCreateTicketState(s,v,sd,g,i),
+      ABS_CMK_CreateBlob(p,t,m,k,l,r,st,e,i) : 
+      		CMKCreateBlobState(s,p,t,m,k,l,r,st,e,i),
+      ABS_CMK_ConvertMigration(p,r,st,m,l,n,i) : 
+      		CMKConvertMigrationState(s,p,r,st,m,l,n,i),
+      ABS_SHA1Complete(h) : SHA1CompleteState(s,h),
+      ABS_SHA1CompleteExtend(p,hd) : SHA1CompleteExtendState(s,p,hd),
+      ABS_Sign(k,a) : signState(s,k,a),
+      ABS_CertifyKey(c,k,n,i1,i2) : certifyKeyState(s,c,k,n,i1,i2),
+      ABS_CreateEndorsementKeyPair(n,k) : createEKPairState(s,n,k),
+      ABS_CreateRevocableEK(r,k,g,i) : createRevEKState(s,r,k,g,i),
+      ABS_RevokeTrust(r) : revokeTrustState(s,r),
+      ABS_OwnerReadInternalPub(k,a) : ownerReadInternalPubState(s,k,a),
+      ABS_MakeIdentity(e,d,k,a1,a2) : makeIdentityState(s,e,d,k,a1,a2), 
+      ABS_ActivateIdentity(a,b,a1,a2): activateIdentityState(s,a,b,a1,a2),
+      ABS_Extend(n,d) : extendState(s,n,d),
+      ABS_PCRRead(i) : pcrReadState(s,i),
+      ABS_Quote(a,n,p,i) : quoteState(s,a,n,p,i),
+      ABS_PCR_Reset(p) : pcrResetState(s,p),
+      ABS_ChangeAuth(p,n,d,i1,i2) : changeAuthState(s,p,n,d,i1,i2),
+%      ABS_certify(k,cr) : certState(s,k,cr),
+      ABS_senter : 
+        changeLocalityState(extendState(pcrsResetSenterState(s),0,sinitHash)),
+      ABS_sinit : changeLocalityState(extendState(s,0,mleHash)),
+      ABS_save(i,v) : saveToMemState(s,i,v)
+  ENDCASES;
+  
+  %% Execute a command on state generating a new state.  Commands execution
+  %% should be blocked if startup has not run and postInitialize=true.
+  executeCom2(s:tpmAbsState,c:tpmAbsInput) : tpmAbsState =
+    IF afterInit?(s)
+    THEN executeComPostInit2(s,c)
+    ELSE executeComStartup2(s,c)
+    ENDIF;
+
+  outData_sequence_test : THEOREM
+   FORALL  (state:(afterStartup?),srk,j,k:(tpmKey?)
+   	   ,eOA,eSA:(encrypted?)
+   	   ,e:(tpmEncAuth?)
+    	   ,p:(tpmPCRInfoLong?)
+	   ,d:tpmData
+	   ,ato,a,ap,ad:authIn,x:nat) :
+    LET (a,s) = runState(
+		 TPM_TakeOwnership(eOA,eSA,srk,ato)
+      	  	>>  TPM_Seal(k,e,p,d,a)
+		>>= CPU_saveOutput(x)
+		>>= (LAMBDA (a:tpmAbsOutput) : 
+		     CASES a OF
+		       OUT_Seal(sd,ao,m) : TPM_Unseal(j,sd,ap,ad) 
+		       ELSE TPM_Noop(a)
+		     ENDCASES)
+		     )
+		  (state) IN  
+    LET A2=decrypt(eSA,private(state`ek),state`keys),
+    	A1=decrypt(eOA,private(state`ek),state`keys) IN
+    takeOwnership?(state,srk,eOA,eSA) AND
+    tpmSecret?(A1) AND tpmSecret?(A2) AND
+    OUT_Seal?(s`memory(x)) AND
+    seal?(k) AND
+    unseal?(state,j,sealedData(s`memory(x))) AND 
+    key(j)=private(k)
+    =>
+    LET asymkey=tpmStoreAsymkey(A2,
+		migrationAuth(encData(encDat(srk))),
+		pubDataDigest(encData(encDat(srk))),
+		private(srk)) IN
+    LET K1=tpmKey(key(srk),keyUsage(srk),keyFlags(srk),
+		authDataUsage(srk),algoParms(srk),
+		PCRInfo(srk),encrypted(asymkey,0)) IN
+    member(K1,outData(s)) AND
+    member(sealedData(s`memory(x)),outData(s)) AND
+    member(d,outData(s));
+
+
+  protectedData : set[tpmData] %TODO: figure out what this should be
+
+  %% key output by TakeOwnership is SRK
+  takeOwnership_SRK : THEOREM
+    FORALL (state:tpmAbsState,c:tpmAbsInput) :
+    LET (a,s)=runState(
+		modifyOutput(LAMBDA (s:tpmAbsState) : executeCom(s,c),
+			     LAMBDA (s:tpmAbsState) : outputCom(s,c))
+        	)(state) IN
+    not ABS_read?(c) =>
+    CASES a OF
+      OUT_TakeOwnership(k,a,m) : k=s`srk
+      ELSE TRUE
+    ENDCASES
+
+
+  goodEK : (tpmKey?)
+  badEK : (tpmKey?)
+
+  certify_noSign?(aik:(tpmKey?),certReq:(tpmIdContents?)) : bool = 
+      tpmDigest?(digest(certReq))
+    
+  % Generate a certified AIK from an AIK.  Certification assumes that the
+  % EK really does belong to TPM with goodEK. We're abstracting away that check.
+  % Differs in that certReq is not signed by an EK.
+  certOut_noSign(aik:(tpmKey?),certReq:(tpmIdContents?)) : tpmAbsOutput =
+    IF certify_noSign?(aik,certReq)
+    THEN OUT_Certify(aik,encrypt(tpmAsymCAContents(tpmSessKey(initSessKeyVal),
+					digest(certReq)),
+				   key(goodEK)), 
+				   %% Thinks talking to TPM with goodEK
+		CPU_SUCCESS)
+    ELSE OUT_CPUError(CPU_CERTIFY_ERROR)
+    ENDIF
+
+  %% Invoke the certification authority using unsigned certReq
+  CA_certify_noSign(aik:(tpmKey?),cr:(tpmIdContents?)) : State =
+     output(LAMBDA (s:tpmAbsState) : certOut_noSign(aik,cr));
+
+  %% Identitical to makeIdentityState except that it adds an unsigned 
+  %% tpmIdContents to s`outData. 
+  makeIdentityState_noSign(s:tpmAbsState,iA:(tpmEncAuth?),CADig:(tpmDigest?),
+	k:(tpmKey?),i1,i2:authIn) : tpmAbsState = 
+    IF makeIdentity?(s,k) AND member(private(k),vals(s`keys))
+    THEN LET a1=decryptADIP(iA,authHandle(i2)) IN			% 6
+         LET pcr=tpmPCRInfoLong(makeIdentityLocality,			% 9
+			locAtRelease(PCRInfo(k)),
+			creationPCRSelect(PCRInfo(k)),
+			releasePCRSelect(PCRInfo(k)),
+			setDigAtCreation(s,PCRInfo(k)),			% 9
+			digAtRelease(PCRInfo(k))),
+	     encData=encrypt(tpmStoreAsymkey(a1,			% 11
+				s`permData`tpmProof,			% 13
+				pubDataDigest(encData(encDat(k))),
+				private(k)),
+			key(s`srk)) IN					% 15
+      	LET idKey=tpmKey(s`keyGenCnt,					% 8
+	    		keyUsage(k),
+			keyFlags(k),
+			authDataUsage(k),
+			algoParms(k),
+			pcr,
+			encData) IN 
+	LET idBind=tpmIdContents(CADig,idKey) IN			% 16
+    	 genKeyState(s) WITH [`outData:=add(idKey,add(idBind,outData(s)))]
+    ELSE s
+    ENDIF;
+
+
+  %% We use a new method to get the state, but use the same output method. This
+  %% is so that we have to rewrite minimal pieces of that function. Remember to
+  %% only use the signData of the idBinding output by makeIdentity
+  TPM_MakeIdentity_noSign(e:(tpmEncAuth?),d:(tpmDigest?),k:(tpmKey?),
+	a1,a2:authIn) : State =
+     modifyOutput(
+	(LAMBDA (s:tpmAbsState) : makeIdentityState_noSign(s,e,d,k,a1,a2)),
+        (LAMBDA (s:tpmAbsState) : outputCom(s,ABS_MakeIdentity(e,d,k,a1,a2))));
+
+
+  %% Using an unsigned idBind
+  CA_unsigned : THEOREM
+   FORALL (state:(afterStartup?)
+   	  ,e:(tpmEncAuth?)
+	  ,d:(tpmDigest?)
+	  ,k:(tpmKey?)
+   	  ,n:(tpmNonce?)
+	  ,p:PCR_SELECTION
+	  ,i1,i2,i3,i4,i5:authIn
+	  ,x,y,z:nat
+	  ) :
+    private(badEK)/=private(goodEK)
+    AND x/=y AND y/=z AND z/=x AND y/=x 
+    =>
+    LET state1 = state WITH [`ek:=badEK] IN
+    LET (a,s) = runState(
+ 		TPM_MakeIdentity_noSign(e,d,k,i1,i2)
+		>>= CPU_saveOutput(x)
+		>>= (LAMBDA (a:tpmAbsOutput) :
+		    CASES a OF
+		    	  OUT_MakeIdentity(ok,i,o1,o2,m) : 
+			  		CA_certify_noSign(ok,signData(i))
+			  ELSE TPM_Noop(a)
+		    ENDCASES)
+		>>= CPU_saveOutput(y)
+		>>= (LAMBDA (a:tpmAbsOutput) : 
+		    CASES a OF
+		    	  OUT_Certify(j,d,m) : TPM_ActivateIdentity(j,d,i3,i4)
+			  ELSE TPM_Noop(a)
+		    ENDCASES)
+		>> CPU_read(x)
+		>>= (LAMBDA (a:tpmAbsOutput) :
+		     CASES a OF 
+			OUT_MakeIdentity(ik,b,o1,o2,m) : TPM_Quote(ik,n,p,i5)
+			ELSE TPM_Noop(a)
+		     ENDCASES)
+		>>= CPU_saveOutput(z)
+ 		>> CPU_BuildQuoteFromMem(z,x) % Build the quote
+		)
+		(state1) IN
+    member(private(state1`ek),vals(state1`keys)) AND 
+    member(private(k),vals(state1`keys)) AND
+    makeIdentity?(state1,k) =>
+    OUT_MakeIdentity?(s`memory(x)) AND
+    LET key=idKey(s`memory(x)) IN
+    certify_noSign?(key,signData(idBinding(s`memory(x)))) =>
+    wellFormedRestore?(s`restore) AND
+    OUT_Certify?(s`memory(y)) AND
+    activateIdentity?(s,key,dat(s`memory(y))) AND
+    quote?(key) 
+    =>
+    OUT_Quote?(s`memory(z)) AND
+    OUT_FullQuote?(a) AND
+    signData(sig(s`memory(z)))=
+	tpmQuote(tpmCompositeHash(tpmPCRComposite(p,state1`pcrs)),n);
+
+  CA_unsigned_outData : THEOREM
+   FORALL (state:(afterStartup?)
+   	  ,e:(tpmEncAuth?)
+	  ,d:(tpmDigest?)
+	  ,k:(tpmKey?)
+   	  ,n:(tpmNonce?)
+	  ,p:PCR_SELECTION
+	  ,i1,i2,i3,i4,i5:authIn
+	  ,w,x,y,z:nat
+	  ) :
+    private(badEK)/=private(goodEK)
+    AND w/=x AND w/=y AND w/=z AND x/=y AND x/=z AND y/=z
+    =>
+    LET state1 = state WITH [`ek:=badEK] IN
+    LET (a,s) = runState(
+ 		TPM_MakeIdentity_noSign(e,d,k,i1,i2)
+		>>= CPU_saveOutput(x)
+		>>= (LAMBDA (a:tpmAbsOutput) :
+		    CASES a OF
+		    	  OUT_MakeIdentity(ok,i,o1,o2,m) : 
+			  		CA_certify_noSign(ok,signData(i))
+			  ELSE TPM_Noop(a)
+		    ENDCASES)
+		>>= CPU_saveOutput(y)
+		>>= (LAMBDA (a:tpmAbsOutput) : 
+		    CASES a OF
+		    	  OUT_Certify(j,d,m) : TPM_ActivateIdentity(j,d,i3,i4)
+			  ELSE TPM_Noop(a)
+		    ENDCASES)
+		>>= CPU_saveOutput(w)
+% 		>> CPU_read(x)
+% 		>>= (LAMBDA (a:tpmAbsOutput) :
+% 		     CASES a OF 
+% 			OUT_MakeIdentity(ik,b,o1,o2,m) : TPM_Quote(ik,n,p,i5)
+% 			ELSE TPM_Noop(a)
+% 		     ENDCASES)
+% 		>>= CPU_saveOutput(z)
+%  		>> CPU_BuildQuoteFromMem(z,x) % Build the quote
+		)
+		(state1) IN
+    member(private(state1`ek),vals(state1`keys)) AND 
+    member(private(k),vals(state1`keys)) AND
+    wellFormedRestore?(s`restore) AND 
+    makeIdentity?(state1,k) =>
+    OUT_MakeIdentity?(s`memory(x)) AND
+    LET key=idKey(s`memory(x)) IN
+    certify_noSign?(key,signData(idBinding(s`memory(x)))) =>
+    s`memory(y)=OUT_Certify(key,
+			encrypted(tpmAsymCAContents(
+				tpmSessKey(initSessKeyVal),
+				digest(signData(idBinding(s`memory(x))))),
+			    key(goodEK)),
+			CPU_SUCCESS) AND
+    LET encr=dat(s`memory(y)) IN
+    activateIdentity?(s,key,encr) =>
+    OUT_ActivateIdentity?(s`memory(w)) AND
+    LET o3=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+			resAuth:=%tpmSecret(authData(e))#),
+				usageAuth(encData(encDat(key)))#),
+	o4=(#nonceEven:=EVEN,nonceOdd:=ODD,contAuthSess:=TRUE,
+			resAuth:=ownerAuth(i4)#) IN
+    a=OUT_ActivateIdentity(sKey(blob(badData)),o3,o4,TPM_SUCCESS) OR
+    a=OUT_ActivateIdentity(sessK(badData),o3,o4,TPM_SUCCESS) OR
+    a=OUT_ActivateIdentity(badData,o3 with [`resAuth:=badData],o4,TPM_SUCCESS)
+    AND 
+%    a=OUT_ActivateIdentity(badData,o1,o2,TPM_SUCCESS) AND 
+    s`outData=% add(signData(sigD(state`memory(z))),
+% 		add(idBinding(state`memory(x)),
+% 	add(signed(tpmQuote(H1,n),private(key)),add(pcrData,
+	add(symmKey(s`memory(w)),add(key,add(signData(idBinding(s`memory(x))),
+		outData(state1))))%))))
+%     quote?(key)=>
+%     OUT_FullQuote?(a)
+%     AND
+%     LET H1=tpmCompositeHash(tpmPCRComposite(p,s`pcrs)),
+% 	pcrData=tpmPCRComposite(p,s`pcrs) IN
+%     s`outData=add(signData(sigD(state`memory(z))),
+% 		add(idBinding(state`memory(x)),
+% 	add(signed(tpmQuote(H1,n),private(key)),add(pcrData,
+% 	add(symmKey(s`memory(w)),add(key,add(signData(idBinding(s`memory(x))),
+% 		outData(state1))))))))
+%     AND
+%     member(badData,s`outData)
+;
+
+	
+END attacker

@@ -107,7 +107,8 @@ PermanentData[HV:TYPE+] : THEORY
 %     , daaBlobKey : (tpmKey?)
   #];
 
-  permDataInit : PermData = (# tpmProof:=tpmSecret(INVALIDPROOF)
+  permDataDefault : PermData =
+  		    	    (# tpmProof:=tpmSecret(INVALIDPROOF)
   	       	 	     , ekReset:=nonceInit
 			     , ownerAuth:=tpmSecret(INVALIDAUTH)
 			     , operatorAuth:=tpmSecret(INVALIDAUTH)

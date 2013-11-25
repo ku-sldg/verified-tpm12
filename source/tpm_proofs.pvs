@@ -1,0 +1,47 @@
+%% ----
+%%
+%% TPM Proofs Theory
+%%
+%% Author: Brigid Halling
+%% Date: 
+%%
+%% Description: 
+%% 
+%% Dependencies:
+%%  StateMonad.pvs
+%%  ReturnCodes.pvs
+%%  memory.pvs 
+%%  StclearFlags.pvs
+%%  startupData.pvs
+%%  PermanentData.pvs
+%%  PermanentFlags.pvs
+%%  StanyData.pvs
+%%  StanyFlags.pvs
+%%  key.pvs
+%%  data.pvs
+%%  keyData.pvs
+%%  pcr.pvs	
+%%  authdata.pvs
+%%  tpm.pvs
+%%
+%% Todo: (key - => pending, + => done)
+%% ----
+
+tpmProofs[HV:TYPE+] : THEORY
+  BEGIN 
+
+  IMPORTING lemmas[HV];
+
+  %% ALL COMMANDS:
+  %% Commands should not result in a successful error
+  no_success_errors : THEOREM
+    FORALL (state:(afterStartup?),c:tpmAbsInput,i:int) :
+    LET (a,s)=runState(
+		output(LAMBDA (s:tpmAbsState) : outputCom(s,c))
+        	)(state) IN
+ (state`memory(i(c))/=OUT_Error(TPM_SUCCESS)) =>
+    a/=OUT_Error(TPM_SUCCESS)
+;
+
+
+END tpmProofs

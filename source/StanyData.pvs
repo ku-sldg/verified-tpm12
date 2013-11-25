@@ -55,7 +55,7 @@ StanyData[HV:TYPE+] : THEORY
 %	   , sessions : TPM_SESSION_DATA
   #];
 
-  stanyDataInit : StanyData = 
+  stanyDataDefault : StanyData = 
   		 (# contextNonceSession:=tpmNonceZero
   	       	    %, auditDigest:=0
 		    %, currentTicks:=FALSE

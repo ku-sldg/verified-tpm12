@@ -1,0 +1,67 @@
+%% ----
+%%
+%% Lemma Theory
+%%
+%% Author: Brigid Halling
+%% Date: Mon Jan 7 11:30:01 CST 2013
+%%
+%% Description:  
+%%   Place to throw unprovable lemmas - There's likely a better way to do this..
+%% 
+%% Dependencies:
+%%  StateMonad.pvs
+%%  ReturnCodes.pvs
+%%  memory.pvs 
+%%  StclearFlags.pvs
+%%  startupData.pvs
+%%  PermanentData.pvs
+%%  PermanentFlags.pvs
+%%  StanyData.pvs
+%%  StanyFlags.pvs
+%%  key.pvs
+%%  data.pvs
+%%  keyData.pvs
+%%  pcr.pvs	
+%%  authdata.pvs
+%%
+%% Todo: (key - => pending, + => done)
+%%
+%% ----
+
+lemmas[HV:TYPE+] : THEORY
+  BEGIN
+  
+  IMPORTING tpm[HV];
+
+  %% A predefined ek exists (in key.pvs). If the ek of the state is valid, 
+  %%  it have at least the same key value as the predefined ek.
+  ekDef : LEMMA 
+    FORALL(s:tpmAbsState) : 
+    	not(invalidKey?(s`ek)) =>
+	key(s`ek)=key(TPM_KH_EK)
+
+  %% We have defined initKeyVal = 100 (in tpm.pvs). Therefore, any keyGenCnt 
+  %%  should be >= 100.
+  keyGenCntDef : LEMMA 
+    FORALL(s:tpmAbsState) : 
+    	s`keyGenCnt>=100;
+
+  %% If a given key, k, has the same key value as the predefined ek, then k
+  %%  should be the ek.
+  notEK : LEMMA
+    FORALL (s:tpmAbsState,k:(tpmKey?)) : 
+        IF key(k)=key(TPM_KH_EK)
+	THEN s`ek=k
+	ELSE s`ek/=k
+	ENDIF
+
+  %% SRK cannot be EK
+  SRKnotEK : LEMMA
+    FORALL (s:tpmAbsState,k:(tpmKey?)) : 
+      not invalidKey?(s`ek) => s`ek/=s`srk
+
+
+  %% Input keys cannot be invalid keys
+%  inputKeysValid : LEMMA
+  
+END lemmas
