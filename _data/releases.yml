@@ -1,4 +1,14 @@
 - name: PVS TPM Model
   version: 0.0
-  description: PVS source
-  file: pvs.tgz
+  description: PVS source for our intial contract deliverable on 31 July 2012.
+  file: verified-tpm-20120731.tgz
+
+- name: PVS TPM Model
+  version: 0.1
+  description: PVS source for our intial contract deliverable on 31 October 2012.
+  file: verified-tpm-20121031.tgz
+
+- name: PVS TPM Model
+  version: 0.2
+  description: PVS source for our intial contract deliverable on 31 January 2013.
+  file: verified-tpm-20130131.tgz
