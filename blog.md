@@ -1,9 +1,9 @@
 ---
 layout: frontpage
-title: EECS 662 Blog
+title: Verified TPM Blog
 ---
 
-# EECS 662 Blog
+# {{ page.title }}
 
 {% for post in site.categories.blog %}
 <a href="{{ site.baseurl }}{{ post.url }}">{{ post.title }}</a>
