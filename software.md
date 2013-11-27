@@ -11,4 +11,4 @@ title: Software Releases
 {% endfor %}
 </ul>
 
-Visit {{ site.maintitle }} on [github](http://github.com/{{ site.account }}/{{ site.repo }})
+Visit {{ site.title }} on [github](http://github.com/{{ site.account }}/{{ site.repo }})
