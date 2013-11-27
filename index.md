@@ -19,7 +19,7 @@ instructions.
 
 ## Team
 
-Verified TPM is run by [System-Level Design Group](http://ku-sldg.github.io)
+Verified TPM is run by the [System-Level Design Group](http://ku-sldg.github.io)
 in The Information and Telecommunication Technology Center at The
 University of Kansas.
 
