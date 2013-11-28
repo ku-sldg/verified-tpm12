@@ -1,0 +1,11 @@
+{% for paper in site.data.publications limit:1 %}
+{% if paper.author == "none" %}
+No current publications.
+{% else %}
+<ul>
+{% for paper in site.data.publications %}
+<li>{{ paper.author }}, <a href="{{ site.baseurl }}/{{ site.repo }}/resources/{{ paper.pdf }}">{{ paper.title }}</a>, {{ paper.where }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+{% endfor %}

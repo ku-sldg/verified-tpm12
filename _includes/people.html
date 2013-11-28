@@ -1,0 +1,62 @@
+### Faculty
+
+<ul>
+{% for person in site.data.people %}
+{% if person.role == "faculty" %}
+  {% if person.web == nil %}
+<li>{{ person.name }}</li>
+  {% else %}
+<li><a href="{{ person.web }}">{{ person.name }}</a></li>
+  {% endif %}
+{% else %}
+{% endif %}
+{% endfor %}
+</ul>
+
+### Students
+
+<ul>
+{% for person in site.data.people %}
+{% if person.role == "student" %}
+  {% if person.web == nil %}
+<li>{{ person.name }}</li>
+  {% else %}
+<li><a href="{{ person.web }}">{{ person.name }}</a></li>
+  {% endif %}
+{% else %}
+{% endif %}
+{% endfor %}
+</ul>
+
+### Research Staff
+
+<ul>
+{% for person in site.data.people %}
+{% if person.role == "staff" %}
+  {% if person.web == nil %}
+<li>{{ person.name }}</li>
+  {% else %}
+<li><a href="{{ person.web }}">{{ person.name }}</a></li>
+  {% endif %}
+{% else %}
+{% endif %}
+{% endfor %}
+</ul>
+
+### Subcontractors
+
+<ul>
+{% for person in site.data.people %}
+{% if person.role == "contractor" %}
+  {% if person.web == nil %}
+<li>{{ person.name }}</li>
+  {% else %}
+<li><a href="{{ person.web }}">{{ person.name }}</a></li>
+  {% endif %}
+{% else %}
+{% endif %}
+{% endfor %}
+</ul>
+
+The System-Level Design Group is a part of The Information and
+Telecommunication Technology Center at The University of Kansas.

@@ -1,6 +1,6 @@
 ---
 layout: frontpage
-title: Documenation
+title: {{ site.title }}
 ---
 
 # Documentation

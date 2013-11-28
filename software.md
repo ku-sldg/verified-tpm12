@@ -1,14 +1,8 @@
 ---
 layout: frontpage
-title: Software Releases
+title: {{ site.title }}
 ---
 
-# Software and Model Releases
+# Software
 
-<ul>
-{% for release in site.data.releases %}
-<li> <a href="{{ site.baseurl }}/{{ site.repo }}/resources/{{ release.file }}">{{ release.name }}</a>, version {{ release.version }} - {{ release.description }}</li>
-{% endfor %}
-</ul>
-
-Visit {{ site.title }} on [github](http://github.com/{{ site.account }}/{{ site.repo }})
+{% include releases.html %}

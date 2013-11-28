@@ -1,0 +1,14 @@
+{% for release in site.data.releases limit:1 %}
+{% if release.name == "none" %}
+No current software relases.
+{% else %}
+<ul>
+{% for release in site.data.releases %}
+<li> <a href="{{ site.baseurl }}/{{ site.repo }}/resources/{{ release.file }}">{{ release.name }}</a>, version {{ release.version }} - {{ release.description }} </li>
+{% endfor %}
+</ul>
+{% endif %}
+{% endfor %}
+
+
+Visit {{ site.title }} on [github](http://github.com/{{ site.account }}/{{ site.repo }})

@@ -2,3 +2,4 @@ baseurl: http://ku-sldg.github.io/verified-tpm12/
 title: Verified TPM
 subtitle: Formal Specification of the TPM 1.2
 github: https://github.com/ku-sldg/verified-tpm12
+description: The goal of the Verified TPM is specifying and verifying the TPM 1.2 formally in PVS.  We specify the TPM as a state transformation system with each instruction modifying the TPM state.  We then use a state monad to sequence instruction execution, threading state through a sequence of instructions.
