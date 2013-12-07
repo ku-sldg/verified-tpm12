@@ -12,7 +12,11 @@
 %%   was established using the TPM_HASH_START command in the TPM Interface.
 %% 
 %% Dependencies:
-%%  pcr.pvs
+%%  key.pvs
+%%  data.pvs
+%%  pcr.pvs (only necessary dependency)
+%%  keyData.pvs
+%%  authdata.pvs
 %%
 %% Todo: (key - => pending, + => done)
 %%
@@ -21,7 +25,7 @@
 StanyFlags[HV:TYPE+] : THEORY
   BEGIN
 
-  IMPORTING pcr[HV];
+  IMPORTING key[HV];
 
   StanyFlags : TYPE = [#
   	   % Prevents the operation of most capabilities. There is no default 

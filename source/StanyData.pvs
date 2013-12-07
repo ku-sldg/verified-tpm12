@@ -11,6 +11,7 @@
 %%  various TPM_GetCapability fields including startup effects.
 %% 
 %% Dependencies:
+%%  key.pvs
 %%  data.pvs
 %%  keydata.pvs
 %%  authdata.pvs
@@ -22,7 +23,7 @@
 StanyData[HV:TYPE+] : THEORY
   BEGIN
 
-  IMPORTING data[HV];
+  IMPORTING key[HV];
 
   StanyData : TYPE = [#
 	   % The nonce used to properly identify saved session context blobs.

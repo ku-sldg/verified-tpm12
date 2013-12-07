@@ -1,4 +1,7 @@
 (attacker
+ (IMP_lemmas_TCC1 0
+  (IMP_lemmas_TCC1-1 nil 3595166977 ("" (existence-tcc) nil nil) nil
+   nil))
  (executeComStartup2_TCC1 0
   (executeComStartup2_TCC1-1 nil 3587927416 ("" (cases-tcc) nil nil)
    nil nil))
@@ -7,6 +10,9 @@
    nil))
  (outData_sequence_test_TCC1 0
   (outData_sequence_test_TCC1-1 nil 3587917940
+   ("" (subtype-tcc) nil nil) nil nil))
+ (outData_sequence_test_TCC2 0
+  (outData_sequence_test_TCC2-1 nil 3595166977
    ("" (subtype-tcc) nil nil) nil nil))
  (outData_sequence_test 0
   (outData_sequence_test-1 nil 3587917940
@@ -164,6 +170,9 @@
    shostak))
  (goodEK_TCC1 0
   (goodEK_TCC1-1 nil 3589638539 ("" (existence-tcc) nil nil) nil nil))
+ (certify_noSign?_TCC1 0
+  (certify_noSign?_TCC1-1 nil 3595166977 ("" (subtype-tcc) nil nil) nil
+   nil))
  (certOut_noSign_TCC1 0
   (certOut_noSign_TCC1-1 nil 3589638539 ("" (subtype-tcc) nil nil) nil
    nil))
@@ -175,6 +184,12 @@
    ("" (subtype-tcc) nil nil) nil nil))
  (makeIdentityState_noSign_TCC2 0
   (makeIdentityState_noSign_TCC2-1 nil 3591452819
+   ("" (subtype-tcc) nil nil) nil nil))
+ (makeIdentityState_noSign_TCC3 0
+  (makeIdentityState_noSign_TCC3-1 nil 3595166977
+   ("" (subtype-tcc) nil nil) nil nil))
+ (makeIdentityState_noSign_TCC4 0
+  (makeIdentityState_noSign_TCC4-1 nil 3595166977
    ("" (subtype-tcc) nil nil) nil nil))
  (CA_unsigned_TCC1 0
   (CA_unsigned_TCC1-1 nil 3589644613 ("" (subtype-tcc) nil nil) nil
@@ -318,6 +333,9 @@
  (CA_unsigned_outData_TCC10 0
   (CA_unsigned_outData_TCC10-1 nil 3592182107
    ("" (subtype-tcc) nil nil) nil nil))
+ (CA_unsigned_outData_TCC11 0
+  (CA_unsigned_outData_TCC11-1 nil 3595166977
+   ("" (subtype-tcc) nil nil) nil nil))
  (CA_unsigned_outData 0
   (CA_unsigned_outData-1 nil 3591115351
    ("" (assert)
@@ -358,11 +376,75 @@
                                             nil)
                                            ("3"
                                             (lemma pubInversePriv)
-                                            (("3" (grind) nil nil))
+                                            (("3"
+                                              (grind)
+                                              (("3"
+                                                (rewrite existsBadData)
+                                                (("3"
+                                                  (rewrite
+                                                   checkBadData)
+                                                  nil
+                                                  nil))
+                                                nil))
+                                              nil))
                                             nil)
                                            ("4"
                                             (lemma pubInversePriv)
-                                            (("4" (grind) nil nil))
+                                            (("4"
+                                              (grind)
+                                              (("4"
+                                                (rewrite existsBadData)
+                                                (("4"
+                                                  (rewrite
+                                                   checkBadData)
+                                                  nil
+                                                  nil))
+                                                nil))
+                                              nil))
+                                            nil)
+                                           ("5"
+                                            (rewrite existsBadData)
+                                            (("5"
+                                              (rewrite existsBadData)
+                                              (("5"
+                                                (lemma pubInversePriv)
+                                                (("5" (grind) nil nil))
+                                                nil))
+                                              nil))
+                                            nil)
+                                           ("6"
+                                            (rewrite existsBadData)
+                                            (("6"
+                                              (rewrite checkBadData)
+                                              nil
+                                              nil))
+                                            nil)
+                                           ("7"
+                                            (lemma pubInversePriv)
+                                            (("7" (grind) nil nil))
+                                            nil)
+                                           ("8"
+                                            (rewrite existsBadData)
+                                            (("8"
+                                              (rewrite checkBadData)
+                                              nil
+                                              nil))
+                                            nil)
+                                           ("9"
+                                            (lemma pubInversePriv)
+                                            (("9" (grind) nil nil))
+                                            nil)
+                                           ("10"
+                                            (lemma pubInversePriv)
+                                            (("10" (grind) nil nil))
+                                            nil)
+                                           ("11"
+                                            (lemma pubInversePriv)
+                                            (("11" (grind) nil nil))
+                                            nil)
+                                           ("12"
+                                            (lemma pubInversePriv)
+                                            (("12" (grind) nil nil))
                                             nil))
                                           nil))
                                         nil)
@@ -381,11 +463,69 @@
                                             nil)
                                            ("3"
                                             (lemma pubInversePriv)
-                                            (("3" (grind) nil nil))
+                                            (("3"
+                                              (grind)
+                                              (("3"
+                                                (rewrite existsBadData)
+                                                (("3"
+                                                  (rewrite
+                                                   checkBadData)
+                                                  nil
+                                                  nil))
+                                                nil))
+                                              nil))
                                             nil)
                                            ("4"
                                             (lemma pubInversePriv)
-                                            (("4" (grind) nil nil))
+                                            (("4"
+                                              (grind)
+                                              (("4"
+                                                (rewrite existsBadData)
+                                                (("4"
+                                                  (rewrite
+                                                   checkBadData)
+                                                  nil
+                                                  nil))
+                                                nil))
+                                              nil))
+                                            nil)
+                                           ("5"
+                                            (lemma pubInversePriv)
+                                            (("5" (grind) nil nil))
+                                            nil)
+                                           ("6"
+                                            (rewrite existsBadData)
+                                            (("6"
+                                              (rewrite checkBadData)
+                                              nil
+                                              nil))
+                                            nil)
+                                           ("7"
+                                            (lemma pubInversePriv)
+                                            (("7" (grind) nil nil))
+                                            nil)
+                                           ("8"
+                                            (rewrite existsBadData)
+                                            (("8"
+                                              (rewrite checkBadData)
+                                              nil
+                                              nil))
+                                            nil)
+                                           ("9"
+                                            (lemma pubInversePriv)
+                                            (("9" (grind) nil nil))
+                                            nil)
+                                           ("10"
+                                            (lemma pubInversePriv)
+                                            (("10" (grind) nil nil))
+                                            nil)
+                                           ("11"
+                                            (lemma pubInversePriv)
+                                            (("11" (grind) nil nil))
+                                            nil)
+                                           ("12"
+                                            (lemma pubInversePriv)
+                                            (("12" (grind) nil nil))
                                             nil))
                                           nil))
                                         nil))
@@ -434,7 +574,7 @@
     (PermFlags type-eq-decl nil PermanentFlags nil)
     (PermData type-eq-decl nil PermanentData nil)
     (PCRVALUES type-eq-decl nil pcr nil)
-    (set type-eq-decl nil sets nil) (mem type-eq-decl nil memory nil)
+    (list type-decl nil list_adt nil) (mem type-eq-decl nil memory nil)
     (OUT_Nothing adt-constructor-decl "(OUT_Nothing?)" tpm nil)
     (OUT_Nothing? adt-recognizer-decl "[tpmAbsOutput -> boolean]" tpm
      nil)
@@ -458,15 +598,103 @@
     (tpmDigest? adt-recognizer-decl "[tpmData -> boolean]" data nil)
     (tpmNonce? adt-recognizer-decl "[tpmData -> boolean]" data nil)
     (PRED type-eq-decl nil defined_types nil)
-    (list type-decl nil list_adt nil)
     (every adt-def-decl "boolean" list_adt nil)
     (AND const-decl "[bool, bool -> bool]" booleans nil)
     (<= const-decl "bool" reals nil)
     (PCR_SELECTION type-eq-decl nil pcr nil)
     (nat nonempty-type-eq-decl nil naturalnumbers nil)
     (genKeyState const-decl "tpmAbsState" tpm nil)
+    (tpmSessKey adt-constructor-decl "[KVAL -> (tpmSessKey?)]" data
+     nil)
+    (tpmSessKey? adt-recognizer-decl "[tpmData -> boolean]" data nil)
+    (existsBadData inductive-decl "bool" data nil)
+    (cons? adt-recognizer-decl "[list -> boolean]" list_adt nil)
+    (cons adt-constructor-decl "[[T, list] -> (cons?)]" list_adt nil)
+    (badData const-decl "tpmData" data nil)
+    (KVAL type-eq-decl nil keydata nil)
+    (KEY_USAGE type-decl nil keydata nil)
+    (KEY_FLAGS type-eq-decl nil keydata nil)
+    (AUTH_DATA_USAGE type-decl nil authdata nil)
+    (ALGO_ID type-decl nil keydata nil)
+    (ENC_SCHEME type-decl nil keydata nil)
+    (SIG_SCHEME type-decl nil keydata nil)
+    (KEY_PARMS type-eq-decl nil keydata nil)
+    (tpmPCRInfoLong? adt-recognizer-decl "[tpmData -> boolean]" data
+     nil)
+    (tpmKey adt-constructor-decl
+     "[[KVAL, KEY_USAGE, KEY_FLAGS, AUTH_DATA_USAGE, KEY_PARMS,
+  (tpmPCRInfoLong?), (encrypted?)] ->
+   (tpmKey?)]" data nil)
+    (OR const-decl "[bool, bool -> bool]" booleans nil)
+    (tpmCertifyInfo? adt-recognizer-decl "[tpmData -> boolean]" data
+     nil)
+    (tpmCertifyInfo2? adt-recognizer-decl "[tpmData -> boolean]" data
+     nil)
+    (keyUsage shared-adt-accessor-decl
+     "[{x: tpmData | tpmKey?(x) OR tpmCertifyInfo?(x) OR tpmCertifyInfo2?(x)} ->
+   KEY_USAGE]" data nil)
+    (keyFlags shared-adt-accessor-decl
+     "[{x: tpmData | tpmKey?(x) OR tpmCertifyInfo?(x) OR tpmCertifyInfo2?(x)} ->
+   KEY_FLAGS]" data nil)
+    (authDataUsage shared-adt-accessor-decl
+     "[{x: tpmData | tpmKey?(x) OR tpmCertifyInfo?(x) OR tpmCertifyInfo2?(x)} ->
+   AUTH_DATA_USAGE]" data nil)
+    (tpmPubkey? adt-recognizer-decl "[tpmData -> boolean]" data nil)
+    (algoParms shared-adt-accessor-decl "[{x: tpmData |
+          tpmKey?(x) OR
+           tpmPubkey?(x) OR tpmCertifyInfo?(x) OR tpmCertifyInfo2?(x)} ->
+   KEY_PARMS]" data nil)
+    (tpmCompositeHash? adt-recognizer-decl "[tpmData -> boolean]" data
+     nil)
+    (tpmPCRInfoLong adt-constructor-decl
+     "[[LOCALITY, LOCALITY, PCR_SELECTION, PCR_SELECTION, (tpmCompositeHash?),
+  (tpmCompositeHash?)] ->
+   (tpmPCRInfoLong?)]" data nil)
+    (makeIdentityLocality const-decl "LOCALITY" tpm nil)
+    (locAtRelease adt-accessor-decl
+     "[(tpmPCRInfoLong?) -> LOCALITY[HV]]" data nil)
+    (PCRInfo shared-adt-accessor-decl
+     "[{x: tpmData | tpmKey?(x) OR tpmCertifyInfo?(x) OR tpmCertifyInfo2?(x)} ->
+   (tpmPCRInfoLong?)]" data nil)
+    (creationPCRSelect adt-accessor-decl
+     "[(tpmPCRInfoLong?) -> PCR_SELECTION[HV]]" data nil)
+    (releasePCRSelect adt-accessor-decl
+     "[(tpmPCRInfoLong?) -> PCR_SELECTION[HV]]" data nil)
+    (tpmPCRComposite? adt-recognizer-decl "[tpmData -> boolean]" data
+     nil)
+    (tpmCompositeHash adt-constructor-decl
+     "[(tpmPCRComposite?) -> (tpmCompositeHash?)]" data nil)
+    (PCR type-decl nil pcr nil)
+    (tpmPCRComposite adt-constructor-decl
+     "[[PCR_SELECTION, PCRVALUES] -> (tpmPCRComposite?)]" data nil)
+    (tpmPCRInfoShort? adt-recognizer-decl "[tpmData -> boolean]" data
+     nil)
+    (digAtRelease shared-adt-accessor-decl
+     "[{x: tpmData | tpmPCRInfoLong?(x) OR tpmPCRInfoShort?(x)} ->
+   (tpmCompositeHash?)]" data nil)
+    (encrypted adt-constructor-decl "[[tpmData, KVAL] -> (encrypted?)]"
+     data nil)
+    (tpmSecret? adt-recognizer-decl "[tpmData -> boolean]" data nil)
+    (tpmStoreAsymkey adt-constructor-decl
+     "[[(tpmSecret?), (tpmSecret?), (tpmDigest?), privKVAL] -> (tpmStoreAsymkey?)]"
+     data nil)
+    (tpmSecret adt-constructor-decl "[int -> (tpmSecret?)]" data nil)
+    (authData adt-accessor-decl "[(tpmEncAuth?) -> int]" data nil)
+    (tpmMigrateAsymkey? adt-recognizer-decl "[tpmData -> boolean]" data
+     nil)
+    (pubDataDigest shared-adt-accessor-decl
+     "[{x: tpmData | tpmStoreAsymkey?(x) OR tpmMigrateAsymkey?(x)} ->
+   (tpmDigest?)]" data nil)
+    (key adt-accessor-decl "[(tpmKey?) -> KVAL]" data nil)
+    (tpmIdContents? adt-recognizer-decl "[tpmData -> boolean]" data
+     nil)
+    (tpmIdContents adt-constructor-decl
+     "[[(tpmDigest?), (tpmKey?)] -> (tpmIdContents?)]" data nil)
+    (checkBadData inductive-decl "bool" data nil)
+    (badData? const-decl "bool" data nil)
     (pubInversePriv formula-decl nil data nil)
     (goodEK const-decl "(tpmKey?)" attacker nil)
+    (member def-decl "bool" list_props nil)
     (real_le_is_total_order name-judgement "(total_order?[real])"
      real_props nil)
     (tpmStoreAsymkey? adt-recognizer-decl "[tpmData -> boolean]" data

@@ -218,7 +218,7 @@ attacker[HV:TYPE+] : THEORY
 			pcr,
 			encData) IN 
 	LET idBind=tpmIdContents(CADig,idKey) IN			% 16
-    	 genKeyState(s) WITH [`outData:=add(idKey,add(idBind,outData(s)))]
+    	 genKeyState(s) WITH [`outData:=cons(idKey,cons(idBind,outData(s)))]
     ELSE s
     ENDIF;
 
@@ -354,21 +354,21 @@ attacker[HV:TYPE+] : THEORY
     a=OUT_ActivateIdentity(sessK(badData),o3,o4,TPM_SUCCESS) OR
     a=OUT_ActivateIdentity(badData,o3 with [`resAuth:=badData],o4,TPM_SUCCESS)
     AND 
-%    a=OUT_ActivateIdentity(badData,o1,o2,TPM_SUCCESS) AND 
-    s`outData=% add(signData(sigD(state`memory(z))),
-% 		add(idBinding(state`memory(x)),
-% 	add(signed(tpmQuote(H1,n),private(key)),add(pcrData,
-	add(symmKey(s`memory(w)),add(key,add(signData(idBinding(s`memory(x))),
-		outData(state1))))%))))
+    member(symmKey(s`memory(w)),s`outData) AND
+    member(key,s`outData) AND
+    member(signData(idBinding(s`memory(x))),s`outData) AND
+    existsBadData(s`outData)
+    
+    %s`outData=cons(symmKey(s`memory(w)),cons(key,cons(signData(idBinding(s`memory(x))),outData(state1))))
 %     quote?(key)=>
 %     OUT_FullQuote?(a)
 %     AND
 %     LET H1=tpmCompositeHash(tpmPCRComposite(p,s`pcrs)),
 % 	pcrData=tpmPCRComposite(p,s`pcrs) IN
-%     s`outData=add(signData(sigD(state`memory(z))),
-% 		add(idBinding(state`memory(x)),
-% 	add(signed(tpmQuote(H1,n),private(key)),add(pcrData,
-% 	add(symmKey(s`memory(w)),add(key,add(signData(idBinding(s`memory(x))),
+%     s`outData=cons(signData(sigD(state`memory(z))),
+% 		cons(idBinding(state`memory(x)),
+% 	cons(signed(tpmQuote(H1,n),private(key)),cons(pcrData,
+% 	cons(symmKey(s`memory(w)),cons(key,cons(signData(idBinding(s`memory(x))),
 % 		outData(state1))))))))
 %     AND
 %     member(badData,s`outData)

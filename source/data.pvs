@@ -24,12 +24,10 @@ data[HV:TYPE+]  : THEORY
   IMPORTING keydata;
   IMPORTING types;
 
-%  RNG : TYPE = int;
-
   %% Data items that the TPM is aware of
   tpmData : DATATYPE
   BEGIN
-    %% RNG 
+    %% Random Number Generator 
     RNG(n:int) : RNG?
     
     %% Identifyier for naming things
@@ -438,6 +436,7 @@ data[HV:TYPE+]  : THEORY
   %% badData Lemmas and Theorems
   goodData : tpmData 
   goodDataNotBad : LEMMA not(badData?(goodData))
+
  
   %% Recursively checks data to see if includes badData. TRUE if does.
   checkBadData(d:tpmData) : INDUCTIVE bool = %RECURSIVE
@@ -546,44 +545,49 @@ data[HV:TYPE+]  : THEORY
    FORALL (k:(tpmKey?)) :
     checkBadData(badEncryption(k))=TRUE;
   
-  %%Sets of data to test:
-  badDataSetA : set[tpmData] = %CHECKS OUT
-    add(badData,(empty?));
+  %%Lists of data to test:
+  badDataList1(k:(tpmKey?)) : list[tpmData] = %CHECKS OUT
+    cons(badEncryption(k),null);
 
-  badDataSetB : set[tpmData] = %CHECKS OUT
-    add(goodData,add(badData,(empty?)));
+  badDataList2(k:(tpmKey?)) : list[tpmData] = %CHECKS OUT
+    cons(goodEncryption(k),(cons(badEncryption(k),null)))
 
-  badDataSet0 : set[tpmData] = 
-    add(badQuote1,(empty?));
+  badDataList3(k:(tpmKey?)) : list[tpmData] = %CHECKS OUT
+    cons(badQuote1,cons(badEncryption(k),null))
 
-  badDataSet1(k:(tpmKey?)) : set[tpmData] = 
-    add(badEncryption(k),(empty?));
+  goodDataList0 : list[tpmData] = %CHECKS OUT
+    cons(goodQuote,cons(tpmSecret(1),cons(RNG(3),null)))
 
-  badDataSet2(k:(tpmKey?)) : set[tpmData] =
-    add(goodEncryption(k),(add(badEncryption(k),(empty?))))
+  goodDataList1(k:(tpmKey?)) : list[tpmData] = %CHECKS OUT
+    cons(goodEncryption(k),null)
 
-  badDataSet3(k:(tpmKey?)) : set[tpmData] =
-    add(badQuote1,add(badEncryption(k),(empty?)))
+  goodDataList2(k:(tpmKey?)) : list[tpmData] = %CHECKS OUT
+    cons(goodEncryption(k),cons(tpmSecret(1),cons(RNG(3),null)))
 
-  goodDataSet0 : set[tpmData] = %CHECKS OUT
-    add(goodQuote,add(tpmSecret(1),add(RNG(3),(empty?))))
+  goodDataList3(k:(tpmKey?)) : list[tpmData] = %CHECKS OUT
+    cons(goodQuote,cons(goodEncryption(k),cons(tpmSecret(1),cons(RNG(3),null))))
 
-  goodDataSet1(k:(tpmKey?)) : set[tpmData] =
-    add(goodEncryption(k),(empty?))
 
-  goodDataSet2(k:(tpmKey?)) : set[tpmData] =
-    add(goodEncryption(k),add(tpmSecret(1),add(RNG(3),(empty?))))
+  badDataListA : list[tpmData] = %CHECKS OUT
+    cons(badData,null);
 
-  goodDataSet3(k:(tpmKey?)) : set[tpmData] =
-    add(goodQuote,add(goodEncryption(k),add(tpmSecret(1),add(RNG(3),(empty?)))))
+  badDataListB : list[tpmData] = %CHECKS OUT
+    cons(goodData,cons(badData,goodDataList0));
+
+  badDataList0 : list[tpmData] = 
+    cons(badQuote1,null);
 
   %% Should return TRUE if badData shows up anywhere in the set. 
-  existsBadData(d:set[tpmData]) : bool = 
-    some(checkBadData,d)
-  %MEASURE d BY <<
+  existsBadData(d:list[tpmData]) : INDUCTIVE bool = 
+    checkBadData(car(d)) OR existsBadData(cdr(d))
+ 
+  nullNotBad : LEMMA not(existsBadData(null))
 
   test_existsBadData : THEOREM
-    existsBadData(badDataSet0) = TRUE;
+   FORALL(k:(tpmKey?)) : 
+    existsBadData(goodDataList3(k)) = FALSE;
+
+
 
 
 END data

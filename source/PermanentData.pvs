@@ -10,6 +10,7 @@
 %%   and not affected by TPM_Startup(any)
 %% 
 %% Dependencies:
+%%  key.pvs
 %%  data.pvs
 %%  pcr.pvs
 %%  keyData.pvs
@@ -22,7 +23,7 @@
 PermanentData[HV:TYPE+] : THEORY
   BEGIN
 
-  IMPORTING data[HV];
+  IMPORTING key[HV];
   
   PermData : TYPE = [#
     %% TPM_TAG_PERMANENT_DATA
