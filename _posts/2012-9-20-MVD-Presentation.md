@@ -1,10 +1,11 @@
 ---
 layout: blog
 category: blog
-titie: Up and going
+titie: MVD'12 Presentation
 ---
 
-ArmoredSoftware is officially up and going.  Our contract started
-October 29 and we are happily at work.  Check back for more details as
-we get our experimental cloud up and start sharing our system
-architecture.
+Brigid Halling presented initial results from our verification work at
+Midwestern Verification Day in Lawrence.  First presentation on this
+work went quite well.  MVD has no proceedings, so please check out one
+of our other papers on this topic for details.
+
