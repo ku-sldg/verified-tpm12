@@ -1,0 +1,1394 @@
+<html>
+<head>
+<title>TPM Structures and Commands</title>
+<style type="text/css">
+<!--
+body,td,th {
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: small;
+}
+-->
+</style>
+</head>
+<body>
+<h1>Command Bytes and Int Parameters</h1>
+<table border="1">
+	<tr>
+		<th scope="col">Sec</th>
+		<th scope="col">Command</th>
+		<th scope="col">In/out</th>
+		<th scope="col">Param Name</th>
+		<th scope="col">Param Type</th>
+		<th scope="col">Description</th>
+	</tr>
+	<tr valign="top">
+		<td>4.3</td>
+		<td>TPM_GetTestResult</td>
+		<td>out</td>
+		<td>outDataSize</td>
+		<td>UINT32</td>
+		<td>The size of the outData area</td>
+	</tr>
+	<tr valign="top">
+		<td>4.3</td>
+		<td>TPM_GetTestResult</td>
+		<td>out</td>
+		<td>outData</td>
+		<td>BYTE[]</td>
+		<td>The outData this is manufacturer specific</td>
+	</tr>
+	<tr valign="top">
+		<td>6.1</td>
+		<td>TPM_TakeOwnership</td>
+		<td>in</td>
+		<td>encOwnerAuthSize</td>
+		<td>UINT32</td>
+		<td>The size of the encOwnerAuth field</td>
+	</tr>
+	<tr valign="top">
+		<td>6.1</td>
+		<td>TPM_TakeOwnership</td>
+		<td>in</td>
+		<td>encOwnerAuth</td>
+		<td>BYTE[]</td>
+		<td>The owner AuthData encrypted with PUBEK</td>
+	</tr>
+	<tr valign="top">
+		<td>6.1</td>
+		<td>TPM_TakeOwnership</td>
+		<td>in</td>
+		<td>encSrkAuthSize</td>
+		<td>UINT32</td>
+		<td>The size of the encSrkAuth field</td>
+	</tr>
+	<tr valign="top">
+		<td>6.1</td>
+		<td>TPM_TakeOwnership</td>
+		<td>in</td>
+		<td>encSrkAuth</td>
+		<td>BYTE[]</td>
+		<td>The SRK AuthData encrypted with PUBEK</td>
+	</tr>
+	<tr valign="top">
+		<td>7.1</td>
+		<td>TPM_GetCapability</td>
+		<td>in</td>
+		<td>subCapSize</td>
+		<td>UINT32</td>
+		<td>Size of subCap parameter</td>
+	</tr>
+	<tr valign="top">
+		<td>7.1</td>
+		<td>TPM_GetCapability</td>
+		<td>in</td>
+		<td>subCap</td>
+		<td>BYTE[]</td>
+		<td>Further definition of information</td>
+	</tr>
+	<tr valign="top">
+		<td>7.1</td>
+		<td>TPM_GetCapability</td>
+		<td>out</td>
+		<td>respSize</td>
+		<td>UINT32</td>
+		<td>The length of the returned capability response</td>
+	</tr>
+	<tr valign="top">
+		<td>7.1</td>
+		<td>TPM_GetCapability</td>
+		<td>out</td>
+		<td>resp</td>
+		<td>BYTE[]</td>
+		<td>The capability response</td>
+	</tr>
+	<tr valign="top">
+		<td>7.2</td>
+		<td>TPM_SetCapability</td>
+		<td>in</td>
+		<td>subCapSize</td>
+		<td>UINT32</td>
+		<td>Size of subCap parameter</td>
+	</tr>
+	<tr valign="top">
+		<td>7.2</td>
+		<td>TPM_SetCapability</td>
+		<td>in</td>
+		<td>subCap</td>
+		<td>BYTE[]</td>
+		<td>Further definition of information</td>
+	</tr>
+	<tr valign="top">
+		<td>7.2</td>
+		<td>TPM_SetCapability</td>
+		<td>in</td>
+		<td>setValueSize</td>
+		<td>UINT32</td>
+		<td>The size of the value to set</td>
+	</tr>
+	<tr valign="top">
+		<td>7.2</td>
+		<td>TPM_SetCapability</td>
+		<td>in</td>
+		<td>setValue</td>
+		<td>BYTE[]</td>
+		<td>The value to set</td>
+	</tr>
+	<tr valign="top">
+		<td>7.3</td>
+		<td>TPM_GetCapabilityOwner</td>
+		<td>out</td>
+		<td>non_volatile_flags</td>
+		<td>UINT32</td>
+		<td>The current state of the non-volatile flags.</td>
+	</tr>
+	<tr valign="top">
+		<td>7.3</td>
+		<td>TPM_GetCapabilityOwner</td>
+		<td>out</td>
+		<td>volatile_flags</td>
+		<td>UINT32</td>
+		<td>The current state of the volatile flags.</td>
+	</tr>
+	<tr valign="top">
+		<td>8.3</td>
+		<td>TPM_GetAuditDigest</td>
+		<td>in</td>
+		<td>startOrdinal</td>
+		<td>UINT32</td>
+		<td>The starting ordinal for the list of audited ordinals</td>
+	</tr>
+	<tr valign="top">
+		<td>8.3</td>
+		<td>TPM_GetAuditDigest</td>
+		<td>out</td>
+		<td>ordSize</td>
+		<td>UINT32</td>
+		<td>Size of the ordinal list in bytes</td>
+	</tr>
+	<tr valign="top">
+		<td>8.3</td>
+		<td>TPM_GetAuditDigest</td>
+		<td>out</td>
+		<td>ordList</td>
+		<td>UINT32[]</td>
+		<td>List of ordinals that are audited.</td>
+	</tr>
+	<tr valign="top">
+		<td>8.4</td>
+		<td>TPM_GetAuditDigestSigned</td>
+		<td>out</td>
+		<td>sigSize</td>
+		<td>UINT32</td>
+		<td>The size of the sig parameter</td>
+	</tr>
+	<tr valign="top">
+		<td>8.4</td>
+		<td>TPM_GetAuditDigestSigned</td>
+		<td>out</td>
+		<td>sig</td>
+		<td>BYTE[]</td>
+		<td>The signature of the area</td>
+	</tr>
+	<tr valign="top">
+		<td>9.2</td>
+		<td>TPM_SetRedirection</td>
+		<td>in</td>
+		<td>inputDataSize</td>
+		<td>UINT32</td>
+		<td>The size of the input data</td>
+	</tr>
+	<tr valign="top">
+		<td>9.2</td>
+		<td>TPM_SetRedirection</td>
+		<td>in</td>
+		<td>inputData</td>
+		<td>BYTE</td>
+		<td>Manufacturer parameter</td>
+	</tr>
+	<tr valign="top">
+		<td>10.1</td>
+		<td>TPM_Seal</td>
+		<td>in</td>
+		<td>pcrInfoSize</td>
+		<td>UINT32</td>
+		<td>The size of the pcrInfo parameter. If 0 there are no PCR registers in use</td>
+	</tr>
+	<tr valign="top">
+		<td>10.1</td>
+		<td>TPM_Seal</td>
+		<td>in</td>
+		<td>inDataSize</td>
+		<td>UINT32</td>
+		<td>The size of the inData parameter</td>
+	</tr>
+	<tr valign="top">
+		<td>10.1</td>
+		<td>TPM_Seal</td>
+		<td>in</td>
+		<td>inData</td>
+		<td>BYTE[]</td>
+		<td>The data to be sealed to the platform and any specified PCRs</td>
+	</tr>
+	<tr valign="top">
+		<td>10.2</td>
+		<td>TPM_Unseal</td>
+		<td>out</td>
+		<td>secretSize</td>
+		<td>UINT32</td>
+		<td>The used size of the output area for secret</td>
+	</tr>
+	<tr valign="top">
+		<td>10.2</td>
+		<td>TPM_Unseal</td>
+		<td>out</td>
+		<td>secret</td>
+		<td>BYTE[]</td>
+		<td>Decrypted data that had been sealed</td>
+	</tr>
+	<tr valign="top">
+		<td>10.3</td>
+		<td>TPM_UnBind</td>
+		<td>in</td>
+		<td>inDataSize</td>
+		<td>UINT32</td>
+		<td>The size of the input blob</td>
+	</tr>
+	<tr valign="top">
+		<td>10.3</td>
+		<td>TPM_UnBind</td>
+		<td>in</td>
+		<td>inData</td>
+		<td>BYTE[]</td>
+		<td>Encrypted blob to be decrypted</td>
+	</tr>
+	<tr valign="top">
+		<td>10.3</td>
+		<td>TPM_UnBind</td>
+		<td>out</td>
+		<td>outDataSize</td>
+		<td>UINT32</td>
+		<td>The length of the returned decrypted data</td>
+	</tr>
+	<tr valign="top">
+		<td>10.3</td>
+		<td>TPM_UnBind</td>
+		<td>out</td>
+		<td>outData</td>
+		<td>BYTE[]</td>
+		<td>The resulting decrypted data.</td>
+	</tr>
+	<tr valign="top">
+		<td>10.7</td>
+		<td>TPM_Sealx</td>
+		<td>in</td>
+		<td>pcrInfoSize</td>
+		<td>UINT32</td>
+		<td>The size of the pcrInfo parameter. If 0 there are no PCR registers in use</td>
+	</tr>
+	<tr valign="top">
+		<td>10.7</td>
+		<td>TPM_Sealx</td>
+		<td>in</td>
+		<td>inDataSize</td>
+		<td>UINT32</td>
+		<td>The size of the inData parameter</td>
+	</tr>
+	<tr valign="top">
+		<td>10.7</td>
+		<td>TPM_Sealx</td>
+		<td>in</td>
+		<td>inData</td>
+		<td>BYTE[]</td>
+		<td>The data to be sealed to the platform and any specified PCRs</td>
+	</tr>
+	<tr valign="top">
+		<td>11.1</td>
+		<td>TPM_CreateMigrationBlob</td>
+		<td>in</td>
+		<td>encDataSize</td>
+		<td>UINT32</td>
+		<td>The size of the encData parameter</td>
+	</tr>
+	<tr valign="top">
+		<td>11.1</td>
+		<td>TPM_CreateMigrationBlob</td>
+		<td>in</td>
+		<td>encData</td>
+		<td>BYTE[]</td>
+		<td>The encrypted entity that is to be modified.</td>
+	</tr>
+	<tr valign="top">
+		<td>11.1</td>
+		<td>TPM_CreateMigrationBlob</td>
+		<td>out</td>
+		<td>randomSize</td>
+		<td>UINT32</td>
+		<td>The used size of the output area for random</td>
+	</tr>
+	<tr valign="top">
+		<td>11.1</td>
+		<td>TPM_CreateMigrationBlob</td>
+		<td>out</td>
+		<td>random</td>
+		<td>BYTE[]</td>
+		<td>String used for xor encryption</td>
+	</tr>
+	<tr valign="top">
+		<td>11.1</td>
+		<td>TPM_CreateMigrationBlob</td>
+		<td>out</td>
+		<td>outDataSize</td>
+		<td>UINT32</td>
+		<td>The used size of the output area for outData</td>
+	</tr>
+	<tr valign="top">
+		<td>11.1</td>
+		<td>TPM_CreateMigrationBlob</td>
+		<td>out</td>
+		<td>outData</td>
+		<td>BYTE[]</td>
+		<td>The modified, encrypted entity.</td>
+	</tr>
+	<tr valign="top">
+		<td>11.2</td>
+		<td>TPM_ConvertMigrationBlob</td>
+		<td>in</td>
+		<td>inDataSize</td>
+		<td>UINT32</td>
+		<td>Size of inData</td>
+	</tr>
+	<tr valign="top">
+		<td>11.2</td>
+		<td>TPM_ConvertMigrationBlob</td>
+		<td>in</td>
+		<td>[]</td>
+		<td>BYTE</td>
+		<td>inData The XORÕd and encrypted key</td>
+	</tr>
+	<tr valign="top">
+		<td>11.2</td>
+		<td>TPM_ConvertMigrationBlob</td>
+		<td>in</td>
+		<td>randomSize</td>
+		<td>UINT32</td>
+		<td>Size of random</td>
+	</tr>
+	<tr valign="top">
+		<td>11.2</td>
+		<td>TPM_ConvertMigrationBlob</td>
+		<td>in</td>
+		<td>[]</td>
+		<td>BYTE</td>
+		<td>random Random value used to hide key data.</td>
+	</tr>
+	<tr valign="top">
+		<td>11.2</td>
+		<td>TPM_ConvertMigrationBlob</td>
+		<td>out</td>
+		<td>outDataSize</td>
+		<td>UINT32</td>
+		<td>The used size of the output area for outData</td>
+	</tr>
+	<tr valign="top">
+		<td>11.2</td>
+		<td>TPM_ConvertMigrationBlob</td>
+		<td>out</td>
+		<td>outData</td>
+		<td>BYTE[]</td>
+		<td>The encrypted private key that can be loaded with TPM_LoadKey</td>
+	</tr>
+	<tr valign="top">
+		<td>11.4</td>
+		<td>TPM_MigrateKey</td>
+		<td>in</td>
+		<td>inDataSize</td>
+		<td>UINT32</td>
+		<td>The size of inData</td>
+	</tr>
+	<tr valign="top">
+		<td>11.4</td>
+		<td>TPM_MigrateKey</td>
+		<td>in</td>
+		<td>inData</td>
+		<td>BYTE[]</td>
+		<td>The input blob</td>
+	</tr>
+	<tr valign="top">
+		<td>11.4</td>
+		<td>TPM_MigrateKey</td>
+		<td>out</td>
+		<td>outDataSize</td>
+		<td>UINT32</td>
+		<td>The used size of the output area for outData</td>
+	</tr>
+	<tr valign="top">
+		<td>11.4</td>
+		<td>TPM_MigrateKey</td>
+		<td>out</td>
+		<td>outData</td>
+		<td>BYTE[]</td>
+		<td>The re-encrypted blob</td>
+	</tr>
+	<tr valign="top">
+		<td>11.8</td>
+		<td>TPM_CMK_CreateTicket</td>
+		<td>in</td>
+		<td>signatureValueSize</td>
+		<td>UINT32</td>
+		<td>The size of the signatureValue</td>
+	</tr>
+	<tr valign="top">
+		<td>11.8</td>
+		<td>TPM_CMK_CreateTicket</td>
+		<td>in</td>
+		<td>signatureValue</td>
+		<td>BYTE[]</td>
+		<td>The signatureValue to be verified</td>
+	</tr>
+	<tr valign="top">
+		<td>11.9</td>
+		<td>TPM_CMK_CreateBlob</td>
+		<td>in</td>
+		<td>msaListSize</td>
+		<td>UINT32</td>
+		<td>The size of the msaList parameter, which is a variable length TPM_MSA_COMPOSITE structure</td>
+	</tr>
+	<tr valign="top">
+		<td>11.9</td>
+		<td>TPM_CMK_CreateBlob</td>
+		<td>in</td>
+		<td>restrictTicketSize</td>
+		<td>UINT32</td>
+		<td>The size of the restrictTicket parameter</td>
+	</tr>
+	<tr valign="top">
+		<td>11.9</td>
+		<td>TPM_CMK_CreateBlob</td>
+		<td>in</td>
+		<td>restrictTicket</td>
+		<td>BYTE[]</td>
+		<td>If migrationType is TPM_MS_RESTRICT_APPROVE, a TPM_CMK_AUTH structure, containing the digests of the public keys belonging to the Migration Authority, the destination parent key and the key-to-be-migrated.</td>
+	</tr>
+	<tr valign="top">
+		<td>11.9</td>
+		<td>TPM_CMK_CreateBlob</td>
+		<td>in</td>
+		<td>sigTicketSize</td>
+		<td>UINT32</td>
+		<td>The size of the sigTicket parameter</td>
+	</tr>
+	<tr valign="top">
+		<td>11.9</td>
+		<td>TPM_CMK_CreateBlob</td>
+		<td>in</td>
+		<td>sigTicket</td>
+		<td>BYTE[]</td>
+		<td>If migrationType is TPM_MS_RESTRICT_APPROVE, a TPM_HMAC structure, generated by the TPM, signaling a valid signature over restrictTicket</td>
+	</tr>
+	<tr valign="top">
+		<td>11.9</td>
+		<td>TPM_CMK_CreateBlob</td>
+		<td>in</td>
+		<td>encDataSize</td>
+		<td>UINT32</td>
+		<td>The size of the encData parameter</td>
+	</tr>
+	<tr valign="top">
+		<td>11.9</td>
+		<td>TPM_CMK_CreateBlob</td>
+		<td>in</td>
+		<td>encData</td>
+		<td>BYTE[]</td>
+		<td>The encrypted entity that is to be modified.</td>
+	</tr>
+	<tr valign="top">
+		<td>11.9</td>
+		<td>TPM_CMK_CreateBlob</td>
+		<td>out</td>
+		<td>randomSize</td>
+		<td>UINT32</td>
+		<td>The used size of the output area for random</td>
+	</tr>
+	<tr valign="top">
+		<td>11.9</td>
+		<td>TPM_CMK_CreateBlob</td>
+		<td>out</td>
+		<td>random</td>
+		<td>BYTE[]</td>
+		<td>String used for xor encryption</td>
+	</tr>
+	<tr valign="top">
+		<td>11.9</td>
+		<td>TPM_CMK_CreateBlob</td>
+		<td>out</td>
+		<td>outDataSize</td>
+		<td>UINT32</td>
+		<td>The used size of the output area for outData</td>
+	</tr>
+	<tr valign="top">
+		<td>11.9</td>
+		<td>TPM_CMK_CreateBlob</td>
+		<td>out</td>
+		<td>outData</td>
+		<td>BYTE[]</td>
+		<td>The modified, encrypted entity.</td>
+	</tr>
+	<tr valign="top">
+		<td>11.10</td>
+		<td>TPM_CMK_ConvertMigration</td>
+		<td>in</td>
+		<td>msaListSize</td>
+		<td>UINT32</td>
+		<td>The size of the msaList parameter, which is a variable length TPM_MSA_COMPOSITE structure</td>
+	</tr>
+	<tr valign="top">
+		<td>11.10</td>
+		<td>TPM_CMK_ConvertMigration</td>
+		<td>in</td>
+		<td>randomSize</td>
+		<td>UINT32</td>
+		<td>Size of random</td>
+	</tr>
+	<tr valign="top">
+		<td>11.10</td>
+		<td>TPM_CMK_ConvertMigration</td>
+		<td>in</td>
+		<td>random</td>
+		<td>BYTE[]</td>
+		<td>Random value used to hide key data.</td>
+	</tr>
+	<tr valign="top">
+		<td>11.10</td>
+		<td>TPM_CMK_ConvertMigration</td>
+		<td>out</td>
+		<td>outDataSize</td>
+		<td>UINT32</td>
+		<td>The used size of the output area for outData</td>
+	</tr>
+	<tr valign="top">
+		<td>11.10</td>
+		<td>TPM_CMK_ConvertMigration</td>
+		<td>out</td>
+		<td>outData</td>
+		<td>BYTE[]</td>
+		<td>The encrypted private key that can be loaded with TPM_LoadKey</td>
+	</tr>
+	<tr valign="top">
+		<td>12.1</td>
+		<td>TPM_CreateMaintenanceArchive</td>
+		<td>out</td>
+		<td>randomSize</td>
+		<td>UINT32</td>
+		<td>Size of the returned random data. Will be 0 if generateRandom is FALSE.</td>
+	</tr>
+	<tr valign="top">
+		<td>12.1</td>
+		<td>TPM_CreateMaintenanceArchive</td>
+		<td>out</td>
+		<td>random</td>
+		<td>BYTE[]</td>
+		<td>Random data to XOR with result.</td>
+	</tr>
+	<tr valign="top">
+		<td>12.1</td>
+		<td>TPM_CreateMaintenanceArchive</td>
+		<td>out</td>
+		<td>archiveSize</td>
+		<td>UINT32</td>
+		<td>Size of the encrypted archive</td>
+	</tr>
+	<tr valign="top">
+		<td>12.1</td>
+		<td>TPM_CreateMaintenanceArchive</td>
+		<td>out</td>
+		<td>archive</td>
+		<td>BYTE[]</td>
+		<td>Encrypted key archive.</td>
+	</tr>
+	<tr valign="top">
+		<td>12.2</td>
+		<td>TPM_LoadMaintenanceArchive</td>
+		<td>in</td>
+		<td>archiveSize</td>
+		<td>UINT32</td>
+		<td>Sice of the encrypted archive</td>
+	</tr>
+	<tr valign="top">
+		<td>12.2</td>
+		<td>TPM_LoadMaintenanceArchive</td>
+		<td>in</td>
+		<td>archive</td>
+		<td>BYTE[]</td>
+		<td>Encrypted key archive</td>
+	</tr>
+	<tr valign="top">
+		<td>13.1</td>
+		<td>TPM_SHA1Start</td>
+		<td>out</td>
+		<td>maxNumBytes</td>
+		<td>UINT32</td>
+		<td>Maximum number of bytes that can be sent to TPM_SHA1Update. Must be a multiple of 64 bytes.</td>
+	</tr>
+	<tr valign="top">
+		<td>13.2</td>
+		<td>TPM_SHA1Update</td>
+		<td>in</td>
+		<td>numBytes</td>
+		<td>UINT32</td>
+		<td>The number of bytes in hashData. Must be a multiple of 64 bytes.</td>
+	</tr>
+	<tr valign="top">
+		<td>13.2</td>
+		<td>TPM_SHA1Update</td>
+		<td>in</td>
+		<td>[]</td>
+		<td>BYTE</td>
+		<td>hashData Bytes to be hashed</td>
+	</tr>
+	<tr valign="top">
+		<td>13.3</td>
+		<td>TPM_SHA1Complete</td>
+		<td>in</td>
+		<td>hashDataSize</td>
+		<td>UINT32</td>
+		<td>Number of bytes in hashData, MUST be 64 or less</td>
+	</tr>
+	<tr valign="top">
+		<td>13.3</td>
+		<td>TPM_SHA1Complete</td>
+		<td>in</td>
+		<td>[]</td>
+		<td>BYTE</td>
+		<td>hashData Final bytes to be hashed</td>
+	</tr>
+	<tr valign="top">
+		<td>13.4</td>
+		<td>TPM_SHA1CompleteExtend</td>
+		<td>in</td>
+		<td>hashDataSize</td>
+		<td>UINT32</td>
+		<td>Number of bytes in hashData, MUST be 64 or less</td>
+	</tr>
+	<tr valign="top">
+		<td>13.4</td>
+		<td>TPM_SHA1CompleteExtend</td>
+		<td>in</td>
+		<td>[]</td>
+		<td>BYTE</td>
+		<td>hashData Final bytes to be hashed</td>
+	</tr>
+	<tr valign="top">
+		<td>13.5</td>
+		<td>TPM_Sign</td>
+		<td>in</td>
+		<td>areaToSignSize</td>
+		<td>UINT32</td>
+		<td>The size of the areaToSign parameter</td>
+	</tr>
+	<tr valign="top">
+		<td>13.5</td>
+		<td>TPM_Sign</td>
+		<td>in</td>
+		<td>areaToSign</td>
+		<td>BYTE[]</td>
+		<td>The value to sign</td>
+	</tr>
+	<tr valign="top">
+		<td>13.5</td>
+		<td>TPM_Sign</td>
+		<td>out</td>
+		<td>sigSize</td>
+		<td>UINT32</td>
+		<td>The length of the returned digital signature</td>
+	</tr>
+	<tr valign="top">
+		<td>13.5</td>
+		<td>TPM_Sign</td>
+		<td>out</td>
+		<td>sig</td>
+		<td>BYTE[]</td>
+		<td>The resulting digital signature.</td>
+	</tr>
+	<tr valign="top">
+		<td>13.6</td>
+		<td>TPM_GetRandom</td>
+		<td>in</td>
+		<td>bytesRequested</td>
+		<td>UINT32</td>
+		<td>Number of bytes to return</td>
+	</tr>
+	<tr valign="top">
+		<td>13.6</td>
+		<td>TPM_GetRandom</td>
+		<td>out</td>
+		<td>randomBytesSize</td>
+		<td>UINT32</td>
+		<td>The number of bytes returned</td>
+	</tr>
+	<tr valign="top">
+		<td>13.6</td>
+		<td>TPM_GetRandom</td>
+		<td>out</td>
+		<td>randomBytes</td>
+		<td>BYTE[]</td>
+		<td>The returned bytes</td>
+	</tr>
+	<tr valign="top">
+		<td>13.7</td>
+		<td>TPM_StirRandom</td>
+		<td>in</td>
+		<td>dataSize</td>
+		<td>UINT32</td>
+		<td>Number of bytes of input</td>
+	</tr>
+	<tr valign="top">
+		<td>13.7</td>
+		<td>TPM_StirRandom</td>
+		<td>in</td>
+		<td>inData</td>
+		<td>BYTE[]</td>
+		<td>Data to add entropy to RNG state</td>
+	</tr>
+	<tr valign="top">
+		<td>13.8</td>
+		<td>TPM_CertifyKey</td>
+		<td>out</td>
+		<td>outDataSize</td>
+		<td>UINT32</td>
+		<td>The used size of the output area for outData</td>
+	</tr>
+	<tr valign="top">
+		<td>13.8</td>
+		<td>TPM_CertifyKey</td>
+		<td>out</td>
+		<td>outData</td>
+		<td>BYTE[]</td>
+		<td>The signature of certifyInfo</td>
+	</tr>
+	<tr valign="top">
+		<td>13.9</td>
+		<td>TPM_CertifyKey2</td>
+		<td>out</td>
+		<td>outDataSize</td>
+		<td>UINT32</td>
+		<td>The used size of the output area for outData</td>
+	</tr>
+	<tr valign="top">
+		<td>13.9</td>
+		<td>TPM_CertifyKey2</td>
+		<td>out</td>
+		<td>outData</td>
+		<td>BYTE[]</td>
+		<td>The signed public key.</td>
+	</tr>
+	<tr valign="top">
+		<td>15.1</td>
+		<td>TPM_MakeIdentity</td>
+		<td>out</td>
+		<td>identityBindingSize</td>
+		<td>UINT32</td>
+		<td>The used size of the output area for identityBinding</td>
+	</tr>
+	<tr valign="top">
+		<td>15.1</td>
+		<td>TPM_MakeIdentity</td>
+		<td>out</td>
+		<td>identityBinding</td>
+		<td>BYTE[]</td>
+		<td>Signature of TPM_IDENTITY_CONTENTS using idKey.private.</td>
+	</tr>
+	<tr valign="top">
+		<td>15.2</td>
+		<td>TPM_ActivateIdentity</td>
+		<td>in</td>
+		<td>blobSize</td>
+		<td>UINT32</td>
+		<td>Size of encrypted blob from CA</td>
+	</tr>
+	<tr valign="top">
+		<td>15.2</td>
+		<td>TPM_ActivateIdentity</td>
+		<td>in</td>
+		<td>blob</td>
+		<td>BYTE[]</td>
+		<td>The encrypted ASYM_CA_CONTENTS or TPM_EK_BLOB</td>
+	</tr>
+	<tr valign="top">
+		<td>16.3</td>
+		<td>TPM_Quote</td>
+		<td>out</td>
+		<td>sigSize</td>
+		<td>UINT32</td>
+		<td>The used size of the output area for the signature</td>
+	</tr>
+	<tr valign="top">
+		<td>16.3</td>
+		<td>TPM_Quote</td>
+		<td>out</td>
+		<td>sig</td>
+		<td>BYTE[]</td>
+		<td>The signed data blob.</td>
+	</tr>
+	<tr valign="top">
+		<td>16.5</td>
+		<td>TPM_Quote2</td>
+		<td>out</td>
+		<td>versionInfoSize</td>
+		<td>UINT32</td>
+		<td>Size of the version info</td>
+	</tr>
+	<tr valign="top">
+		<td>16.5</td>
+		<td>TPM_Quote2</td>
+		<td>out</td>
+		<td>sigSize</td>
+		<td>UINT32</td>
+		<td>The used size of the output area for the signature</td>
+	</tr>
+	<tr valign="top">
+		<td>16.5</td>
+		<td>TPM_Quote2</td>
+		<td>out</td>
+		<td>sig</td>
+		<td>BYTE[]</td>
+		<td>The signed data blob.</td>
+	</tr>
+	<tr valign="top">
+		<td>17.1</td>
+		<td>TPM_ChangeAuth</td>
+		<td>in</td>
+		<td>encDataSize</td>
+		<td>UINT32</td>
+		<td>The size of the encData parameter</td>
+	</tr>
+	<tr valign="top">
+		<td>17.1</td>
+		<td>TPM_ChangeAuth</td>
+		<td>in</td>
+		<td>encData</td>
+		<td>BYTE[]</td>
+		<td>The encrypted entity that is to be modified.</td>
+	</tr>
+	<tr valign="top">
+		<td>17.1</td>
+		<td>TPM_ChangeAuth</td>
+		<td>out</td>
+		<td>outDataSize</td>
+		<td>UINT32</td>
+		<td>The used size of the output area for outData</td>
+	</tr>
+	<tr valign="top">
+		<td>17.1</td>
+		<td>TPM_ChangeAuth</td>
+		<td>out</td>
+		<td>outData</td>
+		<td>BYTE[]</td>
+		<td>The modified, encrypted entity.</td>
+	</tr>
+	<tr valign="top">
+		<td>18.2</td>
+		<td>TPM_OSAP</td>
+		<td>in</td>
+		<td>entityValue</td>
+		<td>UINT32</td>
+		<td>The selection value based on entityType, e.g. a keyHandle #</td>
+	</tr>
+	<tr valign="top">
+		<td>18.3</td>
+		<td>TPM_DSAP</td>
+		<td>in</td>
+		<td>entityValueSize</td>
+		<td>UINT32</td>
+		<td>The size of entityValue.</td>
+	</tr>
+	<tr valign="top">
+		<td>18.3</td>
+		<td>TPM_DSAP</td>
+		<td>in</td>
+		<td>entityValue</td>
+		<td>BYTE[]</td>
+		<td>TPM_DELEGATE_KEY_BLOB or TPM_DELEGATE_OWNER_BLOB or index MUST not be empty If entityType is TPM_ET_DEL_ROW then entityValue is a TPM_DELEGATE_INDEX</td>
+	</tr>
+	<tr valign="top">
+		<td>18.4</td>
+		<td>TPM_SetOwnerPointer</td>
+		<td>in</td>
+		<td>entityValue</td>
+		<td>UINT32</td>
+		<td>The selection value based on entityType</td>
+	</tr>
+	<tr valign="top">
+		<td>19.1</td>
+		<td>TPM_Delegate_Manage</td>
+		<td>in</td>
+		<td>opDataSize</td>
+		<td>UINT32</td>
+		<td>Size in bytes of opData</td>
+	</tr>
+	<tr valign="top">
+		<td>19.1</td>
+		<td>TPM_Delegate_Manage</td>
+		<td>in</td>
+		<td>opData</td>
+		<td>BYTE[]</td>
+		<td>Data necessary to implement opCode</td>
+	</tr>
+	<tr valign="top">
+		<td>19.1</td>
+		<td>TPM_Delegate_Manage</td>
+		<td>out</td>
+		<td>retDataSize</td>
+		<td>UINT32</td>
+		<td>Size in bytes of retData</td>
+	</tr>
+	<tr valign="top">
+		<td>19.1</td>
+		<td>TPM_Delegate_Manage</td>
+		<td>out</td>
+		<td>retData</td>
+		<td>BYTE[]</td>
+		<td>Returned data</td>
+	</tr>
+	<tr valign="top">
+		<td>19.2</td>
+		<td>TPM_Delegate_CreateKeyDelegation</td>
+		<td>out</td>
+		<td>blobSize</td>
+		<td>UINT32</td>
+		<td>The length of the returned blob</td>
+	</tr>
+	<tr valign="top">
+		<td>19.3</td>
+		<td>TPM_Delegate_CreateOwnerDelegation</td>
+		<td>out</td>
+		<td>blobSize</td>
+		<td>UINT32</td>
+		<td>The length of the returned blob</td>
+	</tr>
+	<tr valign="top">
+		<td>19.4</td>
+		<td>TPM_Delegate_LoadOwnerDelegation</td>
+		<td>in</td>
+		<td>blobSize</td>
+		<td>UINT32</td>
+		<td>The size of the delegate blob</td>
+	</tr>
+	<tr valign="top">
+		<td>19.5</td>
+		<td>TPM_Delegate_ReadTable</td>
+		<td>out</td>
+		<td>familyTableSize</td>
+		<td>UINT32</td>
+		<td>Size in bytes of familyTable</td>
+	</tr>
+	<tr valign="top">
+		<td>19.5</td>
+		<td>TPM_Delegate_ReadTable</td>
+		<td>out</td>
+		<td>familyTable</td>
+		<td>BYTE[]</td>
+		<td>Array of TPM_FAMILY_TABLE_ENTRY elements</td>
+	</tr>
+	<tr valign="top">
+		<td>19.5</td>
+		<td>TPM_Delegate_ReadTable</td>
+		<td>out</td>
+		<td>delegateTableSize</td>
+		<td>UINT32</td>
+		<td>Size in bytes of delegateTable</td>
+	</tr>
+	<tr valign="top">
+		<td>19.5</td>
+		<td>TPM_Delegate_ReadTable</td>
+		<td>out</td>
+		<td>delegateTable</td>
+		<td>BYTE[]</td>
+		<td>Array of TPM_DELEGATE_INDEX and TPM_DELEGATE_PUBLIC elements</td>
+	</tr>
+	<tr valign="top">
+		<td>19.6</td>
+		<td>TPM_Delegate_UpdateVerification</td>
+		<td>in</td>
+		<td>inputSize</td>
+		<td>UINT32</td>
+		<td>The size of inputData</td>
+	</tr>
+	<tr valign="top">
+		<td>19.6</td>
+		<td>TPM_Delegate_UpdateVerification</td>
+		<td>in</td>
+		<td>inputData</td>
+		<td>BYTE</td>
+		<td>TPM_DELEGATE_KEY_BLOB or TPM_DELEGATE_OWNER_BLOB or TPM_DELEGATE_INDEX</td>
+	</tr>
+	<tr valign="top">
+		<td>19.6</td>
+		<td>TPM_Delegate_UpdateVerification</td>
+		<td>out</td>
+		<td>outputSize</td>
+		<td>UINT32</td>
+		<td>The size of the output</td>
+	</tr>
+	<tr valign="top">
+		<td>19.6</td>
+		<td>TPM_Delegate_UpdateVerification</td>
+		<td>out</td>
+		<td>outputData</td>
+		<td>BYTE</td>
+		<td>TPM_DELEGATE_KEY_BLOB or TPM_DELEGATE_OWNER_BLOB</td>
+	</tr>
+	<tr valign="top">
+		<td>19.7</td>
+		<td>TPM_Delegate_VerifyDelegation</td>
+		<td>in</td>
+		<td>delegationSize</td>
+		<td>UINT32</td>
+		<td>The length of the delegated information blob</td>
+	</tr>
+	<tr valign="top">
+		<td>19.7</td>
+		<td>TPM_Delegate_VerifyDelegation</td>
+		<td>in</td>
+		<td>delegation</td>
+		<td>BYTE[]</td>
+		<td>TPM_DELEGATE_KEY_BLOB or TPM_DELEGATE_OWNER_BLOB</td>
+	</tr>
+	<tr valign="top">
+		<td>20.2</td>
+		<td>TPM_NV_WriteValue</td>
+		<td>in</td>
+		<td>offset</td>
+		<td>UINT32</td>
+		<td>The offset into the NV Area</td>
+	</tr>
+	<tr valign="top">
+		<td>20.2</td>
+		<td>TPM_NV_WriteValue</td>
+		<td>in</td>
+		<td>dataSize</td>
+		<td>UINT32</td>
+		<td>The size of the data parameter</td>
+	</tr>
+	<tr valign="top">
+		<td>20.2</td>
+		<td>TPM_NV_WriteValue</td>
+		<td>in</td>
+		<td>data</td>
+		<td>BYTE</td>
+		<td>The data to set the area to</td>
+	</tr>
+	<tr valign="top">
+		<td></td>
+		<td>TPM_NV_WriteValueAuth</td>
+		<td>in</td>
+		<td>offset</td>
+		<td>UINT32</td>
+		<td>The offset into the chunk</td>
+	</tr>
+	<tr valign="top">
+		<td></td>
+		<td>TPM_NV_WriteValueAuth</td>
+		<td>in</td>
+		<td>dataSize</td>
+		<td>UINT32</td>
+		<td>The size of the data area</td>
+	</tr>
+	<tr valign="top">
+		<td></td>
+		<td>TPM_NV_WriteValueAuth</td>
+		<td>in</td>
+		<td>data</td>
+		<td>BYTE</td>
+		<td>The data to set the area to</td>
+	</tr>
+	<tr valign="top">
+		<td></td>
+		<td>TPM_NV_ReadValue</td>
+		<td>in</td>
+		<td>offset</td>
+		<td>UINT32</td>
+		<td>The offset into the area</td>
+	</tr>
+	<tr valign="top">
+		<td></td>
+		<td>TPM_NV_ReadValue</td>
+		<td>in</td>
+		<td>dataSize</td>
+		<td>UINT32</td>
+		<td>The size of the data area</td>
+	</tr>
+	<tr valign="top">
+		<td></td>
+		<td>TPM_NV_ReadValue</td>
+		<td>out</td>
+		<td>dataSize</td>
+		<td>UINT32</td>
+		<td>The size of the data area</td>
+	</tr>
+	<tr valign="top">
+		<td></td>
+		<td>TPM_NV_ReadValue</td>
+		<td>out</td>
+		<td>data</td>
+		<td>BYTE</td>
+		<td>The data to set the area to</td>
+	</tr>
+	<tr valign="top">
+		<td>20.5</td>
+		<td>TPM_NV_ReadValueAuth</td>
+		<td>in</td>
+		<td>dataSize</td>
+		<td>UINT32</td>
+		<td>The size of the data area</td>
+	</tr>
+	<tr valign="top">
+		<td>20.5</td>
+		<td>TPM_NV_ReadValueAuth</td>
+		<td>out</td>
+		<td>dataSize</td>
+		<td>UINT32</td>
+		<td>The size of the data area</td>
+	</tr>
+	<tr valign="top">
+		<td>20.5</td>
+		<td>TPM_NV_ReadValueAuth</td>
+		<td>out</td>
+		<td>data</td>
+		<td>BYTE</td>
+		<td>The data</td>
+	</tr>
+	<tr valign="top">
+		<td>21.3</td>
+		<td>TPM_SaveContext</td>
+		<td>in</td>
+		<td>label</td>
+		<td>BYTE[16]</td>
+		<td>Label for identification purposes</td>
+	</tr>
+	<tr valign="top">
+		<td>21.3</td>
+		<td>TPM_SaveContext</td>
+		<td>out</td>
+		<td>contextSize</td>
+		<td>UINT32</td>
+		<td>The actual size of the outgoing context blob</td>
+	</tr>
+	<tr valign="top">
+		<td>21.3</td>
+		<td>TPM_LoadContext</td>
+		<td>in</td>
+		<td>contextSize</td>
+		<td>UINT32</td>
+		<td>The size of the following context blob.</td>
+	</tr>
+	<tr valign="top">
+		<td>23.2</td>
+		<td>TPM_TickStampBlob</td>
+		<td>out</td>
+		<td>sigSize</td>
+		<td>UINT32</td>
+		<td>The length of the returned digital signature</td>
+	</tr>
+	<tr valign="top">
+		<td>23.2</td>
+		<td>TPM_TickStampBlob</td>
+		<td>out</td>
+		<td>sig</td>
+		<td>BYTE[]</td>
+		<td>The resulting digital signature.</td>
+	</tr>
+	<tr valign="top">
+		<td>24.1</td>
+		<td>TPM_EstablishTransport</td>
+		<td>in</td>
+		<td>secretSize</td>
+		<td>UINT32</td>
+		<td>The size of the secret Area</td>
+	</tr>
+	<tr valign="top">
+		<td>24.1</td>
+		<td>TPM_EstablishTransport</td>
+		<td>in</td>
+		<td>secret</td>
+		<td>BYTE[]</td>
+		<td>The encrypted secret area</td>
+	</tr>
+	<tr valign="top">
+		<td>24.2</td>
+		<td>TPM_ExecuteTransport</td>
+		<td>in</td>
+		<td>wrappedCmdSize</td>
+		<td>UINT32</td>
+		<td>Size of the wrapped command</td>
+	</tr>
+	<tr valign="top">
+		<td>24.2</td>
+		<td>TPM_ExecuteTransport</td>
+		<td>in</td>
+		<td>wrappedCmd</td>
+		<td>BYTE[]</td>
+		<td>The wrapped command</td>
+	</tr>
+	<tr valign="top">
+		<td>24.2</td>
+		<td>TPM_ExecuteTransport</td>
+		<td>out</td>
+		<td>currentTicks</td>
+		<td>UINT64</td>
+		<td>The current ticks when the command was executed</td>
+	</tr>
+	<tr valign="top">
+		<td>24.2</td>
+		<td>TPM_ExecuteTransport</td>
+		<td>out</td>
+		<td>wrappedRspSize</td>
+		<td>UINT32</td>
+		<td>Size of the wrapped response</td>
+	</tr>
+	<tr valign="top">
+		<td>24.2</td>
+		<td>TPM_ExecuteTransport</td>
+		<td>out</td>
+		<td>wrappedRsp</td>
+		<td>BYTE[]</td>
+		<td>The wrapped response</td>
+	</tr>
+	<tr valign="top">
+		<td>24.3</td>
+		<td>TPM_ReleaseTransportSigned</td>
+		<td>out</td>
+		<td>signSize</td>
+		<td>UINT32</td>
+		<td>The size of the signature area</td>
+	</tr>
+	<tr valign="top">
+		<td>24.3</td>
+		<td>TPM_ReleaseTransportSigned</td>
+		<td>out</td>
+		<td>signature</td>
+		<td>BYTE[]</td>
+		<td>The signature of the digest</td>
+	</tr>
+	<tr valign="top">
+		<td>25.1</td>
+		<td>TPM_CreateCounter</td>
+		<td>in</td>
+		<td>label</td>
+		<td>BYTE</td>
+		<td>Label to associate with counter</td>
+	</tr>
+	<tr valign="top">
+		<td>26.1</td>
+		<td>TPM_DAA_Join</td>
+		<td>in</td>
+		<td>stage</td>
+		<td>BYTE</td>
+		<td>Processing stage of join</td>
+	</tr>
+	<tr valign="top">
+		<td>26.1</td>
+		<td>TPM_DAA_Join</td>
+		<td>in</td>
+		<td>inputSize0</td>
+		<td>UINT32</td>
+		<td>Size of inputData0 for this stage of JOIN</td>
+	</tr>
+	<tr valign="top">
+		<td>26.1</td>
+		<td>TPM_DAA_Join</td>
+		<td>in</td>
+		<td>inputData0</td>
+		<td>BYTE[]</td>
+		<td>Data to be used by this capability</td>
+	</tr>
+	<tr valign="top">
+		<td>26.1</td>
+		<td>TPM_DAA_Join</td>
+		<td>in</td>
+		<td>inputSize1</td>
+		<td>UINT32</td>
+		<td>Size of inputData1 for this stage of JOIN</td>
+	</tr>
+	<tr valign="top">
+		<td>26.1</td>
+		<td>TPM_DAA_Join</td>
+		<td>in</td>
+		<td>inputData1</td>
+		<td>BYTE[]</td>
+		<td>Data to be used by this capability</td>
+	</tr>
+	<tr valign="top">
+		<td>26.1</td>
+		<td>TPM_DAA_Join</td>
+		<td>out</td>
+		<td>outputSize</td>
+		<td>UINT32</td>
+		<td>Size of outputData</td>
+	</tr>
+	<tr valign="top">
+		<td>26.1</td>
+		<td>TPM_DAA_Join</td>
+		<td>out</td>
+		<td>outputData</td>
+		<td>BYTE[]</td>
+		<td>Data produced by this capability</td>
+	</tr>
+	<tr valign="top">
+		<td>26.2</td>
+		<td>TPM_DAA_Sign</td>
+		<td>in</td>
+		<td>stage</td>
+		<td>BYTE</td>
+		<td>Stage of the sign process</td>
+	</tr>
+	<tr valign="top">
+		<td>26.2</td>
+		<td>TPM_DAA_Sign</td>
+		<td>in</td>
+		<td>inputSize0</td>
+		<td>UINT32</td>
+		<td>Size of inputData0 for this stage of DAA_Sign</td>
+	</tr>
+	<tr valign="top">
+		<td>26.2</td>
+		<td>TPM_DAA_Sign</td>
+		<td>in</td>
+		<td>inputData0</td>
+		<td>BYTE[]</td>
+		<td>Data to be used by this capability</td>
+	</tr>
+	<tr valign="top">
+		<td>26.2</td>
+		<td>TPM_DAA_Sign</td>
+		<td>in</td>
+		<td>inputSize1</td>
+		<td>UINT32</td>
+		<td>Size of inputData1 for this stage of DAA_Sign</td>
+	</tr>
+	<tr valign="top">
+		<td>26.2</td>
+		<td>TPM_DAA_Sign</td>
+		<td>in</td>
+		<td>inputData1</td>
+		<td>BYTE[]</td>
+		<td>Data to be used by this capability</td>
+	</tr>
+	<tr valign="top">
+		<td>26.2</td>
+		<td>TPM_DAA_Sign</td>
+		<td>out</td>
+		<td>outputSize</td>
+		<td>UINT32</td>
+		<td>Size of outputData</td>
+	</tr>
+	<tr valign="top">
+		<td>26.2</td>
+		<td>TPM_DAA_Sign</td>
+		<td>out</td>
+		<td>outputData</td>
+		<td>BYTE[]</td>
+		<td>Data produced by this capability</td>
+	</tr>
+</table>
+</body>
+</html>

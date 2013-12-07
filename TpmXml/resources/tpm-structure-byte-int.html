@@ -1,0 +1,1075 @@
+<html>
+<head>
+<title>TPM Structures and Commands</title>
+<style type="text/css">
+<!--
+body,td,th {
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: small;
+}
+-->
+</style>
+</head>
+<body>
+<h1>Structure Byte and Int Parameters</h1>
+<table border="1">
+	<tr>
+		<th scope="col">Sec</th>
+		<th scope="col">Structure</th>
+		<th scope="col">Field Name</th>
+		<th scope="col">Field Type</th>
+		<th scope="col">Description</th>
+	</tr>
+	<tr valign="top">
+		<td>5.1</td>
+		<td>TPM_STRUCT_VER</td>
+		<td>major</td>
+		<td>BYTE</td>
+		<td>This SHALL indicate the major version of the structure. MUST be 0x01</td>
+	</tr>
+	<tr valign="top">
+		<td>5.1</td>
+		<td>TPM_STRUCT_VER</td>
+		<td>minor</td>
+		<td>BYTE</td>
+		<td>This SHALL indicate the minor version of the structure. MUST be 0x01</td>
+	</tr>
+	<tr valign="top">
+		<td>5.1</td>
+		<td>TPM_STRUCT_VER</td>
+		<td>revMajor</td>
+		<td>BYTE</td>
+		<td>This MUST be 0x00 on output, ignored on input</td>
+	</tr>
+	<tr valign="top">
+		<td>5.1</td>
+		<td>TPM_STRUCT_VER</td>
+		<td>revMinor</td>
+		<td>BYTE</td>
+		<td>This MUST be 0x00 on output, ignored on input</td>
+	</tr>
+	<tr valign="top">
+		<td>5.3</td>
+		<td>TPM_VERSION</td>
+		<td>revMajor</td>
+		<td>BYTE</td>
+		<td>This SHALL be the value of the TPM_PERMANENT_DATA -> revMajor</td>
+	</tr>
+	<tr valign="top">
+		<td>5.3</td>
+		<td>TPM_VERSION</td>
+		<td>revMinor</td>
+		<td>BYTE</td>
+		<td>This SHALL be the value of the TPM_PERMANENT_DATA -> revMinor</td>
+	</tr>
+	<tr valign="top">
+		<td>5.4</td>
+		<td>TPM_DIGEST</td>
+		<td>digest</td>
+		<td>BYTE[]</td>
+		<td>This SHALL be the actual digest information</td>
+	</tr>
+	<tr valign="top">
+		<td>5.5</td>
+		<td>TPM_NONCE</td>
+		<td>Nonce</td>
+		<td>BYTE[20]</td>
+		<td>This SHALL be the 20 bytes of random data. When created by the TPM the value MUST be the next 20 bytes from the RNG.</td>
+	</tr>
+	<tr valign="top">
+		<td>5.7</td>
+		<td>TPM_KEY_HANDLE_LIST</td>
+		<td>loaded</td>
+		<td>UINT16</td>
+		<td>The number of keys currently loaded in the TPM.</td>
+	</tr>
+	<tr valign="top">
+		<td>5.7</td>
+		<td>TPM_KEY_HANDLE_LIST</td>
+		<td>handle</td>
+		<td>UINT32</td>
+		<td>An array of handles, one for each key currently loaded in the TPM</td>
+	</tr>
+	<tr valign="top">
+		<td>5.13</td>
+		<td>TPM_COUNTER_VALUE</td>
+		<td>label</td>
+		<td>BYTE[4]</td>
+		<td>The label for the counter</td>
+	</tr>
+	<tr valign="top">
+		<td>5.14</td>
+		<td>TPM_SIGN_INFO</td>
+		<td>fixed</td>
+		<td>BYTE[4]</td>
+		<td>The ASCII text that identifies what function was performing the signing operation</td>
+	</tr>
+	<tr valign="top">
+		<td>5.14</td>
+		<td>TPM_SIGN_INFO</td>
+		<td>dataLen</td>
+		<td>UINT32</td>
+		<td>The length of the data area</td>
+	</tr>
+	<tr valign="top">
+		<td>5.14</td>
+		<td>TPM_SIGN_INFO</td>
+		<td>data</td>
+		<td>BYTE*</td>
+		<td>The data that is being signed</td>
+	</tr>
+	<tr valign="top">
+		<td>5.15</td>
+		<td>TPM_MSA_COMPOSITE</td>
+		<td>MSAlist</td>
+		<td>UINT32</td>
+		<td>The number of migAuthDigests. MSAlist MUST be one (1) or greater.</td>
+	</tr>
+	<tr valign="top">
+		<td>5.18</td>
+		<td>TPM_SELECT_SIZE</td>
+		<td>Major</td>
+		<td>BYTE</td>
+		<td>This SHALL indicate the major version of the TPM. This MUST be 0x01</td>
+	</tr>
+	<tr valign="top">
+		<td>5.18</td>
+		<td>TPM_SELECT_SIZE</td>
+		<td>Minor</td>
+		<td>BYTE</td>
+		<td>This SHALL indicate the minor version of the TPM. This MAY be 0x01 or 0x02</td>
+	</tr>
+	<tr valign="top">
+		<td>5.18</td>
+		<td>TPM_SELECT_SIZE</td>
+		<td>reqSize</td>
+		<td>UINT16</td>
+		<td>This SHALL indicate the value for a sizeOfSelect field in the TPM_SELECTION structure</td>
+	</tr>
+	<tr valign="top">
+		<td>7.4</td>
+		<td>TPM_PERMANENT_DATA</td>
+		<td>revMajor</td>
+		<td>BYTE</td>
+		<td>This is the TPM major revision indicator. This SHALL be set by the TPME, only. The default value is manufacturer-specific.</td>
+	</tr>
+	<tr valign="top">
+		<td>7.4</td>
+		<td>TPM_PERMANENT_DATA</td>
+		<td>revMinor</td>
+		<td>BYTE</td>
+		<td>This is the TPM minor revision indicator. This SHALL be set by the TPME, only. The default value is manufacturer-specific.</td>
+	</tr>
+	<tr valign="top">
+		<td>7.4</td>
+		<td>TPM_PERMANENT_DATA</td>
+		<td>ordinalAuditStatus</td>
+		<td>BYTE[]</td>
+		<td>Table indicating which ordinals are being audited.</td>
+	</tr>
+	<tr valign="top">
+		<td>7.4</td>
+		<td>TPM_PERMANENT_DATA</td>
+		<td>rngState</td>
+		<td>BYTE[]</td>
+		<td>State information describing the random number generator.</td>
+	</tr>
+	<tr valign="top">
+		<td>7.4</td>
+		<td>TPM_PERMANENT_DATA</td>
+		<td>lastFamilyID</td>
+		<td>UINT32</td>
+		<td>--</td>
+	</tr>
+	<tr valign="top">
+		<td>7.4</td>
+		<td>TPM_PERMANENT_DATA</td>
+		<td>noOwnerNVWrite</td>
+		<td>UINT32</td>
+		<td>--</td>
+	</tr>
+	<tr valign="top">
+		<td>7.5</td>
+		<td>TPM_STCLEAR_DATA</td>
+		<td>ownerReference</td>
+		<td>UINT32</td>
+		<td>Points to where to obtain the owner secret in OIAP and OSAP commands. This allows a TSS to manage 1.1 applications on a 1.2 TPM where delegation is in operation. Default value is TPM_KH_OWNER.</td>
+	</tr>
+	<tr valign="top">
+		<td>7.5</td>
+		<td>TPM_STCLEAR_DATA</td>
+		<td>deferredPhysicalPresence</td>
+		<td>UINT32</td>
+		<td>The value can save the assertion of physicalPresence. Individual bits indicate to its ordinal that physicalPresence was previously asserted when the software state is such that it can no longer be asserted. Set to zero on each TPM_Startup(ST_Clear).</td>
+	</tr>
+	<tr valign="top">
+		<td>7.6</td>
+		<td>TPM_STANY_DATA</td>
+		<td>contextCount</td>
+		<td>UINT32</td>
+		<td>This is the counter to avoid session context blob replay attacks. This MUST be set to 0 on each TPM_Startup (ST_Clear). The value MAY be set to 0 on TPM_Startup (any).</td>
+	</tr>
+	<tr valign="top">
+		<td>7.6</td>
+		<td>TPM_STANY_DATA</td>
+		<td>contextList</td>
+		<td>UINT32</td>
+		<td>This is the list of outstanding session blobs. All elements of this array MUST be set to 0 on each TPM_Startup (ST_Clear). The values MAY be set to 0 on TPM_Startup (any). TPM_MIN_SESSION_LIST MUST be 16 or greater.</td>
+	</tr>
+	<tr valign="top">
+		<td>8.1</td>
+		<td>TPM_PCR_SELECTION</td>
+		<td>sizeOfSelect</td>
+		<td>UINT16</td>
+		<td>The size in bytes of the pcrSelect structure</td>
+	</tr>
+	<tr valign="top">
+		<td>8.1</td>
+		<td>TPM_PCR_SELECTION</td>
+		<td>pcrSelect</td>
+		<td>BYTE*</td>
+		<td>This SHALL be a bit map that indicates if a PCR is active or not</td>
+	</tr>
+	<tr valign="top">
+		<td>8.2</td>
+		<td>TPM_PCR_COMPOSITE</td>
+		<td>valueSize</td>
+		<td>UINT32</td>
+		<td>This SHALL be the size of the pcrValue field (not the number of PCR’s)</td>
+	</tr>
+	<tr valign="top">
+		<td>9.1</td>
+		<td>TPM_STORED_DATA</td>
+		<td>sealInfoSize</td>
+		<td>UINT32</td>
+		<td>Size of the sealInfo parameter</td>
+	</tr>
+	<tr valign="top">
+		<td>9.1</td>
+		<td>TPM_STORED_DATA</td>
+		<td>sealInfo</td>
+		<td>BYTE*</td>
+		<td>This SHALL be a structure of type TPM_PCR_INFO or a 0 length array if the data is not bound to PCRs.</td>
+	</tr>
+	<tr valign="top">
+		<td>9.1</td>
+		<td>TPM_STORED_DATA</td>
+		<td>encDataSize</td>
+		<td>UINT32</td>
+		<td>This SHALL be the size of the encData parameter</td>
+	</tr>
+	<tr valign="top">
+		<td>9.1</td>
+		<td>TPM_STORED_DATA</td>
+		<td>encData</td>
+		<td>BYTE*</td>
+		<td>This shall be an encrypted TPM_SEALED_DATA structure containing the confidential part of the data.</td>
+	</tr>
+	<tr valign="top">
+		<td>9.2</td>
+		<td>TPM_STORED_DATA12</td>
+		<td>sealInfoSize</td>
+		<td>UINT32</td>
+		<td>Size of the sealInfo parameter</td>
+	</tr>
+	<tr valign="top">
+		<td>9.2</td>
+		<td>TPM_STORED_DATA12</td>
+		<td>sealInfo</td>
+		<td>BYTE*</td>
+		<td>This SHALL be a structure of type TPM_PCR_INFO_LONG</td>
+	</tr>
+	<tr valign="top">
+		<td>9.2</td>
+		<td>TPM_STORED_DATA12</td>
+		<td>encDataSize</td>
+		<td>UINT32</td>
+		<td>This SHALL be the size of the encData parameter</td>
+	</tr>
+	<tr valign="top">
+		<td>9.2</td>
+		<td>TPM_STORED_DATA12</td>
+		<td>encData</td>
+		<td>BYTE*</td>
+		<td>This shall be an encrypted TPM_SEALED_DATA structure containing the confidential part of the data.</td>
+	</tr>
+	<tr valign="top">
+		<td>9.3</td>
+		<td>TPM_SEALED_DATA</td>
+		<td>dataSize</td>
+		<td>UINT32</td>
+		<td>This SHALL be the size of the data parameter</td>
+	</tr>
+	<tr valign="top">
+		<td>9.3</td>
+		<td>TPM_SEALED_DATA</td>
+		<td>data</td>
+		<td>BYTE*</td>
+		<td>This SHALL be the data to be sealed</td>
+	</tr>
+	<tr valign="top">
+		<td>9.4</td>
+		<td>TPM_SYMMETRIC_KEY</td>
+		<td>size</td>
+		<td>UINT16</td>
+		<td>This SHALL be the size of the data parameter in bytes</td>
+	</tr>
+	<tr valign="top">
+		<td>9.4</td>
+		<td>TPM_SYMMETRIC_KEY</td>
+		<td>data</td>
+		<td>BYTE*</td>
+		<td>This SHALL be the symmetric key data</td>
+	</tr>
+	<tr valign="top">
+		<td>9.5</td>
+		<td>TPM_BOUND_DATA</td>
+		<td>payloadData</td>
+		<td>BYTE[]</td>
+		<td>The bound data</td>
+	</tr>
+	<tr valign="top">
+		<td>10.1</td>
+		<td>TPM_KEY_PARMS</td>
+		<td>parmSize</td>
+		<td>UINT32</td>
+		<td>This SHALL be the size of the parms field in bytes</td>
+	</tr>
+	<tr valign="top">
+		<td>10.1</td>
+		<td>TPM_KEY_PARMS</td>
+		<td>parms</td>
+		<td>BYTE*</td>
+		<td>This SHALL be the parameter information dependant upon the key algorithm.</td>
+	</tr>
+	<tr valign="top">
+		<td>10.1</td>
+		<td>TPM_RSA_KEY_PARMS</td>
+		<td>keyLength</td>
+		<td>UINT32</td>
+		<td>This specifies the size of the RSA key in bits</td>
+	</tr>
+	<tr valign="top">
+		<td>10.1</td>
+		<td>TPM_RSA_KEY_PARMS</td>
+		<td>numPrimes</td>
+		<td>UINT32</td>
+		<td>This specifies the number of prime factors used by this RSA key.</td>
+	</tr>
+	<tr valign="top">
+		<td>10.1</td>
+		<td>TPM_RSA_KEY_PARMS</td>
+		<td>exponentSize</td>
+		<td>UINT32</td>
+		<td>This SHALL be the size of the exponent. If the key is using the default exponent then the exponentSize MUST be 0.</td>
+	</tr>
+	<tr valign="top">
+		<td>10.1</td>
+		<td>TPM_RSA_KEY_PARMS</td>
+		<td>exponent</td>
+		<td>BYTE*</td>
+		<td>The public exponent of this key</td>
+	</tr>
+	<tr valign="top">
+		<td>10.1</td>
+		<td>TPM_SYMMETRIC_KEY_PARMS</td>
+		<td>keyLength</td>
+		<td>UINT32</td>
+		<td>This SHALL indicate the length of the key in bits</td>
+	</tr>
+	<tr valign="top">
+		<td>10.1</td>
+		<td>TPM_SYMMETRIC_KEY_PARMS</td>
+		<td>blockSize</td>
+		<td>UINT32</td>
+		<td>This SHALL indicate the block size of the algorithm</td>
+	</tr>
+	<tr valign="top">
+		<td>10.1</td>
+		<td>TPM_SYMMETRIC_KEY_PARMS</td>
+		<td>ivSize</td>
+		<td>UINT32</td>
+		<td>This SHALL indicate the size of the IV</td>
+	</tr>
+	<tr valign="top">
+		<td>10.1</td>
+		<td>TPM_SYMMETRIC_KEY_PARMS</td>
+		<td>IV</td>
+		<td>BYTE*</td>
+		<td>The initialization vector</td>
+	</tr>
+	<tr valign="top">
+		<td>10.2</td>
+		<td>TPM_KEY</td>
+		<td>PCRInfoSize</td>
+		<td>UINT32</td>
+		<td>This SHALL be the length of the pcrInfo parameter. If the key is not bound to a PCR this value SHOULD be 0.</td>
+	</tr>
+	<tr valign="top">
+		<td>10.2</td>
+		<td>TPM_KEY</td>
+		<td>PCRInfo</td>
+		<td>BYTE*</td>
+		<td>This SHALL be a structure of type TPM_PCR_INFO, or an empty array if the key is not bound to PCRs.</td>
+	</tr>
+	<tr valign="top">
+		<td>10.2</td>
+		<td>TPM_KEY</td>
+		<td>encDataSize</td>
+		<td>UINT32</td>
+		<td>This SHALL be the size of the encData parameter.</td>
+	</tr>
+	<tr valign="top">
+		<td>10.2</td>
+		<td>TPM_KEY</td>
+		<td>encData</td>
+		<td>BYTE*</td>
+		<td>This SHALL be an encrypted TPM_STORE_ASYMKEY structure or TPM_MIGRATE_ASYMKEY structure</td>
+	</tr>
+	<tr valign="top">
+		<td>10.3</td>
+		<td>TPM_KEY12</td>
+		<td>fill</td>
+		<td>UINT16</td>
+		<td>MUST be 0x0000</td>
+	</tr>
+	<tr valign="top">
+		<td>10.3</td>
+		<td>TPM_KEY12</td>
+		<td>PCRInfoSize</td>
+		<td>UINT32</td>
+		<td>This SHALL be the length of the pcrInfo parameter. If the key is not bound to a PCR this value SHOULD be 0.</td>
+	</tr>
+	<tr valign="top">
+		<td>10.3</td>
+		<td>TPM_KEY12</td>
+		<td>PCRInfo</td>
+		<td>BYTE*</td>
+		<td>This SHALL be a structure of type TPM_PCR_INFO_LONG,</td>
+	</tr>
+	<tr valign="top">
+		<td>10.3</td>
+		<td>TPM_KEY12</td>
+		<td>encDataSize</td>
+		<td>UINT32</td>
+		<td>This SHALL be the size of the encData parameter.</td>
+	</tr>
+	<tr valign="top">
+		<td>10.3</td>
+		<td>TPM_KEY12</td>
+		<td>encData</td>
+		<td>BYTE*</td>
+		<td>This SHALL be an encrypted TPM_STORE_ASYMKEY structure TPM_MIGRATE_ASYMKEY structure</td>
+	</tr>
+	<tr valign="top">
+		<td>10.4</td>
+		<td>TPM_STORE_PUBKEY</td>
+		<td>keyLength</td>
+		<td>UINT32</td>
+		<td>This SHALL be the length of the key field.</td>
+	</tr>
+	<tr valign="top">
+		<td>10.4</td>
+		<td>TPM_STORE_PUBKEY</td>
+		<td>key</td>
+		<td>BYTE*</td>
+		<td>This SHALL be a structure interpreted according to the algorithm Id in the corresponding TPM_KEY_PARMS structure.</td>
+	</tr>
+	<tr valign="top">
+		<td>10.7</td>
+		<td>TPM_STORE_PRIVKEY</td>
+		<td>keyLength</td>
+		<td>UINT32</td>
+		<td>This SHALL be the length of the key field.</td>
+	</tr>
+	<tr valign="top">
+		<td>10.7</td>
+		<td>TPM_STORE_PRIVKEY</td>
+		<td>key</td>
+		<td>BYTE*</td>
+		<td>This SHALL be a structure interpreted according to the algorithm Id in the corresponding TPM_KEY structure.</td>
+	</tr>
+	<tr valign="top">
+		<td>10.8</td>
+		<td>TPM_MIGRATE_ASYMKEY</td>
+		<td>partPrivKeyLen</td>
+		<td>UINT32</td>
+		<td>This SHALL be the size of the partPrivKey field</td>
+	</tr>
+	<tr valign="top">
+		<td>10.8</td>
+		<td>TPM_MIGRATE_ASYMKEY</td>
+		<td>partPrivKey</td>
+		<td>BYTE*</td>
+		<td>This SHALL be the k2 area as described in TPM_CreateMigrationBlob</td>
+	</tr>
+	<tr valign="top">
+		<td>11.1</td>
+		<td>TPM_CERTIFY_INFO</td>
+		<td>PCRInfoSize</td>
+		<td>UINT32</td>
+		<td>This SHALL be the size of the pcrInfo parameter. A value of zero indicates that the key is not wrapped to a PCR</td>
+	</tr>
+	<tr valign="top">
+		<td>11.1</td>
+		<td>TPM_CERTIFY_INFO</td>
+		<td>PCRInfo</td>
+		<td>BYTE*</td>
+		<td>This SHALL be the TPM_PCR_INFO structure.</td>
+	</tr>
+	<tr valign="top">
+		<td>11.2</td>
+		<td>TPM_CERTIFY_INFO2</td>
+		<td>fill</td>
+		<td>BYTE</td>
+		<td>MUST be 0x00</td>
+	</tr>
+	<tr valign="top">
+		<td>11.2</td>
+		<td>TPM_CERTIFY_INFO2</td>
+		<td>PCRInfoSize</td>
+		<td>UINT32</td>
+		<td>This SHALL be the size of the pcrInfo parameter.</td>
+	</tr>
+	<tr valign="top">
+		<td>11.2</td>
+		<td>TPM_CERTIFY_INFO2</td>
+		<td>PCRInfo</td>
+		<td>BYTE*</td>
+		<td>This SHALL be the TPM_PCR_INFO_SHORT structure.</td>
+	</tr>
+	<tr valign="top">
+		<td>11.2</td>
+		<td>TPM_CERTIFY_INFO2</td>
+		<td>migrationAuthoritySize</td>
+		<td>UINT32</td>
+		<td>This SHALL be the size of migrationAuthority</td>
+	</tr>
+	<tr valign="top">
+		<td>11.2</td>
+		<td>TPM_CERTIFY_INFO2</td>
+		<td>migrationAuthority</td>
+		<td>BYTE*</td>
+		<td>If the key to be certified has [payload == TPM_PT_MIGRATE_RESTRICTED or payload == TPM_PT_MIGRATE_EXTERNAL], migrationAuthority is the digest of the TPM_MSA_COMPOSITE and has TYPE == TPM_DIGEST. Otherwise it is NULL.</td>
+	</tr>
+	<tr valign="top">
+		<td>11.3</td>
+		<td>TPM_QUOTE_INFO</td>
+		<td>fixed</td>
+		<td>BYTE[4]</td>
+		<td>This SHALL always be the string ‘QUOT’</td>
+	</tr>
+	<tr valign="top">
+		<td>11.4</td>
+		<td>TPM_QUOTE_INFO2</td>
+		<td>fixed</td>
+		<td>BYTE[4]</td>
+		<td>This SHALL always be the string ‘QUT2’</td>
+	</tr>
+	<tr valign="top">
+		<td>12.1</td>
+		<td>TPM_EK_BLOB</td>
+		<td>blobSize</td>
+		<td>UINT32</td>
+		<td>The size of the blob field</td>
+	</tr>
+	<tr valign="top">
+		<td>12.1</td>
+		<td>TPM_EK_BLOB</td>
+		<td>blob</td>
+		<td>BYTE*</td>
+		<td>The blob of information depending on the type</td>
+	</tr>
+	<tr valign="top">
+		<td>12.5</td>
+		<td>TPM_IDENTITY_CONTENTS</td>
+		<td>ordinal</td>
+		<td>UINT32</td>
+		<td>This SHALL be the ordinal of the TPM_MakeIdentity command.</td>
+	</tr>
+	<tr valign="top">
+		<td>12.6</td>
+		<td>TPM_IDENTITY_REQ</td>
+		<td>asymSize</td>
+		<td>UINT32</td>
+		<td>This SHALL be the size of the asymmetric encrypted area created by TSS_CollateIdentityRequest</td>
+	</tr>
+	<tr valign="top">
+		<td>12.6</td>
+		<td>TPM_IDENTITY_REQ</td>
+		<td>symSize</td>
+		<td>UINT32</td>
+		<td>This SHALL be the size of the symmetric encrypted area created by TSS_CollateIdentityRequest</td>
+	</tr>
+	<tr valign="top">
+		<td>12.6</td>
+		<td>TPM_IDENTITY_REQ</td>
+		<td>asymBlob</td>
+		<td>BYTE*</td>
+		<td>This SHALL be the asymmetric encrypted area from TSS_CollateIdentityRequest</td>
+	</tr>
+	<tr valign="top">
+		<td>12.6</td>
+		<td>TPM_IDENTITY_REQ</td>
+		<td>symBlob</td>
+		<td>BYTE*</td>
+		<td>This SHALL be the symmetric encrypted area from TSS_CollateIdentityRequest</td>
+	</tr>
+	<tr valign="top">
+		<td>12.7</td>
+		<td>TPM_IDENTITY_PROOF</td>
+		<td>labelSize</td>
+		<td>UINT32</td>
+		<td>This SHALL be the size of the label area</td>
+	</tr>
+	<tr valign="top">
+		<td>12.7</td>
+		<td>TPM_IDENTITY_PROOF</td>
+		<td>identityBindingSize</td>
+		<td>UINT32</td>
+		<td>This SHALL be the size of the identitybinding area</td>
+	</tr>
+	<tr valign="top">
+		<td>12.7</td>
+		<td>TPM_IDENTITY_PROOF</td>
+		<td>endorsementSize</td>
+		<td>UINT32</td>
+		<td>This SHALL be the size of the endorsement credential</td>
+	</tr>
+	<tr valign="top">
+		<td>12.7</td>
+		<td>TPM_IDENTITY_PROOF</td>
+		<td>platformSize</td>
+		<td>UINT32</td>
+		<td>This SHALL be the size of the platform credential</td>
+	</tr>
+	<tr valign="top">
+		<td>12.7</td>
+		<td>TPM_IDENTITY_PROOF</td>
+		<td>conformanceSize</td>
+		<td>UINT32</td>
+		<td>This SHALL be the size of the conformance credential</td>
+	</tr>
+	<tr valign="top">
+		<td>12.7</td>
+		<td>TPM_IDENTITY_PROOF</td>
+		<td>labelArea</td>
+		<td>BYTE*</td>
+		<td>This SHALL be the text label for the new identity</td>
+	</tr>
+	<tr valign="top">
+		<td>12.7</td>
+		<td>TPM_IDENTITY_PROOF</td>
+		<td>identityBinding</td>
+		<td>BYTE*</td>
+		<td>This SHALL be the signature value of TPM_IDENTITY_CONTENTS structure from the TPM_MakeIdentity command</td>
+	</tr>
+	<tr valign="top">
+		<td>12.7</td>
+		<td>TPM_IDENTITY_PROOF</td>
+		<td>endorsementCredential</td>
+		<td>BYTE*</td>
+		<td>This SHALL be the TPM endorsement credential</td>
+	</tr>
+	<tr valign="top">
+		<td>12.7</td>
+		<td>TPM_IDENTITY_PROOF</td>
+		<td>platformCredential</td>
+		<td>BYTE*</td>
+		<td>This SHALL be the TPM platform credential</td>
+	</tr>
+	<tr valign="top">
+		<td>12.7</td>
+		<td>TPM_IDENTITY_PROOF</td>
+		<td>conformanceCredential</td>
+		<td>BYTE*</td>
+		<td>This SHALL be the TPM conformance credential</td>
+	</tr>
+	<tr valign="top">
+		<td>12.9</td>
+		<td>TPM_SYM_CA_ATTESTATION</td>
+		<td>credSize</td>
+		<td>UINT32</td>
+		<td>This SHALL be the size of the credential parameter</td>
+	</tr>
+	<tr valign="top">
+		<td>12.9</td>
+		<td>TPM_SYM_CA_ATTESTATION</td>
+		<td>credential</td>
+		<td>BYTE*</td>
+		<td>This is the result of encrypting TPM_IDENTITY_CREDENTIAL using the session_key and the algorithm indicated “algorithm”</td>
+	</tr>
+	<tr valign="top">
+		<td>15.1</td>
+		<td>TPM_CURRENT_TICKS</td>
+		<td>currentTicks</td>
+		<td>UINT64</td>
+		<td>The number of ticks since the start of this tick session</td>
+	</tr>
+	<tr valign="top">
+		<td>15.1</td>
+		<td>TPM_CURRENT_TICKS</td>
+		<td>tickRate</td>
+		<td>UINT16</td>
+		<td>The number of microseconds per tick. The maximum resolution of the TPM tick counter is thus 1 microsecond. The minimum resolution SHOULD be 1 millisecond.</td>
+	</tr>
+	<tr valign="top">
+		<td>18.1</td>
+		<td>TPM_CONTEXT_BLOB</td>
+		<td>label</td>
+		<td>BYTE[16]</td>
+		<td>Label for identification of the blob. Free format area.</td>
+	</tr>
+	<tr valign="top">
+		<td>18.1</td>
+		<td>TPM_CONTEXT_BLOB</td>
+		<td>contextCount</td>
+		<td>UINT32</td>
+		<td>MUST be TPM_STANY_DATA -> contextCount when creating the structure. This value is ignored for context blobs that reference a key.</td>
+	</tr>
+	<tr valign="top">
+		<td>18.1</td>
+		<td>TPM_CONTEXT_BLOB</td>
+		<td>additionalSize</td>
+		<td>UINT32</td>
+		<td>The size of additionalData</td>
+	</tr>
+	<tr valign="top">
+		<td>18.1</td>
+		<td>TPM_CONTEXT_BLOB</td>
+		<td>additionalData</td>
+		<td>BYTE*</td>
+		<td>Additional information set by the TPM that helps define and reload the context. The information held in this area MUST NOT expose any information held in shielded locations. This should include any IV for symmetric encryption</td>
+	</tr>
+	<tr valign="top">
+		<td>18.1</td>
+		<td>TPM_CONTEXT_BLOB</td>
+		<td>sensitiveSize</td>
+		<td>UINT32</td>
+		<td>The size of sensitiveData</td>
+	</tr>
+	<tr valign="top">
+		<td>18.1</td>
+		<td>TPM_CONTEXT_BLOB</td>
+		<td>sensitiveData</td>
+		<td>BYTE*</td>
+		<td>The normal information for the resource that can be exported</td>
+	</tr>
+	<tr valign="top">
+		<td>18.2</td>
+		<td>TPM_CONTEXT_SENSITIVE</td>
+		<td>internalSize</td>
+		<td>UINT32</td>
+		<td>The size of the internalData area</td>
+	</tr>
+	<tr valign="top">
+		<td>18.2</td>
+		<td>TPM_CONTEXT_SENSITIVE</td>
+		<td>internalData</td>
+		<td>BYTE*</td>
+		<td>The internal data area</td>
+	</tr>
+	<tr valign="top">
+		<td>19.3</td>
+		<td>TPM_NV_DATA_PUBLIC</td>
+		<td>attributes</td>
+		<td>UINT32</td>
+		<td>The attribute area</td>
+	</tr>
+	<tr valign="top">
+		<td>19.4</td>
+		<td>TPM_NV_DATA_SENSITIVE</td>
+		<td>data</td>
+		<td>BYTE*</td>
+		<td>The data area. This MUST not contain any sensitive information as the TPM does not provide any confidentiality on the data.</td>
+	</tr>
+	<tr valign="top">
+		<td>20.2</td>
+		<td>TPM_DELEGATIONS</td>
+		<td>delegateType</td>
+		<td>UINT32</td>
+		<td>Owner or key</td>
+	</tr>
+	<tr valign="top">
+		<td>20.2</td>
+		<td>TPM_DELEGATIONS</td>
+		<td>per2</td>
+		<td>UINT32</td>
+		<td>The second block of permissions</td>
+	</tr>
+	<tr valign="top">
+		<td>20.4</td>
+		<td>TPM_FAMILY_LABEL</td>
+		<td>label</td>
+		<td>BYTE</td>
+		<td>A sequence number that software can map to a string of bytes that can be displayed or used by the applications. This MUST not contain sensitive information.</td>
+	</tr>
+	<tr valign="top">
+		<td>20.7</td>
+		<td>TPM_DELEGATE_LABEL</td>
+		<td>label</td>
+		<td>BYTE</td>
+		<td>A byte that can be displayed or used by the applications. This MUST not contain sensitive information.</td>
+	</tr>
+	<tr valign="top">
+		<td>20.12</td>
+		<td>TPM_DELEGATE_OWNER_BLOB</td>
+		<td>additionalSize</td>
+		<td>UINT32</td>
+		<td>The size of additionalArea</td>
+	</tr>
+	<tr valign="top">
+		<td>20.12</td>
+		<td>TPM_DELEGATE_OWNER_BLOB</td>
+		<td>additionalArea</td>
+		<td>BYTE*</td>
+		<td>An area that the TPM can add to the blob which MUST NOT contain any sensitive information. This would include any IV material for symmetric encryption</td>
+	</tr>
+	<tr valign="top">
+		<td>20.12</td>
+		<td>TPM_DELEGATE_OWNER_BLOB</td>
+		<td>sensitiveSize</td>
+		<td>UINT32</td>
+		<td>The size of the sensitive area</td>
+	</tr>
+	<tr valign="top">
+		<td>20.12</td>
+		<td>TPM_DELEGATE_OWNER_BLOB</td>
+		<td>sensitiveArea</td>
+		<td>BYTE*</td>
+		<td>The area that contains the encrypted TPM_DELEGATE_SENSITIVE</td>
+	</tr>
+	<tr valign="top">
+		<td>20.13</td>
+		<td>TPM_DELEGATE_KEY_BLOB</td>
+		<td>additionalSize</td>
+		<td>UINT32</td>
+		<td>The size of the integrity area</td>
+	</tr>
+	<tr valign="top">
+		<td>20.13</td>
+		<td>TPM_DELEGATE_KEY_BLOB</td>
+		<td>additionalArea</td>
+		<td>BYTE*</td>
+		<td>An area that the TPM can add to the blob which MUST NOT contain any sensitive information. This would include any IV material for symmetric encryption</td>
+	</tr>
+	<tr valign="top">
+		<td>20.13</td>
+		<td>TPM_DELEGATE_KEY_BLOB</td>
+		<td>sensitiveSize</td>
+		<td>UINT32</td>
+		<td>The size of the sensitive area</td>
+	</tr>
+	<tr valign="top">
+		<td>20.13</td>
+		<td>TPM_DELEGATE_KEY_BLOB</td>
+		<td>sensitiveArea</td>
+		<td>BYTE*</td>
+		<td>The area that contains the encrypted TPM_DELEGATE_SENSITIVE</td>
+	</tr>
+	<tr valign="top">
+		<td>21.6</td>
+		<td>TPM_CAP_VERSION_INFO</td>
+		<td>specLevel</td>
+		<td>UINT16</td>
+		<td>A number indicating the level of ordinals supported</td>
+	</tr>
+	<tr valign="top">
+		<td>21.6</td>
+		<td>TPM_CAP_VERSION_INFO</td>
+		<td>errataRev</td>
+		<td>BYTE</td>
+		<td>A number indicating the errata version of the specification</td>
+	</tr>
+	<tr valign="top">
+		<td>21.6</td>
+		<td>TPM_CAP_VERSION_INFO</td>
+		<td>tpmVendorID</td>
+		<td>BYTE[4]</td>
+		<td>The vendor ID unique to each TPM manufacturer.</td>
+	</tr>
+	<tr valign="top">
+		<td>21.6</td>
+		<td>TPM_CAP_VERSION_INFO</td>
+		<td>vendorSpecificSize</td>
+		<td>UINT16</td>
+		<td>The size of the vendor specific area</td>
+	</tr>
+	<tr valign="top">
+		<td>21.6</td>
+		<td>TPM_CAP_VERSION_INFO</td>
+		<td>vendorSpecific</td>
+		<td>BYTE*</td>
+		<td>Vendor specific information</td>
+	</tr>
+	<tr valign="top">
+		<td>21.7</td>
+		<td>TPM_DA_INFO</td>
+		<td>currentCount</td>
+		<td>UINT16</td>
+		<td>Dynamic. The actual count of the authorization failure counter for the selected entity type</td>
+	</tr>
+	<tr valign="top">
+		<td>21.7</td>
+		<td>TPM_DA_INFO</td>
+		<td>thresholdCount</td>
+		<td>UINT16</td>
+		<td>Static. Dictionary attack mitigation threshold count for the selected entity type</td>
+	</tr>
+	<tr valign="top">
+		<td>21.7</td>
+		<td>TPM_DA_INFO</td>
+		<td>actionDependValue</td>
+		<td>UINT32</td>
+		<td>Dynamic. Action being taken when the dictionary attack mitigation logic is active. E.g., when actionAtThreshold is TPM_DA_ACTION_TIMEOUT, this is the lockout time remaining in seconds.</td>
+	</tr>
+	<tr valign="top">
+		<td>21.7</td>
+		<td>TPM_DA_INFO</td>
+		<td>vendorDataSize</td>
+		<td>UINT32</td>
+		<td>Size of vendor specific data field</td>
+	</tr>
+	<tr valign="top">
+		<td>21.7</td>
+		<td>TPM_DA_INFO</td>
+		<td>vendorData</td>
+		<td>BYTE*</td>
+		<td>Vendor specific data field</td>
+	</tr>
+	<tr valign="top">
+		<td>21.8</td>
+		<td>TPM_DA_INFO_LIMITED</td>
+		<td>currentCount</td>
+		<td>UINT16</td>
+		<td>Dynamic. The actual count of the authorization failure counter for the selected entity type</td>
+	</tr>
+	<tr valign="top">
+		<td>21.8</td>
+		<td>TPM_DA_INFO_LIMITED</td>
+		<td>thresholdCount</td>
+		<td>UINT16</td>
+		<td>Static. Dictionary attack mitigation threshold count for the selected entity type</td>
+	</tr>
+	<tr valign="top">
+		<td>21.8</td>
+		<td>TPM_DA_INFO_LIMITED</td>
+		<td>actionDependValue</td>
+		<td>UINT32</td>
+		<td>Dynamic. Action being taken when the dictionary attack mitigation logic is active. E.g., when actionAtThreshold is TPM_DA_ACTION_TIMEOUT, this is the lockout time remaining in seconds.</td>
+	</tr>
+	<tr valign="top">
+		<td>21.8</td>
+		<td>TPM_DA_INFO_LIMITED</td>
+		<td>vendorDataSize</td>
+		<td>UINT32</td>
+		<td>Size of vendor specific data field</td>
+	</tr>
+	<tr valign="top">
+		<td>21.8</td>
+		<td>TPM_DA_INFO_LIMITED</td>
+		<td>vendorData</td>
+		<td>BYTE*</td>
+		<td>Vendor specific data field</td>
+	</tr>
+	<tr valign="top">
+		<td>21.10</td>
+		<td>TPM_DA_ACTION_TYPE</td>
+		<td>actions</td>
+		<td>UINT32</td>
+		<td>The action taken when TPM_DA_STATE is TPM_DA_STATE_ACTIVE.</td>
+	</tr>
+	<tr valign="top">
+		<td>22.3</td>
+		<td>TPM_DAA_ISSUER</td>
+		<td>DAA_</td>
+		<td>BYTE[26]</td>
+		<td>generic _q The parameter q, which is not secret and may be common to many TPMs. Note that q is slightly larger than a digest, but is stored in its native form to simplify the TPM_DAA_join command. Otherwise, JOIN requires 3 input parameters.</td>
+	</tr>
+	<tr valign="top">
+		<td>22.4</td>
+		<td>TPM_DAA_TPM</td>
+		<td>DAA_count</td>
+		<td>UINT32</td>
+		<td>The parameter “count”, which is not secret but must be consistent across JOIN/SIGN sessions. “count” is an input to the TPM from the host system.</td>
+	</tr>
+	<tr valign="top">
+		<td>22.5</td>
+		<td>TPM_DAA_CONTEXT</td>
+		<td>DAA_scratch</td>
+		<td>BYTE[256]</td>
+		<td>Memory used to hold different parameters at different times of DAA computation, but only one parameter at a time. The maximum size of this field is 256 bytes</td>
+	</tr>
+	<tr valign="top">
+		<td>22.5</td>
+		<td>TPM_DAA_CONTEXT</td>
+		<td>DAA_stage</td>
+		<td>BYTE</td>
+		<td>A counter, indicating the stage of DAA computation that was most recently completed. The value of the counter is zero if the TPM currently contains no DAA context. When set to zero (0) the TPM MUST clear all other fields in this structure. The TPM MUST set DAA_stage to 0 on TPM_Startup(ANY)</td>
+	</tr>
+	<tr valign="top">
+		<td>22.6</td>
+		<td>TPM_DAA_JOINDATA</td>
+		<td>DAA_join_u0</td>
+		<td>BYTE[128]</td>
+		<td>A TPM-specific secret “u0”, used during the JOIN phase, and discarded afterwards.</td>
+	</tr>
+	<tr valign="top">
+		<td>22.6</td>
+		<td>TPM_DAA_JOINDATA</td>
+		<td>DAA_join_u1</td>
+		<td>BYTE[128]</td>
+		<td>A TPM-specific secret “u1”, used during the JOIN phase, and discarded afterwards.</td>
+	</tr>
+	<tr valign="top">
+		<td>22.8</td>
+		<td>TPM_DAA_BLOB</td>
+		<td>label</td>
+		<td>BYTE[16]</td>
+		<td>Label for identification of the blob. Free format area.</td>
+	</tr>
+	<tr valign="top">
+		<td>22.8</td>
+		<td>TPM_DAA_BLOB</td>
+		<td>additionalSize</td>
+		<td>UINT32</td>
+		<td>The size of additionalData</td>
+	</tr>
+	<tr valign="top">
+		<td>22.8</td>
+		<td>TPM_DAA_BLOB</td>
+		<td>additionalData</td>
+		<td>BYTE*</td>
+		<td>Additional information set by the TPM that helps define and reload the context. The information held in this area MUST NOT expose any information held in shielded locations. This should include any IV for symmetric encryption</td>
+	</tr>
+	<tr valign="top">
+		<td>22.8</td>
+		<td>TPM_DAA_BLOB</td>
+		<td>sensitiveSize</td>
+		<td>UINT32</td>
+		<td>The size of sensitiveData</td>
+	</tr>
+	<tr valign="top">
+		<td>22.8</td>
+		<td>TPM_DAA_BLOB</td>
+		<td>sensitiveData</td>
+		<td>BYTE*</td>
+		<td>A TPM_DAA_SENSITIVE structure</td>
+	</tr>
+	<tr valign="top">
+		<td>22.9</td>
+		<td>TPM_DAA_SENSITIVE</td>
+		<td>internalSize</td>
+		<td>UINT32</td>
+		<td>The size of the internalData area</td>
+	</tr>
+	<tr valign="top">
+		<td>22.9</td>
+		<td>TPM_DAA_SENSITIVE</td>
+		<td>internalData</td>
+		<td>BYTE*</td>
+		<td>DAA_tpmSpecific or DAA_private_v0 or DAA_private_v1</td>
+	</tr>
+</table>
+</body>
+</html>

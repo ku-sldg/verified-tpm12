@@ -1,0 +1,47 @@
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/TCC/!svn/ver/386/tpm-tcg/trunk/TpmXml/src/tpmxml/test
+END
+DigraphTest.scala
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/TCC/!svn/ver/412/tpm-tcg/trunk/TpmXml/src/tpmxml/test/DigraphTest.scala
+END
+TpmCommandTest.scala
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/svn/TCC/!svn/ver/386/tpm-tcg/trunk/TpmXml/src/tpmxml/test/TpmCommandTest.scala
+END
+HtmlTest.scala
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/TCC/!svn/ver/355/tpm-tcg/trunk/TpmXml/src/tpmxml/test/HtmlTest.scala
+END
+CombineStructures.scala
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/svn/TCC/!svn/ver/386/tpm-tcg/trunk/TpmXml/src/tpmxml/test/CombineStructures.scala
+END
+StructureListTest.scala
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/svn/TCC/!svn/ver/386/tpm-tcg/trunk/TpmXml/src/tpmxml/test/StructureListTest.scala
+END
+TpmStructureTest.scala
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/svn/TCC/!svn/ver/386/tpm-tcg/trunk/TpmXml/src/tpmxml/test/TpmStructureTest.scala
+END
+StructureTest.scala
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/TCC/!svn/ver/355/tpm-tcg/trunk/TpmXml/src/tpmxml/test/StructureTest.scala
+END

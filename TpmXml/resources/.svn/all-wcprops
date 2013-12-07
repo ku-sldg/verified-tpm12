@@ -1,0 +1,83 @@
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/svn/TCC/!svn/ver/403/tpm-tcg/trunk/TpmXml/resources
+END
+tpm-command-byte-int.html
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/svn/TCC/!svn/ver/387/tpm-tcg/trunk/TpmXml/resources/tpm-command-byte-int.html
+END
+tpm-commands-2.xml
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/TCC/!svn/ver/414/tpm-tcg/trunk/TpmXml/resources/tpm-commands-2.xml
+END
+tcg-structures.lisp
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/TCC/!svn/ver/355/tpm-tcg/trunk/TpmXml/resources/tcg-structures.lisp
+END
+tpm-structures.xml
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/svn/TCC/!svn/ver/386/tpm-tcg/trunk/TpmXml/resources/tpm-structures.xml
+END
+primitive-types.lisp
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/TCC/!svn/ver/400/tpm-tcg/trunk/TpmXml/resources/primitive-types.lisp
+END
+tpm-structures-2.html
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/TCC/!svn/ver/415/tpm-tcg/trunk/TpmXml/resources/tpm-structures-2.html
+END
+tpm-structures-add.xml
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/TCC/!svn/ver/386/tpm-tcg/trunk/TpmXml/resources/tpm-structures-add.xml
+END
+tpm-structure-byte-int.html
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/svn/TCC/!svn/ver/388/tpm-tcg/trunk/TpmXml/resources/tpm-structure-byte-int.html
+END
+tpm-structures-2.xml
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/TCC/!svn/ver/412/tpm-tcg/trunk/TpmXml/resources/tpm-structures-2.xml
+END
+tpm-structures-orig.xml
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/svn/TCC/!svn/ver/386/tpm-tcg/trunk/TpmXml/resources/tpm-structures-orig.xml
+END
+tpm-structures.html
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/svn/TCC/!svn/ver/372/tpm-tcg/trunk/TpmXml/resources/tpm-structures.html
+END
+tpm-commands.xml
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/svn/TCC/!svn/ver/414/tpm-tcg/trunk/TpmXml/resources/tpm-commands.xml
+END
+tcg-structures-2.lisp
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/svn/TCC/!svn/ver/414/tpm-tcg/trunk/TpmXml/resources/tcg-structures-2.lisp
+END

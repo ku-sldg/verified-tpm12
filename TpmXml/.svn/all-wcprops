@@ -1,0 +1,23 @@
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/TCC/!svn/ver/407/tpm-tcg/trunk/TpmXml
+END
+.cache
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/svn/TCC/!svn/ver/415/tpm-tcg/trunk/TpmXml/.cache
+END
+.project
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/svn/TCC/!svn/ver/347/tpm-tcg/trunk/TpmXml/.project
+END
+.classpath
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/svn/TCC/!svn/ver/409/tpm-tcg/trunk/TpmXml/.classpath
+END

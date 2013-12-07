@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/TCC/!svn/ver/386/tpm-tcg/trunk/TpmXml/src/tpmxml/data
+END
+TpmParameter.scala
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/TCC/!svn/ver/386/tpm-tcg/trunk/TpmXml/src/tpmxml/data/TpmParameter.scala
+END
+TpmField.scala
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/TCC/!svn/ver/386/tpm-tcg/trunk/TpmXml/src/tpmxml/data/TpmField.scala
+END
+TpmCommand.scala
+K 25
+svn:wc:ra_dav:version-url
+V 75
+/svn/TCC/!svn/ver/386/tpm-tcg/trunk/TpmXml/src/tpmxml/data/TpmCommand.scala
+END
+TpmValue.scala
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/svn/TCC/!svn/ver/386/tpm-tcg/trunk/TpmXml/src/tpmxml/data/TpmValue.scala
+END
+TpmStructure.scala
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/svn/TCC/!svn/ver/386/tpm-tcg/trunk/TpmXml/src/tpmxml/data/TpmStructure.scala
+END

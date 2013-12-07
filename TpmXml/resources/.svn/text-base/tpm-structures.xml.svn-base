@@ -1,0 +1,4061 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<structures>
+	<structure>
+		<name>TPM_RESOURCE_TYPE</name>
+		<section>4.1</section>
+		<typedef>UINT32</typedef>
+		<values>
+			<value>
+				<name>TPM_RT_KEY</name>
+				<numValue>0x00000001</numValue>
+				<description>The handle is a key handle and is the result of a LoadKey type operation</description>
+			</value>
+			<value>
+				<name>TPM_RT_AUTH</name>
+				<numValue>0x00000002</numValue>
+				<description>The handle is an authorization handle. Auth handles come from TPM_OIAP, TPM_OSAP and TPM_DSAP</description>
+			</value>
+			<value>
+				<name>TPM_RT_HASH</name>
+				<numValue>0x00000003</numValue>
+				<description>Reserved for hashes</description>
+			</value>
+			<value>
+				<name>TPM_RT_TRANS</name>
+				<numValue>0x00000004</numValue>
+				<description>The handle is for a transport session. Transport handles come from TPM_EstablishTransport</description>
+			</value>
+			<value>
+				<name>TPM_RT_CONTEXT</name>
+				<numValue>0x00000005</numValue>
+				<description>Resource wrapped and held outside the TPM using the context save/restore commands</description>
+			</value>
+			<value>
+				<name>TPM_RT_COUNTER</name>
+				<numValue>0x00000006</numValue>
+				<description>Reserved for counters</description>
+			</value>
+			<value>
+				<name>TPM_RT_DELEGATE</name>
+				<numValue>0x00000007</numValue>
+				<description>The handle is for a delegate row. These are the internal rows held in NV storage by the TPM</description>
+			</value>
+			<value>
+				<name>TPM_RT_DAA_TPM</name>
+				<numValue>0x00000008</numValue>
+				<description>The value is a DAA TPM specific blob</description>
+			</value>
+			<value>
+				<name>TPM_RT_DAA_V0</name>
+				<numValue>0x00000009</numValue>
+				<description>The value is a DAA V0 parameter</description>
+			</value>
+			<value>
+				<name>TPM_RT_DAA_V1</name>
+				<numValue>0x0000000A</numValue>
+				<description>The value is a DAA V1 parameter</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_PAYLOAD_TYPE</name>
+		<section>4.2</section>
+		<typedef>BYTE</typedef>
+		<values>
+			<value>
+				<name>TPM_PT_ASYM</name>
+				<numValue>0x01</numValue>
+				<description>The entity is an asymmetric key</description>
+			</value>
+			<value>
+				<name>TPM_PT_BIND</name>
+				<numValue>0x02</numValue>
+				<description>The entity is bound data</description>
+			</value>
+			<value>
+				<name>TPM_PT_MIGRATE</name>
+				<numValue>0x03</numValue>
+				<description>The entity is a migration blob</description>
+			</value>
+			<value>
+				<name>TPM_PT_MAINT</name>
+				<numValue>0x04</numValue>
+				<description>The entity is a maintenance blob</description>
+			</value>
+			<value>
+				<name>TPM_PT_SEAL</name>
+				<numValue>0x05</numValue>
+				<description>The entity is sealed data</description>
+			</value>
+			<value>
+				<name>TPM_PT_MIGRATE_RESTRICTED</name>
+				<numValue>0x06</numValue>
+				<description>The entity is a restricted-migration asymmetric key</description>
+			</value>
+			<value>
+				<name>TPM_PT_MIGRATE_EXTERNAL</name>
+				<numValue>0x07</numValue>
+				<description>The entity is a external migratable key</description>
+			</value>
+			<value>
+				<name>TPM_PT_CMK_MIGRATE</name>
+				<numValue>0x08</numValue>
+				<description>The entity is a CMK migratable blob</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_ENTITY_TYPE</name>
+		<section>4.3</section>
+		<typedef>UINT16</typedef>
+		<values/>
+	</structure>
+	<structure>
+		<name>TPM_HANDLE</name>
+		<section>4.4</section>
+		<typedef>UINT32</typedef>
+		<values/>
+	</structure>
+	<structure>
+		<name>TPM_KEY_HANDLE</name>
+		<section>4.4</section>
+		<typedef>UINT32</typedef>
+		<values>
+			<value>
+				<name>TPM_KH_SRK</name>
+				<numValue>0x40000000</numValue>
+				<description>The handle points to the SRK</description>
+			</value>
+			<value>
+				<name>TPM_KH_OWNER</name>
+				<numValue>0x40000001</numValue>
+				<description>The handle points to the TPM Owner</description>
+			</value>
+			<value>
+				<name>TPM_KH_REVOKE</name>
+				<numValue>0x40000002</numValue>
+				<description>The handle points to the RevokeTrust value</description>
+			</value>
+			<value>
+				<name>TPM_KH_TRANSPORT</name>
+				<numValue>0x40000003</numValue>
+				<description>The handle points to the TPM_EstablishTransport static authorization</description>
+			</value>
+			<value>
+				<name>TPM_KH_OPERATOR</name>
+				<numValue>0x40000004</numValue>
+				<description>The handle points to the Operator auth</description>
+			</value>
+			<value>
+				<name>TPM_KH_ADMIN</name>
+				<numValue>0x40000005</numValue>
+				<description>The handle points to the delegation administration auth</description>
+			</value>
+			<value>
+				<name>TPM_KH_EK</name>
+				<numValue>0x40000006</numValue>
+				<description>The handle points to the PUBEK, only usable with TPM_OwnerReadInternalPub</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_STARTUP_TYPE</name>
+		<section>4.5</section>
+		<typedef>UINT16</typedef>
+		<values>
+			<value>
+				<name>TPM_ST_CLEAR</name>
+				<numValue>0x0001</numValue>
+				<description>The TPM is starting up from a clean state</description>
+			</value>
+			<value>
+				<name>TPM_ST_STATE</name>
+				<numValue>0x0002</numValue>
+				<description>The TPM is starting up from a saved state</description>
+			</value>
+			<value>
+				<name>TPM_ST_DEACTIVATED</name>
+				<numValue>0x0003</numValue>
+				<description>The TPM is to startup and set the deactivated flag to TRUE</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_STARTUP_EFFECTS</name>
+		<section>4.6</section>
+		<typedef>UINT32</typedef>
+		<values kind="bit">
+			<value>
+				<name>BIT8</name>
+				<numValue>8</numValue>
+				<description>TPM_RT_DAA_TPM resources are initialized by TPM_Startup(ST_STATE)</description>
+			</value>
+			<value>
+				<name>BIT7</name>
+				<numValue>7</numValue>
+				<description>TPM_Startup has no effect on auditDigest</description>
+			</value>
+			<value>
+				<name>BIT6</name>
+				<numValue>6</numValue>
+				<description>auditDigest is set to all zeros on TPM_Startup(ST_CLEAR) but not on other types of TPM_Startup</description>
+			</value>
+			<value>
+				<name>BIT5</name>
+				<numValue>5</numValue>
+				<description>auditDigest is set to all zeros on TPM_Startup(any)</description>
+			</value>
+			<value>
+				<name>BIT4</name>
+				<numValue>4</numValue>
+				<description>Deprecated, as the meaning was subject to interpretation. (Was:TPM_RT_KEY resources are initialized by TPM_Startup(ST_ANY))</description>
+			</value>
+			<value>
+				<name>BIT3</name>
+				<numValue>3</numValue>
+				<description>TPM_RT_AUTH resources are initialized by TPM_Startup(ST_STATE)</description>
+			</value>
+			<value>
+				<name>BIT2</name>
+				<numValue>2</numValue>
+				<description>TPM_RT_HASH resources are initialized by TPM_Startup(ST_STATE)</description>
+			</value>
+			<value>
+				<name>BIT1</name>
+				<numValue>1</numValue>
+				<description>TPM_RT_TRANS resources are initialized by TPM_Startup(ST_STATE)</description>
+			</value>
+			<value>
+				<name>BIT0</name>
+				<numValue>0</numValue>
+				<description>TPM_RT_CONTEXT session (but not key) resources are initialized by TPM_Startup(ST_STATE)</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_PROTOCOL_ID</name>
+		<section>4.7</section>
+		<typedef>UINT16</typedef>
+		<values>
+			<value>
+				<name>TPM_PID_OIAP</name>
+				<numValue>0x0001</numValue>
+				<description>The OIAP protocol.</description>
+			</value>
+			<value>
+				<name>TPM_PID_OSAP</name>
+				<numValue>0x0002</numValue>
+				<description>The OSAP protocol.</description>
+			</value>
+			<value>
+				<name>TPM_PID_ADIP</name>
+				<numValue>0x0003</numValue>
+				<description>The ADIP protocol.</description>
+			</value>
+			<value>
+				<name>TPM_PID_ADCP</name>
+				<numValue>0X0004</numValue>
+				<description>The ADCP protocol.</description>
+			</value>
+			<value>
+				<name>TPM_PID_OWNER</name>
+				<numValue>0X0005</numValue>
+				<description>The protocol for taking ownership of a TPM.</description>
+			</value>
+			<value>
+				<name>TPM_PID_DSAP</name>
+				<numValue>0x0006</numValue>
+				<description>The DSAP protocol</description>
+			</value>
+			<value>
+				<name>TPM_PID_TRANSPORT</name>
+				<numValue>0x0007</numValue>
+				<description>The transport protocol</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_ALGORITHM_ID</name>
+		<section>4.8</section>
+		<typedef>UINT32</typedef>
+		<values>
+			<value>
+				<name>TPM_ALG_RSA</name>
+				<numValue>0x00000001</numValue>
+				<description>The RSA algorithm.</description>
+			</value>
+			<value>
+				<name>reserved</name>
+				<numValue>0x00000002</numValue>
+				<description>(was the DES algorithm)</description>
+			</value>
+			<value>
+				<name>reserved</name>
+				<numValue>0X00000003</numValue>
+				<description>(was the 3DES algorithm in EDE mode)</description>
+			</value>
+			<value>
+				<name>TPM_ALG_SHA</name>
+				<numValue>0x00000004</numValue>
+				<description>The SHA1 algorithm</description>
+			</value>
+			<value>
+				<name>TPM_ALG_HMAC</name>
+				<numValue>0x00000005</numValue>
+				<description>The RFC 2104 HMAC algorithm</description>
+			</value>
+			<value>
+				<name>TPM_ALG_AES128</name>
+				<numValue>0x00000006</numValue>
+				<description>The AES algorithm, key size 128</description>
+			</value>
+			<value>
+				<name>TPM_ALG_MGF1</name>
+				<numValue>0x00000007</numValue>
+				<description>The XOR algorithm using MGF1 to create a string the size of the encrypted block</description>
+			</value>
+			<value>
+				<name>TPM_ALG_AES192</name>
+				<numValue>0x00000008</numValue>
+				<description>AES, key size 192</description>
+			</value>
+			<value>
+				<name>TPM_ALG_AES256</name>
+				<numValue>0x00000009</numValue>
+				<description>AES, key size 256</description>
+			</value>
+			<value>
+				<name>TPM_ALG_XOR</name>
+				<numValue>0x0000000A</numValue>
+				<description>XOR using the rolling nonces</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_PHYSICAL_PRESENCE</name>
+		<section>4.9</section>
+		<typedef>UINT16</typedef>
+		<values>
+			<value>
+				<name>TPM_PHYSICAL_PRESENCE_HW_DISABLE</name>
+				<numValue>0x0200h</numValue>
+				<description>Sets the physicalPresenceHWEnable to FALSE</description>
+			</value>
+			<value>
+				<name>TPM_PHYSICAL_PRESENCE_CMD_DISABLE</name>
+				<numValue>0x0100h</numValue>
+				<description>Sets the physicalPresenceCMDEnable to FALSE</description>
+			</value>
+			<value>
+				<name>TPM_PHYSICAL_PRESENCE_LIFETIME_LOCK</name>
+				<numValue>0x0080h</numValue>
+				<description>Sets the physicalPresenceLifetimeLock to TRUE</description>
+			</value>
+			<value>
+				<name>TPM_PHYSICAL_PRESENCE_HW_ENABLE</name>
+				<numValue>0x0040h</numValue>
+				<description>Sets the physicalPresenceHWEnable to TRUE</description>
+			</value>
+			<value>
+				<name>TPM_PHYSICAL_PRESENCE_CMD_ENABLE</name>
+				<numValue>0x0020h</numValue>
+				<description>Sets the physicalPresenceCMDEnable to TRUE</description>
+			</value>
+			<value>
+				<name>TPM_PHYSICAL_PRESENCE_NOTPRESENT</name>
+				<numValue>0x0010h</numValue>
+				<description>Sets PhysicalPresence = FALSE</description>
+			</value>
+			<value>
+				<name>TPM_PHYSICAL_PRESENCE_PRESENT</name>
+				<numValue>0x0008h</numValue>
+				<description>Sets PhysicalPresence = TRUE</description>
+			</value>
+			<value>
+				<name>TPM_PHYSICAL_PRESENCE_LOCK</name>
+				<numValue>0x0004h</numValue>
+				<description>Sets PhysicalPresenceLock = TRUE</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_MIGRATE_SCHEME</name>
+		<section>4.10</section>
+		<typedef>UINT16</typedef>
+		<values>
+			<value>
+				<name>TPM_MS_MIGRATE</name>
+				<numValue>0x0001</numValue>
+				<description>A public key that can be used with all TPM migration commands other than ‘ReWrap’ mode.</description>
+			</value>
+			<value>
+				<name>TPM_MS_REWRAP</name>
+				<numValue>0x0002</numValue>
+				<description>A public key that can be used for the ReWrap mode of TPM_CreateMigrationBlob.</description>
+			</value>
+			<value>
+				<name>TPM_MS_MAINT</name>
+				<numValue>0x0003</numValue>
+				<description>A public key that can be used for the Maintenance commands</description>
+			</value>
+			<value>
+				<name>TPM_MS_RESTRICT_MIGRATE</name>
+				<numValue>0x0004</numValue>
+				<description>The key is to be migrated to a Migration Authority.</description>
+			</value>
+			<value>
+				<name>TPM_MS_RESTRICT_APPROVE</name>
+				<numValue>0x0005</numValue>
+				<description>The key is to be migrated to an entity approved by a Migration Authority using double wrapping</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_EK_TYPE</name>
+		<section>4.11</section>
+		<typedef>UINT16</typedef>
+		<values>
+			<value>
+				<name>TPM_EK_TYPE_ACTIVATE</name>
+				<numValue>0x0001</numValue>
+				<description>The blob MUST be TPM_EK_BLOB_ACTIVATE</description>
+			</value>
+			<value>
+				<name>TPM_EK_TYPE_AUTH</name>
+				<numValue>0x0002</numValue>
+				<description>The blob MUST be TPM_EK_BLOB_AUTH</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_PLATFORM_SPECIFIC</name>
+		<section>4.12</section>
+		<typedef>UINT16</typedef>
+		<values>
+			<value>
+				<name>TPM_PS_PC_11</name>
+				<numValue>0x0001</numValue>
+				<description>PC Specific version 1.1</description>
+			</value>
+			<value>
+				<name>TPM_PS_PC_12</name>
+				<numValue>0x0002</numValue>
+				<description>PC Specific version 1.2</description>
+			</value>
+			<value>
+				<name>TPM_PS_PDA_12</name>
+				<numValue>0x0003</numValue>
+				<description>PDA Specific version 1.2</description>
+			</value>
+			<value>
+				<name>TPM_PS_Server_12</name>
+				<numValue>0x0004</numValue>
+				<description>Server Specific version 1.2</description>
+			</value>
+			<value>
+				<name>TPM_PS_Mobile_12</name>
+				<numValue>0x0005</numValue>
+				<description>Mobil Specific version 1.2</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_STRUCT_VER</name>
+		<section>5.1</section>
+		<parameters>
+			<parameter>
+				<name>major</name>
+				<type>BYTE</type>
+				<description>This SHALL indicate the major version of the structure. MUST be 0x01</description>
+			</parameter>
+			<parameter>
+				<name>minor</name>
+				<type>BYTE</type>
+				<description>This SHALL indicate the minor version of the structure. MUST be 0x01</description>
+			</parameter>
+			<parameter>
+				<name>revMajor</name>
+				<type>BYTE</type>
+				<description>This MUST be 0x00 on output, ignored on input</description>
+			</parameter>
+			<parameter>
+				<name>revMinor</name>
+				<type>BYTE</type>
+				<description>This MUST be 0x00 on output, ignored on input</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_VERSION_BYTE</name>
+		<section>5.2</section>
+		<typedef>BYTE</typedef>
+	</structure>
+	<structure>
+		<name>TPM_VERSION</name>
+		<section>5.3</section>
+		<parameters>
+			<parameter>
+				<name>Major</name>
+				<type>TPM_VERSION_BYTE</type>
+				<description>This SHALL indicate the major version of the TPM, mostSigVer MUST be 0x01, leastSigVer MUST be 0x00</description>
+			</parameter>
+			<parameter>
+				<name>Minor</name>
+				<type>TPM_VERSION_BYTE</type>
+				<description>This SHALL indicate the minor version of the TPM, mostSigVer MUST be 0x01 or 0x02, leastSigVer MUST be 0x00</description>
+			</parameter>
+			<parameter>
+				<name>revMajor</name>
+				<type>BYTE</type>
+				<description>This SHALL be the value of the TPM_PERMANENT_DATA -&gt; revMajor</description>
+			</parameter>
+			<parameter>
+				<name>revMinor</name>
+				<type>BYTE</type>
+				<description>This SHALL be the value of the TPM_PERMANENT_DATA -&gt; revMinor</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_DIGEST</name>
+		<section>5.4</section>
+		<parameters>
+			<parameter>
+				<name>digest</name>
+				<type>BYTE[]</type>
+				<description>This SHALL be the actual digest information</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_CHOSENID_HASH</name>
+		<section>5.4</section>
+		<typedef>TPM_DIGEST</typedef>
+	</structure>
+	<structure>
+		<name>TPM_COMPOSITE_HASH</name>
+		<section>5.4</section>
+		<typedef>TPM_DIGEST</typedef>
+	</structure>
+	<structure>
+		<name>TPM_DIRVALUE</name>
+		<section>5.4</section>
+		<typedef>TPM_DIGEST</typedef>
+	</structure>
+	<structure>
+		<name>TPM_HMAC</name>
+		<section>5.4</section>
+		<typedef>TPM_DIGEST</typedef>
+	</structure>
+	<structure>
+		<name>TPM_PCRVALUE</name>
+		<section>5.4</section>
+		<typedef>TPM_DIGEST</typedef>
+	</structure>
+	<structure>
+		<name>TPM_AUDITDIGEST</name>
+		<section>5.4</section>
+		<typedef>TPM_DIGEST</typedef>
+	</structure>
+	<structure>
+		<name>TPM_NONCE</name>
+		<section>5.5</section>
+		<parameters>
+			<parameter>
+				<name>Nonce</name>
+				<type>BYTE[20]</type>
+				<description>This SHALL be the 20 bytes of random data. When created by the TPM the value MUST be the next 20 bytes from the RNG.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_DAA_TPM_SEED</name>
+		<section>5.5</section>
+		<typedef>TPM_NONCE</typedef>
+	</structure>
+	<structure>
+		<name>TPM_DAA_CONTEXT_SEED</name>
+		<section>5.5</section>
+		<typedef>TPM_NONCE</typedef>
+	</structure>
+	<structure>
+		<name>TPM_AUTHDATA</name>
+		<section>5.6</section>
+		<typedef>BYTE[20]</typedef>
+	</structure>
+	<structure>
+		<name>TPM_SECRET</name>
+		<section>5.6</section>
+		<typedef>TPM_AUTHDATA</typedef>
+		<values/>
+	</structure>
+	<structure>
+		<name>TPM_ENCAUTH</name>
+		<section>5.6</section>
+		<typedef>TPM_AUTHDATA</typedef>
+		<values/>
+	</structure>
+	<structure>
+		<name>TPM_KEY_HANDLE_LIST</name>
+		<section>5.7</section>
+		<parameters>
+			<parameter>
+				<name>loaded</name>
+				<type>UINT16</type>
+				<description>The number of keys currently loaded in the TPM.</description>
+			</parameter>
+			<parameter>
+				<name>handle</name>
+				<type>UINT32</type>
+				<description>An array of handles, one for each key currently loaded in the TPM</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_KEY_USAGE</name>
+		<section>5.8</section>
+		<typedef>UINT16</typedef>
+		<values>
+			<value>
+				<name>TPM_KEY_SIGNING</name>
+				<numValue>0x0010</numValue>
+				<description>This SHALL indicate a signing key. The [private] key SHALL be used for signing operations, only. This means that it MUST be a leaf of the Protected Storage key hierarchy.</description>
+			</value>
+			<value>
+				<name>TPM_KEY_STORAGE</name>
+				<numValue>0x0011</numValue>
+				<description>This SHALL indicate a storage key. The key SHALL be used to wrap and unwrap other keys in the Protected Storage hierarchy</description>
+			</value>
+			<value>
+				<name>TPM_KEY_IDENTITY</name>
+				<numValue>0x0012</numValue>
+				<description>This SHALL indicate an identity key. The key SHALL be used for operations that require a TPM identity, only.</description>
+			</value>
+			<value>
+				<name>TPM_KEY_AUTHCHANGE</name>
+				<numValue>0X0013</numValue>
+				<description>This SHALL indicate an ephemeral key that is in use during the ChangeAuthAsym process, only.</description>
+			</value>
+			<value>
+				<name>TPM_KEY_BIND</name>
+				<numValue>0x0014</numValue>
+				<description>This SHALL indicate a key that can be used for TPM_Bind and TPM_UnBind operations only.</description>
+			</value>
+			<value>
+				<name>TPM_KEY_LEGACY</name>
+				<numValue>0x0015</numValue>
+				<description>This SHALL indicate a key that can perform signing and binding operations. The key MAY be used for both signing and binding operations. The TPM_KEY_LEGACY key type is to allow for use by applications where both signing and encryption operations occur with the same key. The use of this key type is not recommended</description>
+			</value>
+			<value>
+				<name>TPM_KEY_MIGRATE</name>
+				<numValue>0x0016</numValue>
+				<description>This SHALL indicate a key in use for TPM_MigrateKey</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_ENC_SCHEME</name>
+		<section>5.8</section>
+		<typedef>UINT16</typedef>
+		<values>
+			<value>
+				<name>TPM_ES_NONE</name>
+				<numValue>0x0001</numValue>
+				<description>See section 5.8</description>
+			</value>
+			<value>
+				<name>TPM_ES_RSAESPKCSv15</name>
+				<numValue>0x0002</numValue>
+				<description>See section 5.8</description>
+			</value>
+			<value>
+				<name>TPM_ES_RSAESOAEP_SHA1_MGF1</name>
+				<numValue>0x0003</numValue>
+				<description>See section 5.8</description>
+			</value>
+			<value>
+				<name>TPM_ES_SYM_CTR</name>
+				<numValue>0x0004</numValue>
+				<description>See section 5.8</description>
+			</value>
+			<value>
+				<name>TPM_ES_SYM_OFB</name>
+				<numValue>0x0005</numValue>
+				<description>See section 5.8</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_SIG_SCHEME</name>
+		<section>5.8</section>
+		<typedef>UINT16</typedef>
+		<values>
+			<value>
+				<name>TPM_SS_NONE</name>
+				<numValue>0x0001</numValue>
+				<description>See section 5.8</description>
+			</value>
+			<value>
+				<name>TPM_SS_RSASSAPKCS1v15_SHA1</name>
+				<numValue>0x0002</numValue>
+				<description>See section 5.8</description>
+			</value>
+			<value>
+				<name>TPM_SS_RSASSAPKCS1v15_DER</name>
+				<numValue>0x0003</numValue>
+				<description>See section 5.8</description>
+			</value>
+			<value>
+				<name>TPM_SS_RSASSAPKCS1v15_INFO</name>
+				<numValue>0x0004</numValue>
+				<description>See section 5.8</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_AUTH_DATA_USAGE</name>
+		<section>5.9</section>
+		<typedef>BYTE</typedef>
+		<values>
+			<value>
+				<name>TPM_AUTH_NEVER</name>
+				<numValue>0x00</numValue>
+				<description>This SHALL indicate that usage of the key without authorization is permitted.</description>
+			</value>
+			<value>
+				<name>TPM_AUTH_ALWAYS</name>
+				<numValue>0x01</numValue>
+				<description>This SHALL indicate that on each usage of the key the authorization MUST be performed.</description>
+			</value>
+			<value>
+				<name>TPM_NO_READ_PUBKEY_AUTH</name>
+				<numValue>0x03</numValue>
+				<description>This SHALL indicate that on commands that require the TPM to use the the key, the authorization MUST be performed. For commands that cause the TPM to read the public portion of the key, but not to use the key (e.g. TPM_GetPubKey), the authorization may be omitted.</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_KEY_FLAGS</name>
+		<section>5.10</section>
+		<typedef>UINT32</typedef>
+		<values>
+			<value>
+				<name>redirection</name>
+				<numValue>0x00000001</numValue>
+				<description>This mask value SHALL indicate the use of redirected output.</description>
+			</value>
+			<value>
+				<name>migratable</name>
+				<numValue>0x00000002</numValue>
+				<description>This mask value SHALL indicate that the key is migratable.</description>
+			</value>
+			<value>
+				<name>isVolatile</name>
+				<numValue>0x00000004</numValue>
+				<description>This mask value SHALL indicate that the key MUST be unloaded upon execution of the TPM_Startup(ST_Clear). This does not indicate that a nonvolatile key will remain loaded across TPM_Startup(ST_Clear) events.</description>
+			</value>
+			<value>
+				<name>pcrIgnoredOnRead</name>
+				<numValue>0x00000008</numValue>
+				<description>When TRUE the TPM MUST NOT check digestAtRelease or localityAtRelease for commands that read the public portion of the key (e.g., TPM_GetPubKey) and MAY NOT check digestAtRelease or localityAtRelease for commands that use the public portion of the key (e.g. TPM_Seal) When FALSE the TPM MUST check digestAtRelease and localityAtRelease for commands that read or use the public portion of the key</description>
+			</value>
+			<value>
+				<name>migrateAuthority</name>
+				<numValue>0x00000010</numValue>
+				<description>When set indicates that the key is under control of a migration authority. The TPM MUST only allow the creation of a key with this flag in TPM_CMK_CreateKey</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_CHANGEAUTH_VALIDATE</name>
+		<section>5.11</section>
+		<parameters>
+			<parameter>
+				<name>newAuthSecret</name>
+				<type>TPM_SECRET</type>
+				<description>This SHALL be the new AuthData data for the target entity</description>
+			</parameter>
+			<parameter>
+				<name>n1</name>
+				<type>TPM_NONCE</type>
+				<description>This SHOULD be a nonce, to enable the caller to verify that the target TPM is on-line.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_MIGRATIONKEYAUTH</name>
+		<section>5.12</section>
+		<parameters>
+			<parameter>
+				<name>migrationKey</name>
+				<type>TPM_PUBKEY</type>
+				<description>This SHALL be the public key of the migration facility</description>
+			</parameter>
+			<parameter>
+				<name>migrationScheme</name>
+				<type>TPM_MIGRATE_SCHEME</type>
+				<description>This shall be the type of migration operation.</description>
+			</parameter>
+			<parameter>
+				<name>digest</name>
+				<type>TPM_DIGEST</type>
+				<description>This SHALL be the digest value of the concatenation of migration key, migration scheme and tpmProof</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_COUNTER_VALUE</name>
+		<section>5.13</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>TPM_TAG_COUNTER_VALUE</description>
+			</parameter>
+			<parameter>
+				<name>label</name>
+				<type>BYTE[4]</type>
+				<description>The label for the counter</description>
+			</parameter>
+			<parameter>
+				<name>counter</name>
+				<type>TPM_ACTUAL_COUNT</type>
+				<description>The 32-bit counter value.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_SIGN_INFO</name>
+		<section>5.14</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>Set to TPM_TAG_SIGNINFO</description>
+			</parameter>
+			<parameter>
+				<name>fixed</name>
+				<type>BYTE[4]</type>
+				<description>The ASCII text that identifies what function was performing the signing operation</description>
+			</parameter>
+			<parameter>
+				<name>replay</name>
+				<type>TPM_NONCE</type>
+				<description>Nonce provided by caller to prevent replay attacks</description>
+			</parameter>
+			<parameter>
+				<name>dataLen</name>
+				<type>UINT32</type>
+				<description>The length of the data area</description>
+			</parameter>
+			<parameter>
+				<name>data</name>
+				<type>BYTE*</type>
+				<description>The data that is being signed</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_MSA_COMPOSITE</name>
+		<section>5.15</section>
+		<parameters>
+			<parameter>
+				<name>MSAlist</name>
+				<type>UINT32</type>
+				<description>The number of migAuthDigests. MSAlist MUST be one (1) or greater.</description>
+			</parameter>
+			<parameter>
+				<name>migAuthDigest</name>
+				<type>TPM_DIGEST[]</type>
+				<description>An arbitrary number of digests of public keys belonging to Migration Authorities.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_CMK_AUTH</name>
+		<section>5.16</section>
+		<parameters>
+			<parameter>
+				<name>migrationAuthorityDigest</name>
+				<type>TPM_DIGEST</type>
+				<description>The digest of a public key belonging to a Migration Authority</description>
+			</parameter>
+			<parameter>
+				<name>destinationKeyDigest</name>
+				<type>TPM_DIGEST</type>
+				<description>The digest of a TPM_PUBKEY structure that is an approved destination key for the private key associated with “sourceKey”</description>
+			</parameter>
+			<parameter>
+				<name>sourceKeyDigest</name>
+				<type>TPM_DIGEST</type>
+				<description>The digest of a TPM_PUBKEY structure whose corresponding private key is approved by a Migration Authority to be migrated as a child to the destinationKey.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_CMK_DELEGATE</name>
+		<section>5.17</section>
+		<typedef>UINT32</typedef>
+		<values kind="bit">
+			<value>
+				<name>TPM_CMK_DELEGATE_SIGNING</name>
+				<numValue>31</numValue>
+				<description>When set to 1, this bit SHALL indicate that a delegated command may manipulate a CMK of TPM_KEY_USAGE == TPM_KEY_SIGNING</description>
+			</value>
+			<value>
+				<name>TPM_CMK_DELEGATE_STORAGE</name>
+				<numValue>30</numValue>
+				<description>When set to 1, this bit SHALL indicate that a delegated command may manipulate a CMK of TPM_KEY_USAGE == TPM_KEY_STORAGE</description>
+			</value>
+			<value>
+				<name>TPM_CMK_DELEGATE_BIND</name>
+				<numValue>29</numValue>
+				<description>When set to 1, this bit SHALL indicate that a delegated command may manipulate a CMK of TPM_KEY_USAGE == TPM_KEY_BIND</description>
+			</value>
+			<value>
+				<name>TPM_CMK_DELEGATE_LEGACY</name>
+				<numValue>28</numValue>
+				<description>When set to 1, this bit SHALL indicate that a delegated command may manipulate a CMK of TPM_KEY_USAGE == TPM_KEY_LEGACY</description>
+			</value>
+			<value>
+				<name>TPM_CMK_DELEGATE_MIGRATE</name>
+				<numValue>27</numValue>
+				<description>When set to 1, this bit SHALL indicate that a delegated command may manipulate a CMK of TPM_KEY_USAGE == TPM_KEY_MIGRATE</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_SELECT_SIZE</name>
+		<section>5.18</section>
+		<parameters>
+			<parameter>
+				<name>Major</name>
+				<type>BYTE</type>
+				<description>This SHALL indicate the major version of the TPM. This MUST be 0x01</description>
+			</parameter>
+			<parameter>
+				<name>Minor</name>
+				<type>BYTE</type>
+				<description>This SHALL indicate the minor version of the TPM. This MAY be 0x01 or 0x02</description>
+			</parameter>
+			<parameter>
+				<name>reqSize</name>
+				<type>UINT16</type>
+				<description>This SHALL indicate the value for a sizeOfSelect field in the TPM_SELECTION structure</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_CMK_MIGAUTH</name>
+		<section>5.19</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>Set to TPM_TAG_CMK_MIGAUTH</description>
+			</parameter>
+			<parameter>
+				<name>msaDigest</name>
+				<type>TPM_DIGEST</type>
+				<description>The digest of a TPM_MSA_COMPOSITE structure containing the migration authority public key and parameters.</description>
+			</parameter>
+			<parameter>
+				<name>pubKeyDigest</name>
+				<type>TPM_DIGEST</type>
+				<description>The hash of the associated public key</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_CMK_SIGTICKET</name>
+		<section>5.20</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>Set to TPM_TAG_CMK_SIGTICKET</description>
+			</parameter>
+			<parameter>
+				<name>verKeyDigest</name>
+				<type>TPM_DIGEST</type>
+				<description>The hash of a TPM_PUBKEY structure containing the public key and parameters of the key that can verify the ticket</description>
+			</parameter>
+			<parameter>
+				<name>signedData</name>
+				<type>TPM_DIGEST</type>
+				<description>The ticket data</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_CMK_MA_APPROVAL</name>
+		<section>5.21</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>Set to TPM_TAG_CMK_MA_APPROVAL</description>
+			</parameter>
+			<parameter>
+				<name>migrationAuthorityDigest</name>
+				<type>TPM_DIGEST</type>
+				<description>The hash of a TPM_MSA_COMPOSITE structure containing the hash of one or more migration authority public keys and parameters.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_TAG</name>
+		<section>6</section>
+		<typedef>UINT16</typedef>
+		<values>
+			<value>
+				<name>TPM_TAG_RQU_COMMAND</name>
+				<numValue>0x00C1</numValue>
+				<description>A command with no authentication.</description>
+			</value>
+			<value>
+				<name>TPM_TAG_RQU_AUTH1_COMMAND</name>
+				<numValue>0x00C2</numValue>
+				<description>An authenticated command with one authentication handle</description>
+			</value>
+			<value>
+				<name>TPM_TAG_RQU_AUTH2_COMMAND</name>
+				<numValue>0x00C3</numValue>
+				<description>An authenticated command with two authentication handles</description>
+			</value>
+			<value>
+				<name>TPM_TAG_RSP_COMMAND</name>
+				<numValue>0x00C4</numValue>
+				<description>A response from a command with no authentication</description>
+			</value>
+			<value>
+				<name>TPM_TAG_RSP_AUTH1_COMMAND</name>
+				<numValue>0x00C5</numValue>
+				<description>An authenticated response with one authentication handle</description>
+			</value>
+			<value>
+				<name>TPM_TAG_RSP_AUTH2_COMMAND</name>
+				<numValue>0x00C6</numValue>
+				<description>An authenticated response with two authentication handles</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_PERMANENT_FLAGS</name>
+		<section>7.1</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<flag>--</flag>
+				<description>TPM_TAG_PERMANENT_FLAGS</description>
+			</parameter>
+			<parameter>
+				<name>disable</name>
+				<type>BOOL</type>
+				<flag>TPM_PF_DISABLE</flag>
+				<description>The state of the disable flag. The default state is TRUE</description>
+			</parameter>
+			<parameter>
+				<name>ownership</name>
+				<type>BOOL</type>
+				<flag>TPM_PF_OWNERSHIP</flag>
+				<description>The ability to install an owner. The default state is TRUE.</description>
+			</parameter>
+			<parameter>
+				<name>deactivated</name>
+				<type>BOOL</type>
+				<flag>TPM_PF_DEACTIVATED</flag>
+				<description>The state of the inactive flag. The default state is TRUE.</description>
+			</parameter>
+			<parameter>
+				<name>readPubek</name>
+				<type>BOOL</type>
+				<flag>TPM_PF_READPUBEK</flag>
+				<description>The ability to read the PUBEK without owner AuthData. The default state is TRUE.</description>
+			</parameter>
+			<parameter>
+				<name>disableOwnerClear</name>
+				<type>BOOL</type>
+				<flag>TPM_PF_DISABLEOWNERCLEAR</flag>
+				<description>Whether the owner authorized clear commands are active. The default state is FALSE.</description>
+			</parameter>
+			<parameter>
+				<name>allowMaintenance</name>
+				<type>BOOL</type>
+				<flag>TPM_PF_ALLOWMAINTENANCE</flag>
+				<description>Whether the TPM Owner may create a maintenance archive. The default state is TRUE if maintenance is implemented, vendor specific if maintenance is not implemented.</description>
+			</parameter>
+			<parameter>
+				<name>physicalPresenceLifetimeLock</name>
+				<type>BOOL</type>
+				<flag>TPM_PF_PHYSICALPRESENCELIFETIMELOCK</flag>
+				<description>This bit can only be set to TRUE; it cannot be set to FALSE except during the manufacturing process. FALSE: The state of either physicalPresenceHWEnable or physicalPresenceCMDEnable MAY be changed. (DEFAULT) TRUE: The state of either physicalPresenceHWEnable or physicalPresenceCMDEnable MUST NOT be changed for the life of the TPM.</description>
+			</parameter>
+			<parameter>
+				<name>physicalPresenceHWEnable</name>
+				<type>BOOL</type>
+				<flag>TPM_PF_PHYSICALPRESENCEHWENABLE</flag>
+				<description>FALSE: Disable the hardware signal indicating physical presence. (DEFAULT) TRUE: Enables the hardware signal indicating physical presence.</description>
+			</parameter>
+			<parameter>
+				<name>physicalPresenceCMDEnable</name>
+				<type>BOOL</type>
+				<flag>TPM_PF_PHYSICALPRESENCECMDENABLE</flag>
+				<description>FALSE: Disable the command indicating physical presence. (DEFAULT) TRUE: Enables the command indicating physical presence.</description>
+			</parameter>
+			<parameter>
+				<name>CEKPUsed</name>
+				<type>BOOL</type>
+				<flag>TPM_PF_CEKPUSED</flag>
+				<description>TRUE: The PRIVEK and PUBEK were created using TPM_CreateEndorsementKeyPair. FALSE: The PRIVEK and PUBEK were created using a manufacturer’s process. NOTE: This flag has no default value as the key pair MUST be created by one or the other mechanism.</description>
+			</parameter>
+			<parameter>
+				<name>TPMpost</name>
+				<type>BOOL</type>
+				<flag>TPM_PF_TPMPOST</flag>
+				<description>The meaning of this bit clarified in rev87. While actual use does not match the name, for backwards compatibility there is no change to the name. TRUE: After TPM_Startup, if there is a call to TPM_ContinueSelfTest the TPM MUST execute the actions of TPM_SelfTestFull FALSE: After TPM_Startup, if there is a call to TPM_ContinueSelfTest the TPM MUST execute the actions of TPM_ContinueSelfTest If the TPM supports the implicit invocation of TPM_ContinueSelftTest upon the use of an untested resource, the TPM MUST use the TPMPost flag to execute the actions of either TPM_ContinueSelfTest or TPM_SelfTestFull The TPM manufacturer sets this bit during TPM manufacturing and the bit is unchangeable after shipping the TPM The default state is FALSE</description>
+			</parameter>
+			<parameter>
+				<name>TPMpostLock</name>
+				<type>BOOL</type>
+				<flag>TPM_PF_TPMPOSTLOCK</flag>
+				<description>With the clarification of TPMPost TPMpostLock is now unnecessary. This flag is now deprecated</description>
+			</parameter>
+			<parameter>
+				<name>FIPS</name>
+				<type>BOOL</type>
+				<flag>TPM_PF_FIPS</flag>
+				<description>TRUE: This TPM operates in FIPS mode FALSE: This TPM does NOT operate in FIPS mode</description>
+			</parameter>
+			<parameter>
+				<name>operator</name>
+				<type>BOOL</type>
+				<flag>TPM_PF_OPERATOR</flag>
+				<description>TRUE: The operator AuthData value is valid FALSE: the operator AuthData value is not set (DEFAULT)</description>
+			</parameter>
+			<parameter>
+				<name>enableRevokeEK</name>
+				<type>BOOL</type>
+				<flag>TPM_PF_ENABLEREVOKEEK</flag>
+				<description>TRUE: The TPM_RevokeTrust command is active FALSE: the TPM RevokeTrust command is disabled</description>
+			</parameter>
+			<parameter>
+				<name>nvLocked</name>
+				<type>BOOL</type>
+				<flag>TPM_PF_NV_LOCKED</flag>
+				<description>TRUE: All NV area authorization checks are active FALSE: No NV area checks are performed, except for maxNVWrites. FALSE is the default value</description>
+			</parameter>
+			<parameter>
+				<name>readSRKPub</name>
+				<type>BOOL</type>
+				<flag>TPM_PF_READSRKPUB</flag>
+				<description>TRUE: GetPubKey will return the SRK pub key FALSE: GetPubKey will not return the SRK pub key Default SHOULD be FALSE. See the informative.</description>
+			</parameter>
+			<parameter>
+				<name>tpmEstablished</name>
+				<type>BOOL</type>
+				<flag>TPM_PF_TPMESTABLISHED</flag>
+				<description>TRUE: TPM_HASH_START has been executed at some time FALSE: TPM_HASH_START has not been executed at any time Default is FALSE. Reset to FALSE using TSC_ResetEstablishmentBit</description>
+			</parameter>
+			<parameter>
+				<name>maintenanceDone</name>
+				<type>BOOL</type>
+				<flag>TPM_PF_MAINTENANCEDONE</flag>
+				<description>TRUE: A maintenance archive has been created for the current SRK</description>
+			</parameter>
+			<parameter>
+				<name>disableFullDALogicInfo</name>
+				<type>BOOL</type>
+				<flag>TPM_PF_DISABLEFULLDALOGICINFO</flag>
+				<description>TRUE: The full dictionary attack TPM_GetCapability info is deactivated. The returned structure is TPM_DA_INFO_LIMITED. FALSE: The full dictionary attack TPM_GetCapability info is activated. The returned structure is TPM_DA_INFO. Default is FALSE.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_STCLEAR_FLAGS</name>
+		<section>7.2</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<flag>--</flag>
+				<description>TPM_TAG_STCLEAR_FLAGS</description>
+			</parameter>
+			<parameter>
+				<name>deactivated</name>
+				<type>BOOL</type>
+				<flag>TPM_SF_DEACTIVATED</flag>
+				<description>Prevents the operation of most capabilities. There is no default state. It is initialized by TPM_Startup to the same value as TPM_PERMANENT_FLAGS -&gt; deactivated or a set value depending on the type of TPM_Startup. TPM_SetTempDeactivated sets it to TRUE.</description>
+			</parameter>
+			<parameter>
+				<name>disableForceClear</name>
+				<type>BOOL</type>
+				<flag>TPM_SF_DISABLEFORCECLEAR</flag>
+				<description>Prevents the operation of TPM_ForceClear when TRUE. The default state is FALSE. TPM_DisableForceClear sets it to TRUE.</description>
+			</parameter>
+			<parameter>
+				<name>physicalPresence</name>
+				<type>BOOL</type>
+				<flag>TPM_SF_PHYSICALPRESENCE</flag>
+				<description>Command assertion of physical presence. The default state is FALSE. This flag is affected by the TSC_PhysicalPresence command but not by the hardware signal.</description>
+			</parameter>
+			<parameter>
+				<name>physicalPresenceLock</name>
+				<type>BOOL</type>
+				<flag>TPM_SF_PHYSICALPRESENCELOCK</flag>
+				<description>Indicates whether changes to the TPM_STCLEAR_FLAGS -&gt; physicalPresence flag are permitted. TPM_Startup(ST_CLEAR) sets PhysicalPresenceLock to its default state of FALSE (allow changes to the physicalPresence flag). When TRUE, the physicalPresence flag is FALSE. TSC_PhysicalPresence can change the state of physicalPresenceLock.</description>
+			</parameter>
+			<parameter>
+				<name>bGlobalLock</name>
+				<type>BOOL</type>
+				<flag>TPM_SF_BGLOBALLOCK</flag>
+				<description>Set to FALSE on each TPM_Startup(ST_CLEAR). Set to TRUE when a write to NV_Index =0 is successful</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_STANY_FLAGS</name>
+		<section>7.3</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<flag>--</flag>
+				<description>TPM_TAG_STANY_FLAGS</description>
+			</parameter>
+			<parameter>
+				<name>postInitialise</name>
+				<type>BOOL</type>
+				<flag>TPM_AF_POSTINITIALISE</flag>
+				<description>Prevents the operation of most capabilities. There is no default state. It is initialized by TPM_Init to TRUE. TPM_Startup sets it to FALSE.</description>
+			</parameter>
+			<parameter>
+				<name>localityModifier</name>
+				<type>TPM_MODIFIER_INDICATOR</type>
+				<flag>TPM_AF_LOCALITYMODIFIER</flag>
+				<description>This SHALL indicate for each command the presence of a locality modifier for the command. It MUST be always ensured that the value during usage reflects the currently active locality.</description>
+			</parameter>
+			<parameter>
+				<name>transportExclusive</name>
+				<type>BOOL</type>
+				<flag>TPM_AF_TRANSPORTEXCLUSIVE</flag>
+				<description>Defaults to FALSE. TRUE when there is an exclusive transport session active. Execution of ANY command other than TPM_ExecuteTransport targeting the exclusive transport session MUST invalidate the exclusive transport session.</description>
+			</parameter>
+			<parameter>
+				<name>TOSPresent</name>
+				<type>BOOL</type>
+				<flag>TPM_AF_TOSPRESENT</flag>
+				<description>Defaults to FALSE Set to TRUE on TPM_HASH_START set to FALSE using setCapability</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_PERMANENT_DATA</name>
+		<section>7.4</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<flag>--</flag>
+				<description>TPM_TAG_PERMANENT_DATA</description>
+			</parameter>
+			<parameter>
+				<name>revMajor</name>
+				<type>BYTE</type>
+				<flag>TPM_PD_REVMAJOR</flag>
+				<description>This is the TPM major revision indicator. This SHALL be set by the TPME, only. The default value is manufacturer-specific.</description>
+			</parameter>
+			<parameter>
+				<name>revMinor</name>
+				<type>BYTE</type>
+				<flag>TPM_PD_REVMINOR</flag>
+				<description>This is the TPM minor revision indicator. This SHALL be set by the TPME, only. The default value is manufacturer-specific.</description>
+			</parameter>
+			<parameter>
+				<name>tpmProof</name>
+				<type>TPM_SECRET</type>
+				<flag>TPM_PD_TPMPROOF</flag>
+				<description>This is a random number that each TPM maintains to validate blobs in the SEAL and other processes. The default value is manufacturer-specific.</description>
+			</parameter>
+			<parameter>
+				<name>ownerAuth</name>
+				<type>TPM_SECRET</type>
+				<flag>TPM_PD_OWNERAUTH</flag>
+				<description>This is the TPM-Owner’s AuthData data. The default value is manufacturer-specific.</description>
+			</parameter>
+			<parameter>
+				<name>operatorAuth</name>
+				<type>TPM_SECRET</type>
+				<flag>TPM_PD_OPERATORAUTH</flag>
+				<description>The value that allows the execution of the TPM_SetTempDeactivated command</description>
+			</parameter>
+			<parameter>
+				<name>manuMaintPub</name>
+				<type>TPM_PUBKEY</type>
+				<flag>TPM_PD_MANUMAINTPUB</flag>
+				<description>This is the manufacturer’s public key to use in the maintenance operations. The default value is manufacturer-specific.</description>
+			</parameter>
+			<parameter>
+				<name>endorsementKey</name>
+				<type>TPM_KEY</type>
+				<flag>TPM_PD_ENDORSEMENTKEY</flag>
+				<description>This is the TPM’s endorsement key pair.</description>
+			</parameter>
+			<parameter>
+				<name>srk</name>
+				<type>TPM_KEY</type>
+				<flag>TPM_PD_SRK</flag>
+				<description>This is the TPM’s StorageRootKey.</description>
+			</parameter>
+			<parameter>
+				<name>delegateKey</name>
+				<type>TPM_KEY</type>
+				<flag>TPM_PD_DELEGATEKEY</flag>
+				<description>This key encrypts delegate rows that are stored outside the TPM. The key MAY be symmetric or asymmetric. The key size for the algorithm SHOULD be equivalent to 128-bit AES key. The TPM MAY set this value once or allow for changes to this value. This key MUST NOT be the EK or SRK To save space this key MAY be the same key that performs context blob encryption. If an asymmetric algorithm is in use for this key the public portion of the key MUST never be revealed by the TPM. This value MUST be reset when the TPM Owner changes. The value MUST be invalidated with the actions of TPM_OwnerClear. The value MUST be set on TPM_TakeOwnership. The contextKey and delegateKey MAY be the same value.</description>
+			</parameter>
+			<parameter>
+				<name>contextKey</name>
+				<type>TPM_KEY</type>
+				<flag>TPM_PD_CONTEXTKEY</flag>
+				<description>This is the key in use to perform context saves. The key may be symmetric or asymmetric. The key size is predicated by the algorithm in use. This value MUST be reset when the TPM Owner changes. This key MUST NOT be a copy of the EK or SRK. The contextKey and delegateKey MAY be the same value.</description>
+			</parameter>
+			<parameter>
+				<name>auditMonotonicCounter</name>
+				<type>TPM_COUNTER_VALUE</type>
+				<flag>TPM_PD_AUDITMONOTONICCOUNTER</flag>
+				<description>This SHALL be the audit monotonic counter for the TPM. This value starts at 0 and increments according to the rules of auditing. The label SHALL be fixed at 4 bytes of 0x00.</description>
+			</parameter>
+			<parameter>
+				<name>monotonicCounter</name>
+				<type>TPM_COUNTER_VALUE</type>
+				<flag>TPM_PD_MONOTONICCOUNTER</flag>
+				<description>This SHALL be the monotonic counters for the TPM. The individual counters start and increment according to the rules of monotonic counters.</description>
+			</parameter>
+			<parameter>
+				<name>pcrAttrib</name>
+				<type>TPM_PCR_ATTRIBUTES</type>
+				<flag>TPM_PD_PCRATTRIB</flag>
+				<description>The attributes for all of the PCR registers supported by the TPM.</description>
+			</parameter>
+			<parameter>
+				<name>ordinalAuditStatus</name>
+				<type>BYTE[]</type>
+				<flag>TPM_PD_ORDINALAUDITSTATUS</flag>
+				<description>Table indicating which ordinals are being audited.</description>
+			</parameter>
+			<parameter>
+				<name>authDIR</name>
+				<type>TPM_DIRVALUE</type>
+				<flag>TPM_PD_AUTHDIR</flag>
+				<description>The array of TPM Owner authorized DIR. Points to the same location as the NV index value.</description>
+			</parameter>
+			<parameter>
+				<name>rngState</name>
+				<type>BYTE[]</type>
+				<flag>TPM_PD_RNGSTATE</flag>
+				<description>State information describing the random number generator.</description>
+			</parameter>
+			<parameter>
+				<name>familyTable</name>
+				<type>TPM_FAMILY_TABLE</type>
+				<flag>TPM_PD_FAMILYTABLE</flag>
+				<description>The family table in use for delegations</description>
+			</parameter>
+			<parameter>
+				<name>delegateTable</name>
+				<type>TPM_DELEGATE_TABLE</type>
+				<flag>TPM_DELEGATETABLE</flag>
+				<description>The delegate table</description>
+			</parameter>
+			<parameter>
+				<name>ekReset</name>
+				<type>TPM_NONCE</type>
+				<flag>TPM_PD_EKRESET</flag>
+				<description>Nonce held by TPM to validate TPM_RevokeTrust. This value is set as the next 20 bytes from the TPM RNG when the EK is set</description>
+			</parameter>
+			<parameter>
+				<name>lastFamilyID</name>
+				<type>UINT32</type>
+				<flag>TPM_PD_LASTFAMILYID</flag>
+				<description>--</description>
+			</parameter>
+			<parameter>
+				<name>noOwnerNVWrite</name>
+				<type>UINT32</type>
+				<flag>TPM_PD_NOOWNERNVWRITE</flag>
+				<description>--</description>
+			</parameter>
+			<parameter>
+				<name>restrictDelegate</name>
+				<type>TPM_CMK_DELEGATE</type>
+				<flag>TPM_PD_RESTRICTDELEGATE</flag>
+				<description>--</description>
+			</parameter>
+			<parameter>
+				<name>tpmDAASeed</name>
+				<type>TPM_DAA_TPM_SEED</type>
+				<flag>TPM_PD_TPMDAASEED</flag>
+				<description>--</description>
+			</parameter>
+			<parameter>
+				<name>daaProof</name>
+				<type>TPM_NONCE</type>
+				<flag>TPM_PD_DAAPROOF</flag>
+				<description>--</description>
+			</parameter>
+			<parameter>
+				<name>daaBlobKey</name>
+				<type>TPM_KEY</type>
+				<flag>TPM_DAABLOBKEY</flag>
+				<description>--</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_STCLEAR_DATA</name>
+		<section>7.5</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<flag>--</flag>
+				<description>TPM_TAG_STCLEAR_DATA</description>
+			</parameter>
+			<parameter>
+				<name>contextNonceKey</name>
+				<type>TPM_NONCE</type>
+				<flag>TPM_SD_CONTEXTNONCEKEY</flag>
+				<description>This is the nonce in use to properly identify saved key context blobs This SHALL be set to all zeros on each TPM_Startup (ST_Clear).</description>
+			</parameter>
+			<parameter>
+				<name>countID</name>
+				<type>TPM_COUNT_ID</type>
+				<flag>TPM_SD_COUNTID</flag>
+				<description>This is the handle for the current monotonic counter. This SHALL be set to zero on each TPM_Startup(ST_Clear).</description>
+			</parameter>
+			<parameter>
+				<name>ownerReference</name>
+				<type>UINT32</type>
+				<flag>TPM_SD_OWNERREFERENCE</flag>
+				<description>Points to where to obtain the owner secret in OIAP and OSAP commands. This allows a TSS to manage 1.1 applications on a 1.2 TPM where delegation is in operation. Default value is TPM_KH_OWNER.</description>
+			</parameter>
+			<parameter>
+				<name>disableResetLock</name>
+				<type>BOOL</type>
+				<flag>TPM_SD_DISABLERESETLOCK</flag>
+				<description>Disables TPM_ResetLockValue upon authorization failure. The value remains TRUE for the timeout period. Default is FALSE. The value is in the STCLEAR_DATA structure as the implementation of this flag is TPM vendor specific.</description>
+			</parameter>
+			<parameter>
+				<name>PCR</name>
+				<type>TPM_PCRVALUE</type>
+				<flag>TPM_SD_PCR</flag>
+				<description>Platform configuration registers</description>
+			</parameter>
+			<parameter>
+				<name>deferredPhysicalPresence</name>
+				<type>UINT32</type>
+				<flag>TPM_SD_DEFERREDPHYSICALPRESENCE</flag>
+				<description>The value can save the assertion of physicalPresence. Individual bits indicate to its ordinal that physicalPresence was previously asserted when the software state is such that it can no longer be asserted. Set to zero on each TPM_Startup(ST_Clear).</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_STANY_DATA</name>
+		<section>7.6</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<flag>--</flag>
+				<description>TPM_TAG_STANY_DATA</description>
+			</parameter>
+			<parameter>
+				<name>contextNonceSession</name>
+				<type>TPM_NONCE</type>
+				<flag>TPM_AD_CONTEXTNONCESESSION</flag>
+				<description>This is the nonce in use to properly identify saved session context blobs. This MUST be set to all zeros on each TPM_Startup (ST_Clear). The nonce MAY be set to all zeros on TPM_Startup(any).</description>
+			</parameter>
+			<parameter>
+				<name>auditDigest</name>
+				<type>TPM_DIGEST</type>
+				<flag>TPM_AD_AUDITDIGEST</flag>
+				<description>This is the extended value that is the audit log. This SHALL be set to all zeros at the start of each audit session.</description>
+			</parameter>
+			<parameter>
+				<name>currentTicks</name>
+				<type>TPM_CURRENT_TICKS</type>
+				<flag>TPM_AD_CURRENTTICKS</flag>
+				<description>This is the current tick counter. This is reset to 0 according to the rules when the TPM can tick. See See Part 1 'Design Section for Time Stamping' for details.</description>
+			</parameter>
+			<parameter>
+				<name>contextCount</name>
+				<type>UINT32</type>
+				<flag>TPM_AD_CONTEXTCOUNT</flag>
+				<description>This is the counter to avoid session context blob replay attacks. This MUST be set to 0 on each TPM_Startup (ST_Clear). The value MAY be set to 0 on TPM_Startup (any).</description>
+			</parameter>
+			<parameter>
+				<name>contextList</name>
+				<type>UINT32</type>
+				<flag>TPM_AD_CONTEXTLIST</flag>
+				<description>This is the list of outstanding session blobs. All elements of this array MUST be set to 0 on each TPM_Startup (ST_Clear). The values MAY be set to 0 on TPM_Startup (any). TPM_MIN_SESSION_LIST MUST be 16 or greater.</description>
+			</parameter>
+			<parameter>
+				<name>sessions</name>
+				<type>TPM_SESSION_DATA</type>
+				<flag>TPM_AD_SESSIONS</flag>
+				<description>List of current sessions. Sessions can be OSAP, OIAP, DSAP and Transport</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_PCR_SELECTION</name>
+		<section>8.1</section>
+		<parameters>
+			<parameter>
+				<name>sizeOfSelect</name>
+				<type>UINT16</type>
+				<description>The size in bytes of the pcrSelect structure</description>
+			</parameter>
+			<parameter>
+				<name>pcrSelect</name>
+				<type>BYTE*</type>
+				<description>This SHALL be a bit map that indicates if a PCR is active or not</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_PCR_COMPOSITE</name>
+		<section>8.2</section>
+		<parameters>
+			<parameter>
+				<name>select</name>
+				<type>TPM_PCR_SELECTION</type>
+				<description>This SHALL be the indication of which PCR values are active</description>
+			</parameter>
+			<parameter>
+				<name>valueSize</name>
+				<type>UINT32</type>
+				<description>This SHALL be the size of the pcrValue field (not the number of PCR’s)</description>
+			</parameter>
+			<parameter>
+				<name>pcrValue[]</name>
+				<type>TPM_PCRVALUE</type>
+				<description>This SHALL be an array of TPM_PCRVALUE structures. The values come in the order specified by the select parameter and are concatenated into a single blob</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_PCR_INFO</name>
+		<section>8.3</section>
+		<parameters>
+			<parameter>
+				<name>pcrSelection</name>
+				<type>TPM_PCR_SELECTION</type>
+				<description>This SHALL be the selection of PCRs to which the data or key is bound.</description>
+			</parameter>
+			<parameter>
+				<name>digestAtRelease</name>
+				<type>TPM_COMPOSITE_HASH</type>
+				<description>This SHALL be the digest of the PCR indices and PCR values to verify when revealing Sealed Data or using a key that was wrapped to PCRs.</description>
+			</parameter>
+			<parameter>
+				<name>digestAtCreation</name>
+				<type>TPM_COMPOSITE_HASH</type>
+				<description>This SHALL be the composite digest value of the PCR values, at the time when the sealing is performed.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_PCR_INFO_LONG</name>
+		<section>8.4</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>This SHALL be TPM_TAG_PCR_INFO_LONG</description>
+			</parameter>
+			<parameter>
+				<name>localityAtCreation</name>
+				<type>TPM_LOCALITY_SELECTION</type>
+				<description>This SHALL be the locality modifier when the blob is created</description>
+			</parameter>
+			<parameter>
+				<name>localityAtRelease</name>
+				<type>TPM_LOCALITY_SELECTION</type>
+				<description>This SHALL be the locality modifier required to reveal Sealed Data or use a key that was wrapped to PCRs This value MUST not be zero (0).</description>
+			</parameter>
+			<parameter>
+				<name>creationPCRSelection</name>
+				<type>TPM_PCR_SELECTION</type>
+				<description>This SHALL be the selection of PCRs active when the blob is created</description>
+			</parameter>
+			<parameter>
+				<name>releasePCRSelection</name>
+				<type>TPM_PCR_SELECTION</type>
+				<description>This SHALL be the selection of PCRs to which the data or key is bound.</description>
+			</parameter>
+			<parameter>
+				<name>digestAtCreation</name>
+				<type>TPM_COMPOSITE_HASH</type>
+				<description>This SHALL be the composite digest value of the PCR values, when the blob is created</description>
+			</parameter>
+			<parameter>
+				<name>digestAtRelease</name>
+				<type>TPM_COMPOSITE_HASH</type>
+				<description>This SHALL be the digest of the PCR indices and PCR values to verify when revealing Sealed Data or using a key that was wrapped to PCRs.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_PCR_INFO_SHORT</name>
+		<section>8.5</section>
+		<parameters>
+			<parameter>
+				<name>pcrSelection</name>
+				<type>TPM_PCR_SELECTION</type>
+				<description>This SHALL be the selection of PCRs that specifies the digestAtRelease</description>
+			</parameter>
+			<parameter>
+				<name>localityAtRelease</name>
+				<type>TPM_LOCALITY_SELECTION</type>
+				<description>This SHALL be the locality modifier required to release the information. This value must not be zero (0).</description>
+			</parameter>
+			<parameter>
+				<name>digestAtRelease</name>
+				<type>TPM_COMPOSITE_HASH</type>
+				<description>This SHALL be the digest of the PCR indices and PCR values to verify when revealing auth data</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_LOCALITY_SELECTION</name>
+		<section>8.6</section>
+		<typedef>BYTE</typedef>
+		<values kind="bit">
+			<value>
+				<name>TPM_LOC_FOUR</name>
+				<numValue>4</numValue>
+				<description>Locality 4</description>
+			</value>
+			<value>
+				<name>TPM_LOC_THREE</name>
+				<numValue>3</numValue>
+				<description>Locality 3</description>
+			</value>
+			<value>
+				<name>TPM_LOC_TWO</name>
+				<numValue>2</numValue>
+				<description>Locality 2</description>
+			</value>
+			<value>
+				<name>TPM_LOC_ONE</name>
+				<numValue>1</numValue>
+				<description>Locality 1</description>
+			</value>
+			<value>
+				<name>TPM_LOC_ZERO</name>
+				<numValue>0</numValue>
+				<description>Locality 0. This is the same as the legacy interface.</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_PCR_ATTRIBUTES</name>
+		<section>8.8</section>
+		<parameters>
+			<parameter>
+				<name>pcrReset</name>
+				<type>BOOL</type>
+				<description>A value of TRUE SHALL indicate that the PCR register can be reset using the TPM_PCR_Reset command. If pcrReset is: FALSE- Default value of the PCR MUST be 0x00..00 Reset on TPM_Startup(ST_Clear) only Saved by TPM_SaveState Can not be reset by TPM_PCR_Reset TRUE – Default value of the PCR MUST be 0xFF..FF. Reset on TPM_Startup(any) MUST not be part of any state stored by TPM_SaveState Can be reset by TPM_PCR_Reset When reset as part of HASH_START the starting value MUST be 0x00..00</description>
+			</parameter>
+			<parameter>
+				<name>pcrResetLocal</name>
+				<type>TPM_LOCALITY_SELECTION</type>
+				<description>An indication of which localities can reset the PCR</description>
+			</parameter>
+			<parameter>
+				<name>pcrExtendLocal</name>
+				<type>TPM_LOCALITY_SELECTION</type>
+				<description>An indication of which localities can perform extends on the PCR.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_STORED_DATA</name>
+		<section>9.1</section>
+		<parameters>
+			<parameter>
+				<name>ver</name>
+				<type>TPM_STRUCT_VER</type>
+				<description>This MUST be 1.1.0.0</description>
+			</parameter>
+			<parameter>
+				<name>sealInfoSize</name>
+				<type>UINT32</type>
+				<description>Size of the sealInfo parameter</description>
+			</parameter>
+			<parameter>
+				<name>sealInfo</name>
+				<type>BYTE*</type>
+				<description>This SHALL be a structure of type TPM_PCR_INFO or a 0 length array if the data is not bound to PCRs.</description>
+			</parameter>
+			<parameter>
+				<name>encDataSize</name>
+				<type>UINT32</type>
+				<description>This SHALL be the size of the encData parameter</description>
+			</parameter>
+			<parameter>
+				<name>encData</name>
+				<type>BYTE*</type>
+				<description>This shall be an encrypted TPM_SEALED_DATA structure containing the confidential part of the data.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_STORED_DATA12</name>
+		<section>9.2</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>This SHALL be TPM_TAG_STORED_DATA12</description>
+			</parameter>
+			<parameter>
+				<name>et</name>
+				<type>TPM_ENTITY_TYPE</type>
+				<description>The type of blob</description>
+			</parameter>
+			<parameter>
+				<name>sealInfoSize</name>
+				<type>UINT32</type>
+				<description>Size of the sealInfo parameter</description>
+			</parameter>
+			<parameter>
+				<name>sealInfo</name>
+				<type>BYTE*</type>
+				<description>This SHALL be a structure of type TPM_PCR_INFO_LONG</description>
+			</parameter>
+			<parameter>
+				<name>encDataSize</name>
+				<type>UINT32</type>
+				<description>This SHALL be the size of the encData parameter</description>
+			</parameter>
+			<parameter>
+				<name>encData</name>
+				<type>BYTE*</type>
+				<description>This shall be an encrypted TPM_SEALED_DATA structure containing the confidential part of the data.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_SEALED_DATA</name>
+		<section>9.3</section>
+		<parameters>
+			<parameter>
+				<name>payload</name>
+				<type>TPM_PAYLOAD_TYPE</type>
+				<description>This SHALL indicate the payload type of TPM_PT_SEAL</description>
+			</parameter>
+			<parameter>
+				<name>authData</name>
+				<type>TPM_SECRET</type>
+				<description>This SHALL be the AuthData data for this value</description>
+			</parameter>
+			<parameter>
+				<name>tpmProof</name>
+				<type>TPM_SECRET</type>
+				<description>This SHALL be a copy of TPM_PERMANENT_DATA -&gt; tpmProof</description>
+			</parameter>
+			<parameter>
+				<name>storedDigest</name>
+				<type>TPM_DIGEST</type>
+				<description>This SHALL be a digest of the TPM_STORED_DATA structure, excluding the fields TPM_STORED_DATA -&gt; encDataSize and TPM_STORED_DATA -&gt; encData.</description>
+			</parameter>
+			<parameter>
+				<name>dataSize</name>
+				<type>UINT32</type>
+				<description>This SHALL be the size of the data parameter</description>
+			</parameter>
+			<parameter>
+				<name>data</name>
+				<type>BYTE*</type>
+				<description>This SHALL be the data to be sealed</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_SYMMETRIC_KEY</name>
+		<section>9.4</section>
+		<parameters>
+			<parameter>
+				<name>algId</name>
+				<type>TPM_ALGORITHM_ID</type>
+				<description>This SHALL be the algorithm identifier of the symmetric key.</description>
+			</parameter>
+			<parameter>
+				<name>encScheme</name>
+				<type>TPM_ENC_SCHEME</type>
+				<description>This SHALL fully identify the manner in which the key will be used for encryption operations.</description>
+			</parameter>
+			<parameter>
+				<name>size</name>
+				<type>UINT16</type>
+				<description>This SHALL be the size of the data parameter in bytes</description>
+			</parameter>
+			<parameter>
+				<name>data</name>
+				<type>BYTE*</type>
+				<description>This SHALL be the symmetric key data</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_BOUND_DATA</name>
+		<section>9.5</section>
+		<parameters>
+			<parameter>
+				<name>ver</name>
+				<type>TPM_STRUCT_VER</type>
+				<description>This MUST be 1.1.0.0</description>
+			</parameter>
+			<parameter>
+				<name>payload</name>
+				<type>TPM_PAYLOAD_TYPE</type>
+				<description>This SHALL be the value TPM_PT_BIND</description>
+			</parameter>
+			<parameter>
+				<name>payloadData</name>
+				<type>BYTE[]</type>
+				<description>The bound data</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_KEY_PARMS</name>
+		<section>10.1</section>
+		<parameters>
+			<parameter>
+				<name>algorithmID</name>
+				<type>TPM_ALGORITHM_ID</type>
+				<description>This SHALL be the key algorithm in use</description>
+			</parameter>
+			<parameter>
+				<name>encScheme</name>
+				<type>TPM_ENC_SCHEME</type>
+				<description>This SHALL be the encryption scheme that the key uses to encrypt information</description>
+			</parameter>
+			<parameter>
+				<name>sigScheme</name>
+				<type>TPM_SIG_SCHEME</type>
+				<description>This SHALL be the signature scheme that the key uses to perform digital signatures</description>
+			</parameter>
+			<parameter>
+				<name>parmSize</name>
+				<type>UINT32</type>
+				<description>This SHALL be the size of the parms field in bytes</description>
+			</parameter>
+			<parameter>
+				<name>parms</name>
+				<type>BYTE*</type>
+				<description>This SHALL be the parameter information dependant upon the key algorithm.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_RSA_KEY_PARMS</name>
+		<section>10.1</section>
+		<parameters>
+			<parameter>
+				<name>keyLength</name>
+				<type>UINT32</type>
+				<description>This specifies the size of the RSA key in bits</description>
+			</parameter>
+			<parameter>
+				<name>numPrimes</name>
+				<type>UINT32</type>
+				<description>This specifies the number of prime factors used by this RSA key.</description>
+			</parameter>
+			<parameter>
+				<name>exponentSize</name>
+				<type>UINT32</type>
+				<description>This SHALL be the size of the exponent. If the key is using the default exponent then the exponentSize MUST be 0.</description>
+			</parameter>
+			<parameter>
+				<name>exponent</name>
+				<type>BYTE*</type>
+				<description>The public exponent of this key</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_SYMMETRIC_KEY_PARMS</name>
+		<section>10.1</section>
+		<parameters>
+			<parameter>
+				<name>keyLength</name>
+				<type>UINT32</type>
+				<description>This SHALL indicate the length of the key in bits</description>
+			</parameter>
+			<parameter>
+				<name>blockSize</name>
+				<type>UINT32</type>
+				<description>This SHALL indicate the block size of the algorithm</description>
+			</parameter>
+			<parameter>
+				<name>ivSize</name>
+				<type>UINT32</type>
+				<description>This SHALL indicate the size of the IV</description>
+			</parameter>
+			<parameter>
+				<name>IV</name>
+				<type>BYTE*</type>
+				<description>The initialization vector</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_KEY</name>
+		<section>10.2</section>
+		<parameters>
+			<parameter>
+				<name>ver</name>
+				<type>TPM_STRUCT_VER</type>
+				<description>This MUST be 1.1.0.0</description>
+			</parameter>
+			<parameter>
+				<name>keyUsage</name>
+				<type>TPM_KEY_USAGE</type>
+				<description>This SHALL be the TPM key usage that determines the operations permitted with this key</description>
+			</parameter>
+			<parameter>
+				<name>keyFlags</name>
+				<type>TPM_KEY_FLAGS</type>
+				<description>This SHALL be the indication of migration, redirection etc.</description>
+			</parameter>
+			<parameter>
+				<name>authDataUsage</name>
+				<type>TPM_AUTH_DATA_USAGE</type>
+				<description>This SHALL Indicate the conditions where it is required that authorization be presented.</description>
+			</parameter>
+			<parameter>
+				<name>algorithmParms</name>
+				<type>TPM_KEY_PARMS</type>
+				<description>This SHALL be the information regarding the algorithm for this key</description>
+			</parameter>
+			<parameter>
+				<name>PCRInfoSize</name>
+				<type>UINT32</type>
+				<description>This SHALL be the length of the pcrInfo parameter. If the key is not bound to a PCR this value SHOULD be 0.</description>
+			</parameter>
+			<parameter>
+				<name>PCRInfo</name>
+				<type>BYTE*</type>
+				<description>This SHALL be a structure of type TPM_PCR_INFO, or an empty array if the key is not bound to PCRs.</description>
+			</parameter>
+			<parameter>
+				<name>pubKey</name>
+				<type>TPM_STORE_PUBKEY</type>
+				<description>This SHALL be the public portion of the key</description>
+			</parameter>
+			<parameter>
+				<name>encDataSize</name>
+				<type>UINT32</type>
+				<description>This SHALL be the size of the encData parameter.</description>
+			</parameter>
+			<parameter>
+				<name>encData</name>
+				<type>BYTE*</type>
+				<description>This SHALL be an encrypted TPM_STORE_ASYMKEY structure or TPM_MIGRATE_ASYMKEY structure</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_KEY12</name>
+		<section>10.3</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>MUST be TPM_TAG_KEY12</description>
+			</parameter>
+			<parameter>
+				<name>fill</name>
+				<type>UINT16</type>
+				<description>MUST be 0x0000</description>
+			</parameter>
+			<parameter>
+				<name>keyUsage</name>
+				<type>TPM_KEY_USAGE</type>
+				<description>This SHALL be the TPM key usage that determines the operations permitted with this key</description>
+			</parameter>
+			<parameter>
+				<name>keyFlags</name>
+				<type>TPM_KEY_FLAGS</type>
+				<description>This SHALL be the indication of migration, redirection etc.</description>
+			</parameter>
+			<parameter>
+				<name>authDataUsage</name>
+				<type>TPM_AUTH_DATA_USAGE</type>
+				<description>This SHALL Indicate the conditions where it is required that authorization be presented.</description>
+			</parameter>
+			<parameter>
+				<name>algorithmParms</name>
+				<type>TPM_KEY_PARMS</type>
+				<description>This SHALL be the information regarding the algorithm for this key</description>
+			</parameter>
+			<parameter>
+				<name>PCRInfoSize</name>
+				<type>UINT32</type>
+				<description>This SHALL be the length of the pcrInfo parameter. If the key is not bound to a PCR this value SHOULD be 0.</description>
+			</parameter>
+			<parameter>
+				<name>PCRInfo</name>
+				<type>BYTE*</type>
+				<description>This SHALL be a structure of type TPM_PCR_INFO_LONG,</description>
+			</parameter>
+			<parameter>
+				<name>pubKey</name>
+				<type>TPM_STORE_PUBKEY</type>
+				<description>This SHALL be the public portion of the key</description>
+			</parameter>
+			<parameter>
+				<name>encDataSize</name>
+				<type>UINT32</type>
+				<description>This SHALL be the size of the encData parameter.</description>
+			</parameter>
+			<parameter>
+				<name>encData</name>
+				<type>BYTE*</type>
+				<description>This SHALL be an encrypted TPM_STORE_ASYMKEY structure TPM_MIGRATE_ASYMKEY structure</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_STORE_PUBKEY</name>
+		<section>10.4</section>
+		<parameters>
+			<parameter>
+				<name>keyLength</name>
+				<type>UINT32</type>
+				<description>This SHALL be the length of the key field.</description>
+			</parameter>
+			<parameter>
+				<name>key</name>
+				<type>BYTE*</type>
+				<description>This SHALL be a structure interpreted according to the algorithm Id in the corresponding TPM_KEY_PARMS structure.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_PUBKEY</name>
+		<section>10.5</section>
+		<parameters>
+			<parameter>
+				<name>algorithmParms</name>
+				<type>TPM_KEY_PARMS</type>
+				<description>This SHALL be the information regarding this key</description>
+			</parameter>
+			<parameter>
+				<name>pubKey</name>
+				<type>TPM_STORE_PUBKEY</type>
+				<description>This SHALL be the public key information</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_STORE_ASYMKEY</name>
+		<section>10.6</section>
+		<parameters>
+			<parameter>
+				<name>payload</name>
+				<type>TPM_PAYLOAD_TYPE</type>
+				<description>This SHALL set to TPM_PT_ASYM to indicate an asymmetric key. If used in TPM_CMK_ConvertMigration the value SHALL be TPM_PT_MIGRATE_EXTERNAL If used in TPM_CMK_CreateKey the value SHALL be TPM_PT_MIGRATE_RESTRICTED</description>
+			</parameter>
+			<parameter>
+				<name>usageAuth</name>
+				<type>TPM_SECRET</type>
+				<description>This SHALL be the AuthData data necessary to authorize the use of this value</description>
+			</parameter>
+			<parameter>
+				<name>migrationAuth</name>
+				<type>TPM_SECRET</type>
+				<description>This SHALL be the migration AuthData data for a migratable key, or the TPM secret value tpmProof for a non-migratable key created by the TPM. If the TPM sets this parameter to the value tpmProof, then the TPM_KEY.keyFlags.migratable of the corresponding TPM_KEY structure MUST be set to 0. If this parameter is set to the migration AuthData data for the key in parameter PrivKey, then the TPM_KEY.keyFlags.migratable of the corresponding TPM_KEY structure SHOULD be set to 1.</description>
+			</parameter>
+			<parameter>
+				<name>pubDataDigest</name>
+				<type>TPM_DIGEST</type>
+				<description>This SHALL be the digest of the corresponding TPM_KEY structure, excluding the fields TPM_KEY.encSize and TPM_KEY.encData. When TPM_KEY -&gt; pcrInfoSize is 0 then the digest calculation has no input from the pcrInfo field. The pcrInfoSize field MUST always be part of the digest calculation.</description>
+			</parameter>
+			<parameter>
+				<name>privKey</name>
+				<type>TPM_STORE_PRIVKEY</type>
+				<description>This SHALL be the private key data. The privKey can be a variable length which allows for differences in the key format. The maximum size of the area would be 151 bytes.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_STORE_PRIVKEY</name>
+		<section>10.7</section>
+		<parameters>
+			<parameter>
+				<name>keyLength</name>
+				<type>UINT32</type>
+				<description>This SHALL be the length of the key field.</description>
+			</parameter>
+			<parameter>
+				<name>key</name>
+				<type>BYTE*</type>
+				<description>This SHALL be a structure interpreted according to the algorithm Id in the corresponding TPM_KEY structure.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_MIGRATE_ASYMKEY</name>
+		<section>10.8</section>
+		<parameters>
+			<parameter>
+				<name>payload</name>
+				<type>TPM_PAYLOAD_TYPE</type>
+				<description>This SHALL set to TPM_PT_MIGRATE or TPM_PT_CMK_MIGRATE to indicate an migrating asymmetric key or TPM_PT_MAINT to indicate a maintenance key.</description>
+			</parameter>
+			<parameter>
+				<name>usageAuth</name>
+				<type>TPM_SECRET</type>
+				<description>This SHALL be a copy of the usageAuth from the TPM_STORE_ASYMKEY structure.</description>
+			</parameter>
+			<parameter>
+				<name>pubDataDigest</name>
+				<type>TPM_DIGEST</type>
+				<description>This SHALL be a copy of the pubDataDigest from the TPM_STORE_ASYMKEY structure.</description>
+			</parameter>
+			<parameter>
+				<name>partPrivKeyLen</name>
+				<type>UINT32</type>
+				<description>This SHALL be the size of the partPrivKey field</description>
+			</parameter>
+			<parameter>
+				<name>partPrivKey</name>
+				<type>BYTE*</type>
+				<description>This SHALL be the k2 area as described in TPM_CreateMigrationBlob</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_KEY_CONTROL</name>
+		<section>10.9</section>
+		<typedef>UINT32</typedef>
+		<values kind="bit">
+			<value>
+				<name>TPM_KEY_CONTROL_OWNER_EVICT</name>
+				<numValue>0</numValue>
+				<description>Owner controls when the key is evicted from the TPM. When set the TPM MUST preserve key the key across all TPM_Init invocations.</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_CERTIFY_INFO</name>
+		<section>11.1</section>
+		<parameters>
+			<parameter>
+				<name>version</name>
+				<type>TPM_STRUCT_VER</type>
+				<description>This MUST be 1.1.0.0</description>
+			</parameter>
+			<parameter>
+				<name>keyUsage</name>
+				<type>TPM_KEY_USAGE</type>
+				<description>This SHALL be the same value that would be set in a TPM_KEY representation of the key to be certified. The upper byte MUST be zero.</description>
+			</parameter>
+			<parameter>
+				<name>keyFlags</name>
+				<type>TPM_KEY_FLAGS</type>
+				<description>This SHALL be set to the same value as the corresponding parameter in the TPM_KEY structure that describes the public key that is being certified. The upper byte MUST be zero.</description>
+			</parameter>
+			<parameter>
+				<name>authDataUsage</name>
+				<type>TPM_AUTH_DATA_USAGE</type>
+				<description>This SHALL be the same value that would be set in a TPM_KEY representation of the key to be certified</description>
+			</parameter>
+			<parameter>
+				<name>algorithmParms</name>
+				<type>TPM_KEY_PARMS</type>
+				<description>This SHALL be the same value that would be set in a TPM_KEY representation of the key to be certified</description>
+			</parameter>
+			<parameter>
+				<name>pubKeyDigest</name>
+				<type>TPM_DIGEST</type>
+				<description>This SHALL be a digest of the value TPM_KEY -&gt; pubKey -&gt; key in a TPM_KEY representation of the key to be certified</description>
+			</parameter>
+			<parameter>
+				<name>data</name>
+				<type>TPM_NONCE</type>
+				<description>This SHALL be externally provided data.</description>
+			</parameter>
+			<parameter>
+				<name>parentPCRStatus</name>
+				<type>BOOL</type>
+				<description>This SHALL indicate if any parent key was wrapped to a PCR</description>
+			</parameter>
+			<parameter>
+				<name>PCRInfoSize</name>
+				<type>UINT32</type>
+				<description>This SHALL be the size of the pcrInfo parameter. A value of zero indicates that the key is not wrapped to a PCR</description>
+			</parameter>
+			<parameter>
+				<name>PCRInfo</name>
+				<type>BYTE*</type>
+				<description>This SHALL be the TPM_PCR_INFO structure.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_CERTIFY_INFO2</name>
+		<section>11.2</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>MUST be TPM_TAG_CERTIFY_INFO2</description>
+			</parameter>
+			<parameter>
+				<name>fill</name>
+				<type>BYTE</type>
+				<description>MUST be 0x00</description>
+			</parameter>
+			<parameter>
+				<name>payloadType</name>
+				<type>TPM_PAYLOAD_TYPE</type>
+				<description>This SHALL be the same value that would be set in a TPM_KEY representation of the key to be certified</description>
+			</parameter>
+			<parameter>
+				<name>keyUsage</name>
+				<type>TPM_KEY_USAGE</type>
+				<description>This SHALL be the same value that would be set in a TPM_KEY representation of the key to be certified. The upper byte MUST be zero.</description>
+			</parameter>
+			<parameter>
+				<name>keyFlags</name>
+				<type>TPM_KEY_FLAGS</type>
+				<description>This SHALL be set to the same value as the corresponding parameter in the TPM_KEY structure that describes the public key that is being certified. The upper byte MUST be zero.</description>
+			</parameter>
+			<parameter>
+				<name>authDataUsage</name>
+				<type>TPM_AUTH_DATA_USAGE</type>
+				<description>This SHALL be the same value that would be set in a TPM_KEY representation of the key to be certified</description>
+			</parameter>
+			<parameter>
+				<name>algorithmParms</name>
+				<type>TPM_KEY_PARMS</type>
+				<description>This SHALL be the same value that would be set in a TPM_KEY representation of the key to be certified</description>
+			</parameter>
+			<parameter>
+				<name>pubKeyDigest</name>
+				<type>TPM_DIGEST</type>
+				<description>This SHALL be a digest of the value TPM_KEY -&gt; pubKey -&gt; key in a TPM_KEY representation of the key to be certified</description>
+			</parameter>
+			<parameter>
+				<name>data</name>
+				<type>TPM_NONCE</type>
+				<description>This SHALL be externally provided data.</description>
+			</parameter>
+			<parameter>
+				<name>parentPCRStatus</name>
+				<type>BOOL</type>
+				<description>This SHALL indicate if any parent key was wrapped to a PCR</description>
+			</parameter>
+			<parameter>
+				<name>PCRInfoSize</name>
+				<type>UINT32</type>
+				<description>This SHALL be the size of the pcrInfo parameter.</description>
+			</parameter>
+			<parameter>
+				<name>PCRInfo</name>
+				<type>BYTE*</type>
+				<description>This SHALL be the TPM_PCR_INFO_SHORT structure.</description>
+			</parameter>
+			<parameter>
+				<name>migrationAuthoritySize</name>
+				<type>UINT32</type>
+				<description>This SHALL be the size of migrationAuthority</description>
+			</parameter>
+			<parameter>
+				<name>migrationAuthority</name>
+				<type>BYTE*</type>
+				<description>If the key to be certified has [payload == TPM_PT_MIGRATE_RESTRICTED or payload == TPM_PT_MIGRATE_EXTERNAL], migrationAuthority is the digest of the TPM_MSA_COMPOSITE and has TYPE == TPM_DIGEST. Otherwise it is NULL.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_QUOTE_INFO</name>
+		<section>11.3</section>
+		<parameters>
+			<parameter>
+				<name>version</name>
+				<type>TPM_STRUCT_VER</type>
+				<description>This MUST be 1.1.0.0</description>
+			</parameter>
+			<parameter>
+				<name>fixed</name>
+				<type>BYTE[4]</type>
+				<description>This SHALL always be the string ‘QUOT’</description>
+			</parameter>
+			<parameter>
+				<name>digestValue</name>
+				<type>TPM_COMPOSITE_HASH</type>
+				<description>This SHALL be the result of the composite hash algorithm using the current values of the requested PCR indices.</description>
+			</parameter>
+			<parameter>
+				<name>externalData</name>
+				<type>TPM_NONCE</type>
+				<description>160 bits of externally supplied data</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_QUOTE_INFO2</name>
+		<section>11.4</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>This SHALL be TPM_TAG_QUOTE_INFO2</description>
+			</parameter>
+			<parameter>
+				<name>fixed</name>
+				<type>BYTE[4]</type>
+				<description>This SHALL always be the string ‘QUT2’</description>
+			</parameter>
+			<parameter>
+				<name>externalData</name>
+				<type>TPM_NONCE</type>
+				<description>160 bits of externally supplied data</description>
+			</parameter>
+			<parameter>
+				<name>infoShort</name>
+				<type>TPM_PCR_INFO_SHORT</type>
+				<description>the quoted PCR registers</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_EK_BLOB</name>
+		<section>12.1</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>TPM_TAG_EK_BLOB</description>
+			</parameter>
+			<parameter>
+				<name>ekType</name>
+				<type>TPM_EK_TYPE</type>
+				<description>This SHALL be set to reflect the type of blob in use</description>
+			</parameter>
+			<parameter>
+				<name>blobSize</name>
+				<type>UINT32</type>
+				<description>The size of the blob field</description>
+			</parameter>
+			<parameter>
+				<name>blob</name>
+				<type>BYTE*</type>
+				<description>The blob of information depending on the type</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_EK_BLOB_ACTIVATE</name>
+		<section>12.2</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>TPM_TAG_EK_BLOB_ACTIVATE</description>
+			</parameter>
+			<parameter>
+				<name>sessionKey</name>
+				<type>TPM_SYMMETRIC_KEY</type>
+				<description>This SHALL be the session key used by the CA to encrypt the TPM_IDENTITY_CREDENTIAL</description>
+			</parameter>
+			<parameter>
+				<name>idDigest</name>
+				<type>TPM_DIGEST</type>
+				<description>This SHALL be the digest of the TPM_PUBKEY that is being certified by the CA</description>
+			</parameter>
+			<parameter>
+				<name>pcrInfo</name>
+				<type>TPM_PCR_INFO_SHORT</type>
+				<description>This SHALL indicate the PCR’s and localities</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_EK_BLOB_AUTH</name>
+		<section>12.3</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>TPM_TAG_EK_BLOB_AUTH</description>
+			</parameter>
+			<parameter>
+				<name>authValue</name>
+				<type>TPM_SECRET</type>
+				<description>This SHALL be the AuthData value</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_IDENTITY_CONTENTS</name>
+		<section>12.5</section>
+		<parameters>
+			<parameter>
+				<name>ver</name>
+				<type>TPM_STRUCT_VER</type>
+				<description>This MUST be 1.1.0.0. This is the version information for this structure and not the underlying key.</description>
+			</parameter>
+			<parameter>
+				<name>ordinal</name>
+				<type>UINT32</type>
+				<description>This SHALL be the ordinal of the TPM_MakeIdentity command.</description>
+			</parameter>
+			<parameter>
+				<name>labelPrivCADigest</name>
+				<type>TPM_CHOSENID_HASH</type>
+				<description>This SHALL be the result of hashing the chosen identityLabel and privacyCA for the new TPM identity</description>
+			</parameter>
+			<parameter>
+				<name>identityPubKey</name>
+				<type>TPM_PUBKEY</type>
+				<description>This SHALL be the public key structure of the identity key</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_IDENTITY_REQ</name>
+		<section>12.6</section>
+		<parameters>
+			<parameter>
+				<name>asymSize</name>
+				<type>UINT32</type>
+				<description>This SHALL be the size of the asymmetric encrypted area created by TSS_CollateIdentityRequest</description>
+			</parameter>
+			<parameter>
+				<name>symSize</name>
+				<type>UINT32</type>
+				<description>This SHALL be the size of the symmetric encrypted area created by TSS_CollateIdentityRequest</description>
+			</parameter>
+			<parameter>
+				<name>asymAlgorithm</name>
+				<type>TPM_KEY_PARMS</type>
+				<description>This SHALL be the parameters for the asymmetric algorithm used to create the asymBlob</description>
+			</parameter>
+			<parameter>
+				<name>symAlgorithm</name>
+				<type>TPM_KEY_PARMS</type>
+				<description>This SHALL be the parameters for the symmetric algorithm used to create the symBlob</description>
+			</parameter>
+			<parameter>
+				<name>asymBlob</name>
+				<type>BYTE*</type>
+				<description>This SHALL be the asymmetric encrypted area from TSS_CollateIdentityRequest</description>
+			</parameter>
+			<parameter>
+				<name>symBlob</name>
+				<type>BYTE*</type>
+				<description>This SHALL be the symmetric encrypted area from TSS_CollateIdentityRequest</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_IDENTITY_PROOF</name>
+		<section>12.7</section>
+		<parameters>
+			<parameter>
+				<name>ver</name>
+				<type>TPM_STRUCT_VER</type>
+				<description>This MUST be 1.1.0.0</description>
+			</parameter>
+			<parameter>
+				<name>labelSize</name>
+				<type>UINT32</type>
+				<description>This SHALL be the size of the label area</description>
+			</parameter>
+			<parameter>
+				<name>identityBindingSize</name>
+				<type>UINT32</type>
+				<description>This SHALL be the size of the identitybinding area</description>
+			</parameter>
+			<parameter>
+				<name>endorsementSize</name>
+				<type>UINT32</type>
+				<description>This SHALL be the size of the endorsement credential</description>
+			</parameter>
+			<parameter>
+				<name>platformSize</name>
+				<type>UINT32</type>
+				<description>This SHALL be the size of the platform credential</description>
+			</parameter>
+			<parameter>
+				<name>conformanceSize</name>
+				<type>UINT32</type>
+				<description>This SHALL be the size of the conformance credential</description>
+			</parameter>
+			<parameter>
+				<name>identityKey</name>
+				<type>TPM_PUBKEY</type>
+				<description>This SHALL be the public key of the new identity</description>
+			</parameter>
+			<parameter>
+				<name>labelArea</name>
+				<type>BYTE*</type>
+				<description>This SHALL be the text label for the new identity</description>
+			</parameter>
+			<parameter>
+				<name>identityBinding</name>
+				<type>BYTE*</type>
+				<description>This SHALL be the signature value of TPM_IDENTITY_CONTENTS structure from the TPM_MakeIdentity command</description>
+			</parameter>
+			<parameter>
+				<name>endorsementCredential</name>
+				<type>BYTE*</type>
+				<description>This SHALL be the TPM endorsement credential</description>
+			</parameter>
+			<parameter>
+				<name>platformCredential</name>
+				<type>BYTE*</type>
+				<description>This SHALL be the TPM platform credential</description>
+			</parameter>
+			<parameter>
+				<name>conformanceCredential</name>
+				<type>BYTE*</type>
+				<description>This SHALL be the TPM conformance credential</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_ASYM_CA_CONTENTS</name>
+		<section>12.8</section>
+		<parameters>
+			<parameter>
+				<name>sessionKey</name>
+				<type>TPM_SYMMETRIC_KEY</type>
+				<description>This SHALL be the session key used by the CA to encrypt the TPM_IDENTITY_CREDENTIAL</description>
+			</parameter>
+			<parameter>
+				<name>idDigest</name>
+				<type>TPM_DIGEST</type>
+				<description>This SHALL be the digest of the TPM_PUBKEY of the key that is being certified by the CA</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_SYM_CA_ATTESTATION</name>
+		<section>12.9</section>
+		<parameters>
+			<parameter>
+				<name>credSize</name>
+				<type>UINT32</type>
+				<description>This SHALL be the size of the credential parameter</description>
+			</parameter>
+			<parameter>
+				<name>algorithm</name>
+				<type>TPM_KEY_PARMS</type>
+				<description>This SHALL be the indicator and parameters for the symmetric algorithm</description>
+			</parameter>
+			<parameter>
+				<name>credential</name>
+				<type>BYTE*</type>
+				<description>This is the result of encrypting TPM_IDENTITY_CREDENTIAL using the session_key and the algorithm indicated “algorithm”</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_TRANSPORT_PUBLIC</name>
+		<section>13.1</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>TPM_TAG_TRANSPORT_PUBLIC</description>
+			</parameter>
+			<parameter>
+				<name>transAttributes</name>
+				<type>TPM_TRANSPORT_ATTRIBUTES</type>
+				<description>The attributes of this session</description>
+			</parameter>
+			<parameter>
+				<name>algId</name>
+				<type>TPM_ALGORITHM_ID</type>
+				<description>This SHALL be the algorithm identifier of the symmetric key.</description>
+			</parameter>
+			<parameter>
+				<name>encScheme</name>
+				<type>TPM_ENC_SCHEME</type>
+				<description>This SHALL fully identify the manner in which the key will be used for encryption operations.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_TRANSPORT_INTERNAL</name>
+		<section>13.2</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>TPM_TAG_TRANSPORT_INTERNAL</description>
+			</parameter>
+			<parameter>
+				<name>authData</name>
+				<type>TPM_AUTHDATA</type>
+				<description>The shared secret for this session</description>
+			</parameter>
+			<parameter>
+				<name>transPublic</name>
+				<type>TPM_TRANSPORT_PUBLIC</type>
+				<description>The public information of this session</description>
+			</parameter>
+			<parameter>
+				<name>transHandle</name>
+				<type>TPM_TRANSHANDLE</type>
+				<description>The handle for this session</description>
+			</parameter>
+			<parameter>
+				<name>transNonceEven</name>
+				<type>TPM_NONCE</type>
+				<description>The even nonce for the rolling protocol</description>
+			</parameter>
+			<parameter>
+				<name>transDigest</name>
+				<type>TPM_DIGEST</type>
+				<description>The log of transport events</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_TRANSPORT_LOG_IN</name>
+		<section>13.3</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>TPM_TAG_TRANSPORT_LOG_IN</description>
+			</parameter>
+			<parameter>
+				<name>parameters</name>
+				<type>TPM_DIGEST</type>
+				<description>The actual parameters contained in the digest are subject to the rules of the command using this structure. To find the exact calculation refer to the actions in the command using this structure.</description>
+			</parameter>
+			<parameter>
+				<name>pubKeyHash</name>
+				<type>TPM_DIGEST</type>
+				<description>The hash of any keys in the transport command</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_TRANSPORT_LOG_OUT</name>
+		<section>13.4</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>TPM_TAG_TRANSPORT_LOG_OUT</description>
+			</parameter>
+			<parameter>
+				<name>currentTicks</name>
+				<type>TPM_CURRENT_TICKS</type>
+				<description>The current tick count. This SHALL be the value of the current TPM tick counter.</description>
+			</parameter>
+			<parameter>
+				<name>parameters</name>
+				<type>TPM_DIGEST</type>
+				<description>The actual parameters contained in the digest are subject to the rules of the command using this structure. To find the exact calculation refer to the actions in the command using this structure.</description>
+			</parameter>
+			<parameter>
+				<name>locality</name>
+				<type>TPM_MODIFIER_INDICATOR</type>
+				<description>The locality that called TPM_ExecuteTransport</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_TRANSPORT_AUTH</name>
+		<section>13.5</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>TPM_TAG_TRANSPORT_AUTH</description>
+			</parameter>
+			<parameter>
+				<name>authData</name>
+				<type>TPM_AUTHDATA</type>
+				<description>The AuthData value</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_AUDIT_EVENT_IN</name>
+		<section>14.1</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>TPM_TAG_AUDIT_EVENT_IN</description>
+			</parameter>
+			<parameter>
+				<name>inputParms</name>
+				<type>TPM_DIGEST</type>
+				<description>Digest value according to the HMAC digest rules of the "above the line" parameters (i.e. the first HMAC digest calculation). When there are no HMAC rules, the input digest includes all parameters including and after the ordinal.</description>
+			</parameter>
+			<parameter>
+				<name>auditCount</name>
+				<type>TPM_COUNTER_VALUE</type>
+				<description>The current value of the audit monotonic counter</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_AUDIT_EVENT_OUT</name>
+		<section>14.2</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>TPM_TAG_AUDIT_EVENT_OUT</description>
+			</parameter>
+			<parameter>
+				<name>outputParms</name>
+				<type>TPM_DIGEST</type>
+				<description>Digest value according to the HMAC digest rules of the "above the line" parameters (i.e. the first HMAC digest calculation). When there are no HMAC rules, the output digest includes the return code, the ordinal, and all parameters after the return code.</description>
+			</parameter>
+			<parameter>
+				<name>auditCount</name>
+				<type>TPM_COUNTER_VALUE</type>
+				<description>The current value of the audit monotonic counter</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_CURRENT_TICKS</name>
+		<section>15.1</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>TPM_TAG_CURRENT_TICKS</description>
+			</parameter>
+			<parameter>
+				<name>currentTicks</name>
+				<type>UINT64</type>
+				<description>The number of ticks since the start of this tick session</description>
+			</parameter>
+			<parameter>
+				<name>tickRate</name>
+				<type>UINT16</type>
+				<description>The number of microseconds per tick. The maximum resolution of the TPM tick counter is thus 1 microsecond. The minimum resolution SHOULD be 1 millisecond.</description>
+			</parameter>
+			<parameter>
+				<name>tickNonce</name>
+				<type>TPM_NONCE</type>
+				<description>The nonce created by the TPM when resetting the currentTicks to 0. This indicates the beginning of a time session. This value MUST be valid before the first use of TPM_CURRENT_TICKS. The value can be set at TPM_Startup or just prior to first use.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_RESULT</name>
+		<section>16</section>
+		<typedef>UINT32</typedef>
+		<values/>
+	</structure>
+	<structure>
+		<name>TPM_COMMAND_CODE</name>
+		<section>17</section>
+		<typedef>UINT32</typedef>
+		<values/>
+	</structure>
+	<structure>
+		<name>TPM_CONTEXT_BLOB</name>
+		<section>18.1</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>MUST be TPM_TAG_CONTEXTBLOB</description>
+			</parameter>
+			<parameter>
+				<name>resourceType</name>
+				<type>TPM_RESOURCE_TYPE</type>
+				<description>The resource type</description>
+			</parameter>
+			<parameter>
+				<name>handle</name>
+				<type>TPM_HANDLE</type>
+				<description>Previous handle of the resource</description>
+			</parameter>
+			<parameter>
+				<name>label</name>
+				<type>BYTE[16]</type>
+				<description>Label for identification of the blob. Free format area.</description>
+			</parameter>
+			<parameter>
+				<name>contextCount</name>
+				<type>UINT32</type>
+				<description>MUST be TPM_STANY_DATA -&gt; contextCount when creating the structure. This value is ignored for context blobs that reference a key.</description>
+			</parameter>
+			<parameter>
+				<name>integrityDigest</name>
+				<type>TPM_DIGEST</type>
+				<description>The integrity of the entire blob including the sensitive area. This is a HMAC calculation with the entire structure (including sensitiveData) being the hash and tpmProof is the secret</description>
+			</parameter>
+			<parameter>
+				<name>additionalSize</name>
+				<type>UINT32</type>
+				<description>The size of additionalData</description>
+			</parameter>
+			<parameter>
+				<name>additionalData</name>
+				<type>BYTE*</type>
+				<description>Additional information set by the TPM that helps define and reload the context. The information held in this area MUST NOT expose any information held in shielded locations. This should include any IV for symmetric encryption</description>
+			</parameter>
+			<parameter>
+				<name>sensitiveSize</name>
+				<type>UINT32</type>
+				<description>The size of sensitiveData</description>
+			</parameter>
+			<parameter>
+				<name>sensitiveData</name>
+				<type>BYTE*</type>
+				<description>The normal information for the resource that can be exported</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_CONTEXT_SENSITIVE</name>
+		<section>18.2</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>MUST be TPM_TAG_CONTEXT_SENSITIVE</description>
+			</parameter>
+			<parameter>
+				<name>contextNonce</name>
+				<type>TPM_NONCE</type>
+				<description>On context blobs other than keys this MUST be TPM_STANY_DATA -&gt; contextNonceSession For keys the value is TPM_STCLEAR_DATA -&gt; contextNonceKey</description>
+			</parameter>
+			<parameter>
+				<name>internalSize</name>
+				<type>UINT32</type>
+				<description>The size of the internalData area</description>
+			</parameter>
+			<parameter>
+				<name>internalData</name>
+				<type>BYTE*</type>
+				<description>The internal data area</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_NV_INDEX</name>
+		<section>19.1</section>
+		<typedef>UINT32</typedef>
+		<values>
+			<value>
+				<name>TPM_NV_INDEX_LOCK</name>
+				<numValue>0xFFFFFFFF</numValue>
+				<description>(required) This value turns on the NV authorization protections. Once executed all NV areas us the protections as defined. This value never resets. Attempting to execute TPM_NV_DefineSpace on this value with non-zero size MAY result in a TPM_BADINDEX response.</description>
+			</value>
+			<value>
+				<name>TPM_NV_INDEX0</name>
+				<numValue>0x00000000</numValue>
+				<description>(required) This value allows for the setting of the bGlobalLock flag, which is only reset on TPM_Startup(ST_Clear). Attempting to execute TPM_NV_WriteValue with a size other than zero MAY result in the TPM_BADINDEX error code.</description>
+			</value>
+			<value>
+				<name>TPM_NV_INDEX_DIR</name>
+				<numValue>0x10000001</numValue>
+				<description>(required) Size MUST be 20. This index points to the deprecated DIR command area from 1.1. The TPM MUST map this reserved space to be the area operated on by the 1.1 DIR commands. As the DIR commands are deprecated any additional DIR functionally MUST use the NV commands and not the DIR command. Attempts to execute TPM_NV_DefineSpace with this index MUST result in TPM_BADINDEX. Arrtibutes: TPM_NV_PER_OWNERWRITE, TPM_NV_PER_WRITEALL</description>
+			</value>
+			<value>
+				<name>TPM_NV_INDEX_TPM</name>
+				<numValue>0x0000Fxxx</numValue>
+				<description>Reserved for TPM use</description>
+			</value>
+			<value>
+				<name>TPM_NV_INDEX_EKCert</name>
+				<numValue>0x0000F000</numValue>
+				<description>The Endorsement credential</description>
+			</value>
+			<value>
+				<name>TPM_NV_INDEX_TPM_CC</name>
+				<numValue>0x0000F001</numValue>
+				<description>The TPM Conformance credential</description>
+			</value>
+			<value>
+				<name>TPM_NV_INDEX_PlatformCert</name>
+				<numValue>0x0000F002</numValue>
+				<description>The platform credential</description>
+			</value>
+			<value>
+				<name>TPM_NV_INDEX_Platform_CC</name>
+				<numValue>0x0000F003</numValue>
+				<description>The Platform conformance credential</description>
+			</value>
+			<value>
+				<name>TPM_NV_INDEX_TRIAL</name>
+				<numValue>0x0000F004</numValue>
+				<description>To try TPM_NV_DefineSpace without actually allocating NV space</description>
+			</value>
+			<value>
+				<name>TPM_NV_INDEX_PC</name>
+				<numValue>0x0001xxxx</numValue>
+				<description>Reserved for PC Client use</description>
+			</value>
+			<value>
+				<name>TPM_NV_INDEX_GPIO_xx</name>
+				<numValue>0x000116xx</numValue>
+				<description>Reserved for GPIO pins</description>
+			</value>
+			<value>
+				<name>TPM_NV_INDEX_PDA</name>
+				<numValue>0x0002xxxx</numValue>
+				<description>Reserved for PDA use</description>
+			</value>
+			<value>
+				<name>TPM_NV_INDEX_MOBILE</name>
+				<numValue>0x0003xxxx</numValue>
+				<description>Reserved for mobile use</description>
+			</value>
+			<value>
+				<name>TPM_NV_INDEX_SERVER</name>
+				<numValue>0x0004xxxx</numValue>
+				<description>Reserved for Server use</description>
+			</value>
+			<value>
+				<name>TPM_NV_INDEX_PERIPHERAL</name>
+				<numValue>0x0005xxxx</numValue>
+				<description>Reserved for peripheral use</description>
+			</value>
+			<value>
+				<name>TPM_NV_INDEX_TSS</name>
+				<numValue>0x0006xxxx</numValue>
+				<description>Reserved for TSS use</description>
+			</value>
+			<value>
+				<name>TPM_NV_INDEX_GROUP_RESV</name>
+				<numValue>0x00xxxxxx</numValue>
+				<description>Reserved for TCG WG’s</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_NV_ATTRIBUTES</name>
+		<section>19.2</section>
+		<parameters>
+
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_NV_DATA_PUBLIC</name>
+		<section>19.3</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>TPM_TAG_NV_ATTRIBUTES</description>
+			</parameter>
+			<parameter>
+				<name>attributes</name>
+				<type>UINT32</type>
+				<description>The attribute area</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_NV_DATA_SENSITIVE</name>
+		<section>19.4</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>This SHALL be TPM_TAG_NV_DATA_SENSITIVE</description>
+			</parameter>
+			<parameter>
+				<name>pubInfo</name>
+				<type>TPM_NV_DATA_PUBLIC</type>
+				<description>The public information regarding this area</description>
+			</parameter>
+			<parameter>
+				<name>authValue</name>
+				<type>TPM_AUTHDATA</type>
+				<description>The AuthData value to manipulate the value</description>
+			</parameter>
+			<parameter>
+				<name>data</name>
+				<type>BYTE*</type>
+				<description>The data area. This MUST not contain any sensitive information as the TPM does not provide any confidentiality on the data.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_DELEGATIONS</name>
+		<section>20.2</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>This SHALL be TPM_TAG_DELEGATIONS</description>
+			</parameter>
+			<parameter>
+				<name>delegateType</name>
+				<type>UINT32</type>
+				<description>Owner or key</description>
+			</parameter>
+			<parameter>
+				<name>per1</name>
+				<type>UNIT32</type>
+				<description>The first block of permissions</description>
+			</parameter>
+			<parameter>
+				<name>per2</name>
+				<type>UINT32</type>
+				<description>The second block of permissions</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_FAMILY_FLAGS</name>
+		<section>20.3</section>
+		<values kind="bit">
+			<value>
+				<name>TPM_DELEGATE_ADMIN_LOCK</name>
+				<numValue>1</numValue>
+				<description>TRUE: Some TPM_Delegate_XXX commands are locked and return TPM_DELEGATE_LOCK; FALSE: TPM_Delegate_XXX commands are available; Default is FALSE</description>
+			</value>
+			<value>
+				<name>TPM_FAMFLAG_ENABLED</name>
+				<numValue>0</numValue>
+				<description>When TRUE the table is enabled. The default value is FALSE.</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_FAMILY_LABEL</name>
+		<section>20.4</section>
+		<parameters>
+			<parameter>
+				<name>label</name>
+				<type>BYTE</type>
+				<description>A sequence number that software can map to a string of bytes that can be displayed or used by the applications. This MUST not contain sensitive information.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_FAMILY_TABLE_ENTRY</name>
+		<section>20.5</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>This SHALL be TPM_TAG_FAMILY_TABLE_ENTRY</description>
+			</parameter>
+			<parameter>
+				<name>familyLabel</name>
+				<type>TPM_FAMILY_LABEL</type>
+				<description>A sequence number that software can map to a string of bytes that can be displayed or used by the applications. This MUST not contain sensitive information.</description>
+			</parameter>
+			<parameter>
+				<name>familyID</name>
+				<type>TPM_FAMILY_ID</type>
+				<description>The family ID in use to tie values together. This is not a sensitive value.</description>
+			</parameter>
+			<parameter>
+				<name>verificationCount</name>
+				<type>TPM_FAMILY_VERIFICATION</type>
+				<description>The value inserted into delegation rows to indicate that they are the current generation of rows. Used to identify when a row in the delegate table was last verified. This is not a sensitive value.</description>
+			</parameter>
+			<parameter>
+				<name>flags</name>
+				<type>TPM_FAMILY_FLAGS</type>
+				<description>See section on TPM_FAMILY_FLAGS.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_FAMILY_TABLE</name>
+		<section>20.6</section>
+		<parameters>
+			<parameter>
+				<name>famTableRow</name>
+				<type>TPM_FAMILY_TABLE_ENTRY</type>
+				<description>The array of family table entries</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_DELEGATE_LABEL</name>
+		<section>20.7</section>
+		<parameters>
+			<parameter>
+				<name>label</name>
+				<type>BYTE</type>
+				<description>A byte that can be displayed or used by the applications. This MUST not contain sensitive information.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_DELEGATE_PUBLIC</name>
+		<section>20.8</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>This SHALL be TPM_TAG_DELEGATE_PUBLIC</description>
+			</parameter>
+			<parameter>
+				<name>rowlabel</name>
+				<type>TPM_DELEGATE_LABEL</type>
+				<description>This SHALL be the label for the row. It MUST not contain any sensitive information.</description>
+			</parameter>
+			<parameter>
+				<name>pcrInfo</name>
+				<type>TPM_PCR_INFO_SHORT</type>
+				<description>This SHALL be the designation of the process that can use the permission. This is a not sensitive value. PCR_SELECTION may be NULL. If selected the pcrInfo MUST be checked on each use of the delegation. Use of the delegation is where the delegation is passed as an authorization handle.</description>
+			</parameter>
+			<parameter>
+				<name>permissions</name>
+				<type>TPM_DELEGATIONS</type>
+				<description>This SHALL be the permissions that are allowed to the indicated process. This is not a sensitive value.</description>
+			</parameter>
+			<parameter>
+				<name>familyID</name>
+				<type>TPM_FAMILY_ID</type>
+				<description>This SHALL be the family ID that identifies which family the row belongs to. This is not a sensitive value.</description>
+			</parameter>
+			<parameter>
+				<name>verificationCount</name>
+				<type>TPM_FAMILY_VERIFICATION</type>
+				<description>A copy of verificationCount from the associated family table. This is not a sensitive value.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_DELEGATE_TABLE_ROW</name>
+		<section>20.9</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>This SHALL be TPM_TAG_DELEGATE_TABLE_ROW</description>
+			</parameter>
+			<parameter>
+				<name>pub</name>
+				<type>TPM_DELEGATE_PUBLIC</type>
+				<description>This SHALL be the public information for a table row.</description>
+			</parameter>
+			<parameter>
+				<name>authValue</name>
+				<type>TPM_SECRET</type>
+				<description>This SHALL be the AuthData value that can use the permissions. This is a sensitive value.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_DELEGATE_TABLE</name>
+		<section>20.10</section>
+		<parameters>
+			<parameter>
+				<name>delRow</name>
+				<type>TPM_DELEGATE_TABLE_ROW</type>
+				<description>The array of delegations</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_DELEGATE_SENSITIVE</name>
+		<section>20.11</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>This MUST be TPM_TAG_DELEGATE_SENSITIVE</description>
+			</parameter>
+			<parameter>
+				<name>authValue</name>
+				<type>TPM_SECRET</type>
+				<description>AuthData value</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_DELEGATE_OWNER_BLOB</name>
+		<section>20.12</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>This MUST be TPM_TAG_DELEGATE_OWNER_BLOB</description>
+			</parameter>
+			<parameter>
+				<name>pub</name>
+				<type>TPM_DELEGATE_PUBLIC</type>
+				<description>The public information for this blob</description>
+			</parameter>
+			<parameter>
+				<name>integrityDigest</name>
+				<type>TPM_DIGEST</type>
+				<description>The HMAC to guarantee the integrity of the entire structure</description>
+			</parameter>
+			<parameter>
+				<name>additionalSize</name>
+				<type>UINT32</type>
+				<description>The size of additionalArea</description>
+			</parameter>
+			<parameter>
+				<name>additionalArea</name>
+				<type>BYTE*</type>
+				<description>An area that the TPM can add to the blob which MUST NOT contain any sensitive information. This would include any IV material for symmetric encryption</description>
+			</parameter>
+			<parameter>
+				<name>sensitiveSize</name>
+				<type>UINT32</type>
+				<description>The size of the sensitive area</description>
+			</parameter>
+			<parameter>
+				<name>sensitiveArea</name>
+				<type>BYTE*</type>
+				<description>The area that contains the encrypted TPM_DELEGATE_SENSITIVE</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_DELEGATE_KEY_BLOB</name>
+		<section>20.13</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>This MUST be TPM_TAG_DELG_KEY_BLOB</description>
+			</parameter>
+			<parameter>
+				<name>pub</name>
+				<type>TPM_DELEGATE_PUBLIC</type>
+				<description>The public information for this blob</description>
+			</parameter>
+			<parameter>
+				<name>integrityDigest</name>
+				<type>TPM_DIGEST</type>
+				<description>The HMAC to guarantee the integrity of the entire structure</description>
+			</parameter>
+			<parameter>
+				<name>pubKeyDigest</name>
+				<type>TPM_DIGEST</type>
+				<description>The digest, that uniquely identifies the key for which this usage delegation applies. This is a hash of the TPM_STORE_PUBKEY structure.</description>
+			</parameter>
+			<parameter>
+				<name>additionalSize</name>
+				<type>UINT32</type>
+				<description>The size of the integrity area</description>
+			</parameter>
+			<parameter>
+				<name>additionalArea</name>
+				<type>BYTE*</type>
+				<description>An area that the TPM can add to the blob which MUST NOT contain any sensitive information. This would include any IV material for symmetric encryption</description>
+			</parameter>
+			<parameter>
+				<name>sensitiveSize</name>
+				<type>UINT32</type>
+				<description>The size of the sensitive area</description>
+			</parameter>
+			<parameter>
+				<name>sensitiveArea</name>
+				<type>BYTE*</type>
+				<description>The area that contains the encrypted TPM_DELEGATE_SENSITIVE</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_FAMILY_OPERATION</name>
+		<section>20.14</section>
+		<typedef>UINT32</typedef>
+		<values>
+			<value>
+				<name>TPM_FAMILY_CREATE</name>
+				<numValue>0x00000001</numValue>
+				<description>Create a new family</description>
+			</value>
+			<value>
+				<name>TPM_FAMILY_ENABLE</name>
+				<numValue>0x00000002</numValue>
+				<description>Set or reset the enable flag for this family.</description>
+			</value>
+			<value>
+				<name>TPM_FAMILY_ADMIN</name>
+				<numValue>0x00000003</numValue>
+				<description>Prevent administration of this family.</description>
+			</value>
+			<value>
+				<name>TPM_FAMILY_INVALIDATE</name>
+				<numValue>0x00000004</numValue>
+				<description>Invalidate a specific family row.</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_CAPABILITY_AREA_get</name>
+		<section>21.1</section>
+		<typedef>UINT32</typedef>
+		<values>
+			<value>
+				<name>TPM_CAP_ORD</name>
+				<numValue>0x00000001</numValue>
+				<subcap>A command ordinal</subcap>
+				<description>Boolean value. TRUE indicates that the TPM supports the ordinal. FALSE indicates that the TPM does not support the ordinal. Unimplemented optional ordinals and unused (unassigned) ordinals return FALSE.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_ALG</name>
+				<numValue>0x00000002</numValue>
+				<subcap>TPM_ALG_XX: A value from TPM_ALGORITHM_ID</subcap>
+				<description>Boolean value. TRUE means that the TPM supports the asymmetric algorithm for TPM_Sign, TPM_Seal, TPM_UnSeal and TPM_UnBind and related commands. FALSE indicates that the asymmetric algorithm is not supported for these types of commands. The TPM MAY return TRUE or FALSE for other than asymmetric algoroithms that it supports. Unassigned and unsupported algorithm IDs return FALSE.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PID</name>
+				<numValue>0x00000003</numValue>
+				<subcap>TPM_PID_xx: A value of TPM_PROTOCOL_ID:</subcap>
+				<description>Boolean value. TRUE indicates that the TPM supports the protocol, FALSE indicates that the TPM does not support the protocol. Unassigned protocol IDs return FALSE.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_FLAG</name>
+				<numValue>0x00000004</numValue>
+				<subcap>TPM_CAP_FLAG_PERMANENT or TPM_CAP_FLAG_VOLATILE</subcap>
+				<description>See TPM_CAP_FLAG_SUBCAPS</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROPERTY</name>
+				<numValue>0x00000005</numValue>
+				<subcap>See TPM_CAP_PROPERTY_SUBCAPS</subcap>
+				<description>See TPM_CAP_PROPERTY_SUBCAPS</description>
+			</value>
+			<value>
+				<name>TPM_CAP_VERSION</name>
+				<numValue>0x00000006</numValue>
+				<subcap>Ignored</subcap>
+				<description>TPM_STRUCT_VER structure. The major and minor version MUST indicate 1.1. The firmware revision MUST indicate 0.0. The use of this value is deprecated, new software SHOULD use TPM_CAP_VERSION_VAL to obtain version and revision information regarding the TPM.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_KEY_HANDLE</name>
+				<numValue>0x00000007</numValue>
+				<subcap>Ignored</subcap>
+				<description>A TPM_KEY_HANDLE_LIST structure that enumerates all key handles loaded on the TPM. The list only contains the number of handles that an external manager can operate with and does not include the EK or SRK. This is command is available for backwards compatibility. It is the same as TPM_CAP_HANDLE with a resource type of keys.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_CHECK_LOADED</name>
+				<numValue>0x00000008</numValue>
+				<subcap>A TPM_KEY_PARMS structure</subcap>
+				<description>A Boolean value. TRUE indicates that the TPM supports and has enough memory available to load a key of the type specified by the TPM_KEY_PARMS structure. FALSE indicates that the TPM does not support the key type or does not have enough memory. The Sub cap MUST be a valid TPM_KEY_PARMS structure. The TPM MAY validate the entire TPM_KEY_PARMS structure.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_SYM_MODE</name>
+				<numValue>0x00000009</numValue>
+				<subcap>TPM_SYM_MODE</subcap>
+				<description>A Boolean value. TRUE indicates that the TPM supports the TPM_SYM_MODE, FALSE indicates the TPM does not support the mode. Unassigned modes return FALSE.</description>
+			</value>
+			<value>
+				<name>Unused</name>
+				<numValue>0x0000000A</numValue>
+				<subcap>--</subcap>
+				<description>--</description>
+			</value>
+			<value>
+				<name>Unused</name>
+				<numValue>0x0000000B</numValue>
+				<subcap>--</subcap>
+				<description>--</description>
+			</value>
+			<value>
+				<name>TPM_CAP_KEY_STATUS</name>
+				<numValue>0x0000000C</numValue>
+				<subcap>handle</subcap>
+				<description>Boolean value of ownerEvict. The handle MUST point to a valid key handle. Return TPM_INVALID_KEYHANDLE for an unvalid handle.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_NV_LIST</name>
+				<numValue>0x0000000D</numValue>
+				<subcap>ignored</subcap>
+				<description>A list of TPM_NV_INDEX values that are currently allocated NV storage through TPM_NV_DefineSpace.</description>
+			</value>
+			<value>
+				<name>Unused</name>
+				<numValue>0x0000000E</numValue>
+				<subcap>--</subcap>
+				<description>--</description>
+			</value>
+			<value>
+				<name>Unused</name>
+				<numValue>0x0000000F</numValue>
+				<subcap>--</subcap>
+				<description>--</description>
+			</value>
+			<value>
+				<name>TPM_CAP_MFR</name>
+				<numValue>0x00000010</numValue>
+				<subcap>manufacturer specific</subcap>
+				<description>Manufacturer specific. The manufacturer may provide any additional information regarding the TPM and the TPM state but MUST not expose any sensitive information.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_NV_INDEX</name>
+				<numValue>0x00000011</numValue>
+				<subcap>TPM_NV_INDEX</subcap>
+				<description>A TPM_NV_DATA_PUBLIC structure that indicates the values for the TPM_NV_INDEX. Returns TPM_BADINDEX if the index is not in the TPM_CAP_NV_LIST list.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_TRANS_ALG</name>
+				<numValue>0x00000012</numValue>
+				<subcap>TPM_ALG_XXX</subcap>
+				<description>Boolean value. TRUE means that the TPM supports the algorithm for TPM_EstablishTransport, TPM_ExecuteTransport and TPM_ReleaseTransportSigned. FALSE indicates that for these three commands the algorithm is not supported. Unassigned algorithm IDs return FALSE.</description>
+			</value>
+			<value>
+				<name>Unused</name>
+				<numValue>0x00000013</numValue>
+				<subcap>--</subcap>
+				<description>--</description>
+			</value>
+			<value>
+				<name>TPM_CAP_HANDLE</name>
+				<numValue>0x00000014</numValue>
+				<subcap>TPM_RESOURCE_TYPE</subcap>
+				<description>A TPM_KEY_HANDLE_LIST structure that enumerates all handles currently loaded in the TPM for the given resource type. When describing keys the handle list only contains the number of handles that an external manager can operate with and does not include the EK or SRK. Legal resources are TPM_RT_KEY, TPM_RT_AUTH, TPM_RT_TRANS,, TPM_RT_COUNTER, TPM_RT_DAA_TPM TPM_RT_CONTEXT is valid and returns not a list of handles but a list of the context count values. Return TPM_BAD_MODE for an illegal resource type.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_TRANS_ES</name>
+				<numValue>0x00000015</numValue>
+				<subcap>TPM_ES_XXX</subcap>
+				<description>Boolean value. TRUE means the TPM supports the encryption scheme in a transport session for at least one algorithm. Unassigned schemes return FALSE.</description>
+			</value>
+			<value>
+				<name>Unused</name>
+				<numValue>0x00000016</numValue>
+				<subcap>--</subcap>
+				<description>--</description>
+			</value>
+			<value>
+				<name>TPM_CAP_AUTH_ENCRYPT</name>
+				<numValue>0x00000017</numValue>
+				<subcap>TPM_ALGORITHM_ID</subcap>
+				<description>Boolean value. TRUE indicates that the TPM supports the encryption algorithm in OSAP encryption of AuthData values. Unassigned algorithm IDs return FALSE.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_SELECT_SIZE</name>
+				<numValue>0x00000018</numValue>
+				<subcap>TPM_SELECT_SIZE</subcap>
+				<description>Boolean value. TRUE indicates that the TPM supports reqSize in TPM_PCR_SELECTION -&gt; sizeOfSelect for the given version. For instance a request could ask for version 1.1 size 2 and the TPM would indicate TRUE. For 1.1 size 3 the TPM would indicate FALSE. For 1.2 size 3 the TPM would indicate TRUE.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_DA_LOGIC</name>
+				<numValue>0x00000019</numValue>
+				<subcap>TPM_ENTITY_TYPE</subcap>
+				<description>(OPTIONAL) A TPM_DA_INFO or TPM_DA_INFO_LIMITED structure that returns data according to the selected entity type (e.g., TPM_ET_KEYHANDLE, TPM_ET_OWNER, TPM_ET_SRK, TPM_ET_COUNTER, TPM_ET_OPERATOR, etc.). If the implemented dictionary attack logic does not support different secret types, the entity type can be ignored. Return TPM_WRONG_ENTITYTYPE for an illegal entity type.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_VERSION_VAL</name>
+				<numValue>0x0000001A</numValue>
+				<subcap>Ignored</subcap>
+				<description>TPM_CAP_VERSION_INFO structure. The TPM fills in the structure and returns the information indicating what the TPM currently supports.</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_CAPABILITY_AREA_set</name>
+		<section>21.4</section>
+		<typedef>UINT32</typedef>
+		<values/>
+	</structure>
+	<structure>
+		<name>TPM_CAP_FLAG_SUBCAPS</name>
+		<section>21.1</section>
+		<typedef>UINT32</typedef>
+		<values>
+			<value>
+				<name>TPM_CAP_FLAG_PERMANENT</name>
+				<numValue>0x00000108</numValue>
+				<description>Return the TPM_PERMANENT_FLAGS structure. Each flag in the structure returns as a byte.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_FLAG_VOLATILE</name>
+				<numValue>0x00000109</numValue>
+				<description>Return the TPM_STCLEAR_FLAGS structure. Each flag in the structure returns as a byte.</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_CAP_PROPERTY_SUBCAPS</name>
+		<section>21.2</section>
+		<typedef>UINT32</typedef>
+		<values>
+			<value>
+				<name>TPM_CAP_PROP_PCR</name>
+				<numValue>0x00000101</numValue>
+				<description>UINT32 value. Returns the number of PCR registers supported by the TPM</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_DIR</name>
+				<numValue>0x00000102</numValue>
+				<description>UNIT32. Deprecated. Returns the number of DIR, which is now fixed at 1</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_MANUFACTURER</name>
+				<numValue>0x00000103</numValue>
+				<description>UINT32 value. Returns the vendor ID unique to each TPM manufacturer.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_KEYS</name>
+				<numValue>0x00000104</numValue>
+				<description>UINT32 value. Returns the number of 2048-bit RSA keys that can be loaded. This may vary with time and circumstances.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_MIN_COUNTER</name>
+				<numValue>0x00000107</numValue>
+				<description>UINT32. The minimum amount of time in 10ths of a second that must pass between invocations of incrementing the monotonic counter.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_AUTHSESS</name>
+				<numValue>0x0000010A</numValue>
+				<description>UINT32. The number of available authorization sessions. This may vary with time and circumstances.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_TRANSESS</name>
+				<numValue>0x0000010B</numValue>
+				<description>UINT32. The number of available transport sessions. This may vary with time and circumstances</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_COUNTERS</name>
+				<numValue>0x0000010C</numValue>
+				<description>UINT32. The number of available monotonic counters. This may vary with time and circumstances.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_MAX_AUTHSESS</name>
+				<numValue>0x0000010D</numValue>
+				<description>UINT32. The maximum number of loaded authorization sessions the TPM supports.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_MAX_TRANSESS</name>
+				<numValue>0x0000010E</numValue>
+				<description>UINT32. The maximum number of loaded transport sessions the TPM supports.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_MAX_COUNTERS</name>
+				<numValue>0x0000010F</numValue>
+				<description>UINT32. The maximum number of monotonic counters under control of TPM_CreateCounter</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_MAX_KEYS</name>
+				<numValue>0x00000110</numValue>
+				<description>UINT32. The maximum number of 2048 RSA keys that the TPM can support. The number does not include the EK or SRK.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_OWNER</name>
+				<numValue>0x00000111</numValue>
+				<description>BOOL. A value of TRUE indicates that the TPM has successfully installed an owner.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_CONTEXT</name>
+				<numValue>0x00000112</numValue>
+				<description>UINT32. The number of available saved session slots. This may vary with time and circumstances.		</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_MAX_CONTEXT</name>
+				<numValue>0x00000113</numValue>
+				<description>UINT32. The maximum number of saved session slots.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_FAMILYROWS</name>
+				<numValue>0x00000114</numValue>
+				<description>UINT32. The maximum number of rows in the family table</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_TIS_TIMEOUT</name>
+				<numValue>0x00000115</numValue>
+				<description>A 4 element array of UINT32 values each denoting the timeout value in microseconds for the following in this order: TIMEOUT_A, TIMEOUT_B, TIMEOUT_C, TIMEOUT_D. Where these timeouts are to be used is determined by the platform specific TPM Interface Specification.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_STARTUP_EFFECT</name>
+				<numValue>0x00000116</numValue>
+				<description>The TPM_STARTUP_EFFECTS structure</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_DELEGATE_ROW</name>
+				<numValue>0x00000117</numValue>
+				<description>UINT32. The maximum size of the delegate table in rows.</description>
+			</value>
+			<value>
+				<name>open</name>
+				<numValue>0x00000118</numValue>
+				<description>--</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_MAX_DAASESS</name>
+				<numValue>0x00000119</numValue>
+				<description>UINT32. The maximum number of loaded DAA sessions (join or sign) that the TPM supports.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_DAASESS</name>
+				<numValue>0x0000011A</numValue>
+				<description>UINT32. The number of available DAA sessions. This may vary with time and circumstances</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_CONTEXT_DIST</name>
+				<numValue>0x0000011B</numValue>
+				<description>UINT32. The maximum distance between context count values. This MUST be at least 2^16-1</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_DAA_INTERRUPT</name>
+				<numValue>0x0000011C</numValue>
+				<description>BOOL. A value of TRUE indicates that the TPM will accept ANY command while executing a DAA Join or Sign. A value of FALSE indicates that the TPM will invalidate the DAA Join or Sign upon the receipt of any command other than the next join/sign in the session or a TPM_SaveContext</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_SESSIONS</name>
+				<numValue>0X0000011D</numValue>
+				<description>UNIT32. The number of available authorization and transport sessions from the pool. This may vary with time and circumstances.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_MAX_SESSIONS</name>
+				<numValue>0x0000011E</numValue>
+				<description>UINT32. The maximum number of sessions the TPM supports.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_CMK_RESTRICTION</name>
+				<numValue>0x0000011F</numValue>
+				<description>UINT32 TPM_Permanent_Data -&gt; restrictDelegate</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_DURATION</name>
+				<numValue>0x00000120</numValue>
+				<description>A 3 element array of UINT32 values each denoting the duration value in microseconds of the duration of the three classes of commands: Small, Medium and Long in the following in this order: SMALL_DURATION, MEDIUM_DURATION, LONG_DURATION</description>
+			</value>
+			<value>
+				<name>open</name>
+				<numValue>0x00000121</numValue>
+				<description>--</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_ACTIVE_COUNTER</name>
+				<numValue>0x00000122</numValue>
+				<description>TPM_COUNT_ID. The id of the current counter. 0xff..ff if no counter is active, either because no counter has been set active or because the active counter has been released.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_MAX_NV_AVAILABLE</name>
+				<numValue>0x00000123</numValue>
+				<description>UINT32. Deprecated. The maximum number of NV space that can be allocated, MAY vary with time and circumstances. This capability was not implemented consistently, and is replaced by TPM_NV_INDEX_TRIAL.</description>
+			</value>
+			<value>
+				<name>TPM_CAP_PROP_INPUT_BUFFER</name>
+				<numValue>0x00000124</numValue>
+				<description>UINT32. The maximum size of the TPM input buffer or output buffers in bytes.</description>
+			</value>
+			<value>
+				<name>XX</name>
+				<numValue>0x00000125</numValue>
+				<description>Next number</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_CAP_VERSION_INFO</name>
+		<section>21.6</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>MUST be TPM_TAG_CAP_VERSION_INFO</description>
+			</parameter>
+			<parameter>
+				<name>version</name>
+				<type>TPM_VERSION</type>
+				<description>The version and revision</description>
+			</parameter>
+			<parameter>
+				<name>specLevel</name>
+				<type>UINT16</type>
+				<description>A number indicating the level of ordinals supported</description>
+			</parameter>
+			<parameter>
+				<name>errataRev</name>
+				<type>BYTE</type>
+				<description>A number indicating the errata version of the specification</description>
+			</parameter>
+			<parameter>
+				<name>tpmVendorID</name>
+				<type>BYTE[4]</type>
+				<description>The vendor ID unique to each TPM manufacturer.</description>
+			</parameter>
+			<parameter>
+				<name>vendorSpecificSize</name>
+				<type>UINT16</type>
+				<description>The size of the vendor specific area</description>
+			</parameter>
+			<parameter>
+				<name>vendorSpecific</name>
+				<type>BYTE*</type>
+				<description>Vendor specific information</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_DA_INFO</name>
+		<section>21.7</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>MUST be TPM_TAG_DA_INFO</description>
+			</parameter>
+			<parameter>
+				<name>state</name>
+				<type>TPM_DA_STATE</type>
+				<description>Dynamic. The actual state of the dictionary attack mitigation logic. See 21.9.</description>
+			</parameter>
+			<parameter>
+				<name>currentCount</name>
+				<type>UINT16</type>
+				<description>Dynamic. The actual count of the authorization failure counter for the selected entity type</description>
+			</parameter>
+			<parameter>
+				<name>thresholdCount</name>
+				<type>UINT16</type>
+				<description>Static. Dictionary attack mitigation threshold count for the selected entity type</description>
+			</parameter>
+			<parameter>
+				<name>actionAtThreshold</name>
+				<type>TPM_DA_ACTION_TYPE</type>
+				<description>Static Action of the TPM when currentCount passes thresholdCount. See 21.10.</description>
+			</parameter>
+			<parameter>
+				<name>actionDependValue</name>
+				<type>UINT32</type>
+				<description>Dynamic. Action being taken when the dictionary attack mitigation logic is active. E.g., when actionAtThreshold is TPM_DA_ACTION_TIMEOUT, this is the lockout time remaining in seconds.</description>
+			</parameter>
+			<parameter>
+				<name>vendorDataSize</name>
+				<type>UINT32</type>
+				<description>Size of vendor specific data field</description>
+			</parameter>
+			<parameter>
+				<name>vendorData</name>
+				<type>BYTE*</type>
+				<description>Vendor specific data field</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_DA_INFO_LIMITED</name>
+		<section>21.8</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>MUST be TPM_TAG_DA_INFO_LIMITED</description>
+			</parameter>
+			<parameter>
+				<name>state</name>
+				<type>TPM_DA_STATE</type>
+				<description>Dynamic. The actual state of the dictionary attack mitigation logic. See 21.9.</description>
+			</parameter>
+			<parameter>
+				<name>currentCount</name>
+				<type>UINT16</type>
+				<description>Dynamic. The actual count of the authorization failure counter for the selected entity type</description>
+			</parameter>
+			<parameter>
+				<name>thresholdCount</name>
+				<type>UINT16</type>
+				<description>Static. Dictionary attack mitigation threshold count for the selected entity type</description>
+			</parameter>
+			<parameter>
+				<name>actionAtThreshold</name>
+				<type>TPM_DA_ACTION_TYPE</type>
+				<description>Static Action of the TPM when currentCount passes thresholdCount. See 21.10.</description>
+			</parameter>
+			<parameter>
+				<name>actionDependValue</name>
+				<type>UINT32</type>
+				<description>Dynamic. Action being taken when the dictionary attack mitigation logic is active. E.g., when actionAtThreshold is TPM_DA_ACTION_TIMEOUT, this is the lockout time remaining in seconds.</description>
+			</parameter>
+			<parameter>
+				<name>vendorDataSize</name>
+				<type>UINT32</type>
+				<description>Size of vendor specific data field</description>
+			</parameter>
+			<parameter>
+				<name>vendorData</name>
+				<type>BYTE*</type>
+				<description>Vendor specific data field</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_DA_STATE</name>
+		<section>21.9</section>
+		<typedef>BYTE</typedef>
+		<values>
+			<value>
+				<name>TPM_DA_STATE_INACTIVE</name>
+				<numValue>0x00</numValue>
+				<description>The dictionary attack mitigation logic is currently inactive</description>
+			</value>
+			<value>
+				<name>TPM_DA_STATE_ACTIVE</name>
+				<numValue>0x01</numValue>
+				<description>The dictionary attack mitigation logic is active. TPM_DA_ACTION_TYPE (21.10) is in progress.</description>
+			</value>
+		</values>
+	</structure>
+	<structure>
+		<name>TPM_DA_ACTION_TYPE</name>
+		<section>21.10</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>MUST be TPM_TAG_DA_ACTION_TYPE</description>
+			</parameter>
+			<parameter>
+				<name>actions</name>
+				<type>UINT32</type>
+				<description>The action taken when TPM_DA_STATE is TPM_DA_STATE_ACTIVE.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_DAA_ISSUER</name>
+		<section>22.3</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>MUST be TPM_TAG_DAA_ISSUER</description>
+			</parameter>
+			<parameter>
+				<name>DAA_digest_R0</name>
+				<type>TPM_DIGEST</type>
+				<description>A digest of the parameter “R0”, which is not secret and may be common to many TPMs.</description>
+			</parameter>
+			<parameter>
+				<name>DAA_digest_R1</name>
+				<type>TPM_DIGEST</type>
+				<description>A digest of the parameter “R1”, which is not secret and may be common to many TPMs.</description>
+			</parameter>
+			<parameter>
+				<name>DAA_digest_S0</name>
+				<type>TPM_DIGEST</type>
+				<description>A digest of the parameter “S0”, which is not secret and may be common to many TPMs.</description>
+			</parameter>
+			<parameter>
+				<name>DAA_digest_S1</name>
+				<type>TPM_DIGEST</type>
+				<description>A digest of the parameter “S1”, which is not secret and may be common to many TPMs.</description>
+			</parameter>
+			<parameter>
+				<name>DAA_digest_n</name>
+				<type>TPM_DIGEST</type>
+				<description>A digest of the parameter “n”, which is not secret and may be common to many TPMs.</description>
+			</parameter>
+			<parameter>
+				<name>DAA_digest_gamma</name>
+				<type>TPM_DIGEST</type>
+				<description>A digest of the parameter “gamma”, which is not secret and may be common to many TPMs.</description>
+			</parameter>
+			<parameter>
+				<name>DAA_</name>
+				<type>BYTE[26]</type>
+				<description>generic _q The parameter q, which is not secret and may be common to many TPMs. Note that q is slightly larger than a digest, but is stored in its native form to simplify the TPM_DAA_join command. Otherwise, JOIN requires 3 input parameters.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_DAA_TPM</name>
+		<section>22.4</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>MUST be TPM_TAG_DAA_TPM</description>
+			</parameter>
+			<parameter>
+				<name>DAA_digestIssuer</name>
+				<type>TPM_DIGEST</type>
+				<description>A digest of a TPM_DAA_ISSUER structure that contains the parameters used to generate this TPM_DAA_TPM structure.</description>
+			</parameter>
+			<parameter>
+				<name>DAA_digest_v0</name>
+				<type>TPM_DIGEST</type>
+				<description>A digest of the parameter “v0”, which is secret and specific to this TPM. “v0” is generated during a JOIN phase.</description>
+			</parameter>
+			<parameter>
+				<name>DAA_digest_v1</name>
+				<type>TPM_DIGEST</type>
+				<description>A digest of the parameter “v1”, which is secret and specific to this TPM. “v1” is generated during a JOIN phase.</description>
+			</parameter>
+			<parameter>
+				<name>DAA_rekey</name>
+				<type>TPM_DIGEST</type>
+				<description>A digest related to the rekeying process, which is not secret but is specific to this TPM, and must be consistent across JOIN/SIGN sessions. “rekey” is generated during a JOIN phase.</description>
+			</parameter>
+			<parameter>
+				<name>DAA_count</name>
+				<type>UINT32</type>
+				<description>The parameter “count”, which is not secret but must be consistent across JOIN/SIGN sessions. “count” is an input to the TPM from the host system.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_DAA_CONTEXT</name>
+		<section>22.5</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>MUST be TPM_TAG_DAA_CONTEXT</description>
+			</parameter>
+			<parameter>
+				<name>DAA_digestContext</name>
+				<type>TPM_DIGEST</type>
+				<description>A digest of parameters used to generate this structure. The parameters vary, depending on whether the session is a JOIN session or a SIGN session.</description>
+			</parameter>
+			<parameter>
+				<name>DAA_digest</name>
+				<type>TPM_DIGEST</type>
+				<description>A running digest of certain parameters generated during DAA computation; operationally the same as a PCR (which holds a running digest of integrity metrics).</description>
+			</parameter>
+			<parameter>
+				<name>DAA_contextSeed</name>
+				<type>TPM_DAA_CONTEXT_SEED</type>
+				<description>The seed used to generate other DAA session parameters</description>
+			</parameter>
+			<parameter>
+				<name>DAA_scratch</name>
+				<type>BYTE[256]</type>
+				<description>Memory used to hold different parameters at different times of DAA computation, but only one parameter at a time. The maximum size of this field is 256 bytes</description>
+			</parameter>
+			<parameter>
+				<name>DAA_stage</name>
+				<type>BYTE</type>
+				<description>A counter, indicating the stage of DAA computation that was most recently completed. The value of the counter is zero if the TPM currently contains no DAA context. When set to zero (0) the TPM MUST clear all other fields in this structure. The TPM MUST set DAA_stage to 0 on TPM_Startup(ANY)</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_DAA_JOINDATA</name>
+		<section>22.6</section>
+		<parameters>
+			<parameter>
+				<name>DAA_join_u0</name>
+				<type>BYTE[128]</type>
+				<description>A TPM-specific secret “u0”, used during the JOIN phase, and discarded afterwards.</description>
+			</parameter>
+			<parameter>
+				<name>DAA_join_u1</name>
+				<type>BYTE[128]</type>
+				<description>A TPM-specific secret “u1”, used during the JOIN phase, and discarded afterwards.</description>
+			</parameter>
+			<parameter>
+				<name>DAA_digest_n0</name>
+				<type>TPM_DIGEST</type>
+				<description>A digest of the parameter “n0”, which is an RSA public key with exponent 2^16 +1</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_STANY_DATA</name>
+		<section>22.7</section>
+		<parameters>
+			<parameter>
+				<name>DAA_issuerSettings</name>
+				<type>TPM_DAA_ISSUER</type>
+				<description>A set of DAA issuer parameters controlling a DAA session.</description>
+			</parameter>
+			<parameter>
+				<name>DAA_tpmSpecific</name>
+				<type>TPM_DAA_TPM</type>
+				<description>A set of DAA parameters associated with a specific TPM.</description>
+			</parameter>
+			<parameter>
+				<name>DAA_session</name>
+				<type>TPM_DAA_CONTEXT</type>
+				<description>A set of DAA parameters associated with a DAA session.</description>
+			</parameter>
+			<parameter>
+				<name>DAA_joinSession</name>
+				<type>TPM_DAA_JOINDATA</type>
+				<description>A set of DAA parameters used only during the JOIN phase of a DAA session, and generated by the TPM.</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_DAA_BLOB</name>
+		<section>22.8</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>MUST be TPM_TAG_DAA_BLOB</description>
+			</parameter>
+			<parameter>
+				<name>resourceType</name>
+				<type>TPM_RESOURCE_TYPE</type>
+				<description>The resource type: enc(DAA_tpmSpecific) or enc(v0) or enc(v1)</description>
+			</parameter>
+			<parameter>
+				<name>label</name>
+				<type>BYTE[16]</type>
+				<description>Label for identification of the blob. Free format area.</description>
+			</parameter>
+			<parameter>
+				<name>blobIntegrity</name>
+				<type>TPM_DIGEST</type>
+				<description>The integrity of the entire blob including the sensitive area. This is a HMAC calculation with the entire structure (including sensitiveData) being the hash and daaProof is the secret</description>
+			</parameter>
+			<parameter>
+				<name>additionalSize</name>
+				<type>UINT32</type>
+				<description>The size of additionalData</description>
+			</parameter>
+			<parameter>
+				<name>additionalData</name>
+				<type>BYTE*</type>
+				<description>Additional information set by the TPM that helps define and reload the context. The information held in this area MUST NOT expose any information held in shielded locations. This should include any IV for symmetric encryption</description>
+			</parameter>
+			<parameter>
+				<name>sensitiveSize</name>
+				<type>UINT32</type>
+				<description>The size of sensitiveData</description>
+			</parameter>
+			<parameter>
+				<name>sensitiveData</name>
+				<type>BYTE*</type>
+				<description>A TPM_DAA_SENSITIVE structure</description>
+			</parameter>
+		</parameters>
+	</structure>
+	<structure>
+		<name>TPM_DAA_SENSITIVE</name>
+		<section>22.9</section>
+		<parameters>
+			<parameter>
+				<name>tag</name>
+				<type>TPM_STRUCTURE_TAG</type>
+				<description>MUST be TPM_TAG_DAA_SENSITIVE</description>
+			</parameter>
+			<parameter>
+				<name>internalSize</name>
+				<type>UINT32</type>
+				<description>The size of the internalData area</description>
+			</parameter>
+			<parameter>
+				<name>internalData</name>
+				<type>BYTE*</type>
+				<description>DAA_tpmSpecific or DAA_private_v0 or DAA_private_v1</description>
+			</parameter>
+		</parameters>
+	</structure>
+</structures>

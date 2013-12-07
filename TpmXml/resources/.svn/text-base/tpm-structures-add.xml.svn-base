@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<structures>
+	<structure>
+		<name>TPM_AUTH_DATA_USAGE</name>
+		<typedef>BYTE</typedef>
+		<description>Indicates the conditions where it is required that authorization be presented.</description>
+	</structure>
+	<structure>
+		<name>TPM_PAYLOAD_TYPE</name>
+		<typedef>BYTE</typedef>
+		<description>The information as to what the payload is in an encrypted structure</description>
+	</structure>
+	<structure>
+		<name>TPM_VERSION_BYTE</name>
+		<typedef>BYTE</typedef>
+		<description>The version info breakdown</description>
+	</structure>
+	<structure>
+		<name>TPM_DA_STATE</name>
+		<typedef>BYTE</typedef>
+		<description>The state of the dictionary attack mitigation logic</description>
+	</structure>
+	<structure>
+		<name>TPM_TAG</name>
+		<typedef>UINT16</typedef>
+		<description>The request or response authorization type.</description>
+	</structure>
+	<structure>
+		<name>TPM_PROTOCOL_ID</name>
+		<typedef>UINT16</typedef>
+		<description>The protocol in use.</description>
+	</structure>
+	<structure>
+		<name>TPM_STARTUP_TYPE</name>
+		<typedef>UINT16</typedef>
+		<description>Indicates the start state.</description>
+	</structure>
+	<structure>
+		<name>TPM_ENC_SCHEME</name>
+		<typedef>UINT16</typedef>
+		<description>The definition of the encryption scheme.</description>
+	</structure>
+	<structure>
+		<name>TPM_SIG_SCHEME</name>
+		<typedef>UINT16</typedef>
+		<description>The definition of the signature scheme.</description>
+	</structure>
+	<structure>
+		<name>TPM_MIGRATE_SCHEME</name>
+		<typedef>UINT16</typedef>
+		<description>The definition of the migration scheme</description>
+	</structure>
+	<structure>
+		<name>TPM_PHYSICAL_PRESENCE</name>
+		<typedef>UINT16</typedef>
+		<description>Sets the state of the physical presence mechanism.</description>
+	</structure>
+	<structure>
+		<name>TPM_ENTITY_TYPE</name>
+		<typedef>UINT16</typedef>
+		<description>Indicates the types of entity that are supported by the TPM.</description>
+	</structure>
+	<structure>
+		<name>TPM_KEY_USAGE</name>
+		<typedef>UINT16</typedef>
+		<description>Indicates the permitted usage of the key.</description>
+	</structure>
+	<structure>
+		<name>TPM_EK_TYPE</name>
+		<typedef>UINT16</typedef>
+		<description>The type of asymmetric encrypted structure in use by the endorsement key</description>
+	</structure>
+	<structure>
+		<name>TPM_STRUCTURE_TAG</name>
+		<typedef>UINT16</typedef>
+		<description>The tag for the structure</description>
+	</structure>
+	<structure>
+		<name>TPM_PLATFORM_SPECIFIC</name>
+		<typedef>UINT16</typedef>
+		<description>The platform specific spec to which the information relates to</description>
+	</structure>
+	<structure>
+		<name>TPM_COMMAND_CODE</name>
+		<typedef>UINT32</typedef>
+		<description>The command ordinal.</description>
+	</structure>
+	<structure>
+		<name>TPM_CAPABILITY_AREA</name>
+		<typedef>UINT32</typedef>
+		<description>Identifies a TPM capability area.</description>
+	</structure>
+	<structure>
+		<name>TPM_KEY_FLAGS</name>
+		<typedef>UINT32</typedef>
+		<description>Indicates information regarding a key.</description>
+	</structure>
+	<structure>
+		<name>TPM_ALGORITHM_ID</name>
+		<typedef>UINT32</typedef>
+		<description>Indicates the type of algorithm.</description>
+	</structure>
+	<structure>
+		<name>TPM_MODIFIER_INDICATOR</name>
+		<typedef>UINT32</typedef>
+		<description>The locality modifier</description>
+	</structure>
+	<structure>
+		<name>TPM_ACTUAL_COUNT</name>
+		<typedef>UINT32</typedef>
+		<description>The actual number of a counter.</description>
+	</structure>
+	<structure>
+		<name>TPM_TRANSPORT_ATTRIBUTES</name>
+		<typedef>UINT32</typedef>
+		<description>Attributes that define what options are in use for a transport session</description>
+	</structure>
+	<structure>
+		<name>TPM_AUTHHANDLE</name>
+		<typedef>UINT32</typedef>
+		<description>Handle to an authorization session</description>
+	</structure>
+	<structure>
+		<name>TPM_DIRINDEX</name>
+		<typedef>UINT32</typedef>
+		<description>Index to a DIR register</description>
+	</structure>
+	<structure>
+		<name>TPM_KEY_HANDLE</name>
+		<typedef>UINT32</typedef>
+		<description>The area where a key is held assigned by the TPM.</description>
+	</structure>
+	<structure>
+		<name>TPM_PCRINDEX</name>
+		<typedef>UINT32</typedef>
+		<description>Index to a PCR register</description>
+	</structure>
+	<structure>
+		<name>TPM_RESULT</name>
+		<typedef>UINT32</typedef>
+		<description>The return code from a function</description>
+	</structure>
+	<structure>
+		<name>TPM_RESOURCE_TYPE</name>
+		<typedef>UINT32</typedef>
+		<description>The types of resources that a TPM may have using internal resources</description>
+	</structure>
+	<structure>
+		<name>TPM_KEY_CONTROL</name>
+		<typedef>UINT32</typedef>
+		<description>Allows for controlling of the key when loaded and how to handle TPM_Startup issues</description>
+	</structure>
+	<structure>
+		<name>TPM_NV_INDEX</name>
+		<typedef>UINT32</typedef>
+		<description>The index into the NV storage area</description>
+	</structure>
+	<structure>
+		<name>TPM_FAMILY_ID</name>
+		<typedef>UINT32</typedef>
+		<description>The family ID. Families ID’s are automatically assigned a sequence number by the TPM. A trusted process can set the FamilyID value in an individual row to zero, which invalidates that row. The family ID resets to zero on each change of TPM Owner.</description>
+	</structure>
+	<structure>
+		<name>TPM_FAMILY_VERIFICATION</name>
+		<typedef>UINT32</typedef>
+		<description>A value used as a label for the most recent verification of this family. Set to zero when not in use.</description>
+	</structure>
+	<structure>
+		<name>TPM_STARTUP_EFFECTS</name>
+		<typedef>UINT32</typedef>
+		<description>How the TPM handles var</description>
+	</structure>
+	<structure>
+		<name>TPM_SYM_MODE</name>
+		<typedef>UINT32</typedef>
+		<description>The mode of a symmetric encryption</description>
+	</structure>
+	<structure>
+		<name>TPM_FAMILY_FLAGS</name>
+		<typedef>UINT32</typedef>
+		<description>The family flags</description>
+	</structure>
+	<structure>
+		<name>TPM_DELEGATE_INDEX</name>
+		<typedef>UINT32</typedef>
+		<description>The index value for the delegate NV table</description>
+	</structure>
+	<structure>
+		<name>TPM_CMK_DELEGATE</name>
+		<typedef>UINT32</typedef>
+		<description>The restrictions placed on delegation of CMK commands</description>
+	</structure>
+	<structure>
+		<name>TPM_COUNT_ID</name>
+		<typedef>UINT32</typedef>
+		<description>The ID value of a monotonic counter</description>
+	</structure>
+	<structure>
+		<name>TPM_REDIT_COMMAND</name>
+		<typedef>UINT32</typedef>
+		<description>A command to execute</description>
+	</structure>
+	<structure>
+		<name>TPM_TRANSHANDLE</name>
+		<typedef>UINT32</typedef>
+		<description>A transport session handle</description>
+	</structure>
+	<structure>
+		<name>TPM_HANDLE</name>
+		<typedef>UINT32</typedef>
+		<description>A generic handle could be key, transport etc.</description>
+	</structure>
+	<structure>
+		<name>TPM_FAMILY_OPERATION</name>
+		<typedef>UINT32</typedef>
+		<description>What operation is happening</description>
+	</structure>
+	<structure>
+		<name>TPM_CHOSENID_HASH</name>
+		<typedef>TPM_DIGEST</typedef>
+		<description>This SHALL be the digest of the chosen identityLabel and privacyCA for a new TPM identity.</description>
+	</structure>
+	<structure>
+		<name>TPM_COMPOSITE_HASH</name>
+		<typedef>TPM_DIGEST</typedef>
+		<description>This SHALL be the hash of a list of PCR indexes and PCR values that a key or data is bound to.</description>
+	</structure>
+	<structure>
+		<name>TPM_DIRVALUE</name>
+		<typedef>TPM_DIGEST</typedef>
+		<description>This SHALL be the value of a DIR register</description>
+	</structure>
+	<structure>
+		<name>TPM_HMAC</name>
+		<typedef>TPM_DIGEST</typedef>
+		<description>This shall be the output of the HMAC algorithm</description>
+	</structure>
+	<structure>
+		<name>TPM_PCRVALUE</name>
+		<typedef>TPM_DIGEST</typedef>
+		<description>The value inside of the PCR</description>
+	</structure>
+	<structure>
+		<name>TPM_AUDITDIGEST</name>
+		<typedef>TPM_DIGEST</typedef>
+		<description>This SHALL be the value of the current internal audit state	</description>
+	</structure>
+	<structure>
+		<name>TPM_DAA_TPM_SEED</name>
+		<typedef>TPM_NONCE</typedef>
+		<description>This SHALL be a random value generated by a TPM immediately after the EK is installed in that TPM, whenever an EK is installed in that TPM</description>
+	</structure>
+	<structure>
+		<name>TPM_DAA_CONTEXT_SEED</name>
+		<typedef>TPM_NONCE</typedef>
+		<description>This SHALL be a random value</description>
+	</structure>
+	<structure>
+		<name>TPM_SECRET</name>
+		<typedef>TPM_AUTHDATA</typedef>
+		<description>A secret plaintext value used in the authorization process.</description>
+	</structure>
+	<structure>
+		<name>TPM_ENCAUTH</name>
+		<typedef>TPM_AUTHDATA</typedef>
+		<description>A ciphertext (encrypted) version of AuthData data. The encryption mechanism depends on the context.</description>
+	</structure>
+</structures>
