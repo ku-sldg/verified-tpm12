@@ -1,23 +1,47 @@
-Inductive vtpmDynamicType (dom_ID:Set) (KEY:Set) (HASH:Set) : Set :=
-| vtpmDynamic : dom_ID -> dom_ID -> KEY -> HASH -> HASH -> vtpmDynamicType dom_ID KEY HASH.
+Require Import Bool Arith List.
+Set Implicit Arguments.
 
-Inductive vtpmStaticType (LTN:Set): Set :=
-| vtpmStatic : LTN -> vtpmStaticType LTN.
+Definition dom_ID := nat.
+Definition KEY := nat.
+Definition HASH := nat.
+Definition LTN := nat.
 
-Inductive vtpmEntryType (dom_ID:Set) (KEY:Set) (HASH:Set) (LTN:Set) : Set :=
-| vtpmEntry : vtpmStaticType LTN -> vtpmDynamicType dom_ID KEY HASH -> vtpmEntryType dom_ID KEY HASH LTN.
+Inductive vtpmDynamicType : Set :=
+| vtpmDynamic : dom_ID -> dom_ID -> KEY -> HASH -> HASH -> vtpmDynamicType.
 
-Inductive Lift (T:Set) : Set :=
-| up : T -> Lift T
-| bottom : Lift T.
+Eval simpl in (vtpmDynamic 1 2 3).
 
-Inductive List (T:Set) : Set :=
-| nil : List T
-| cons : T -> List T -> List T.
+Inductive vtpmStaticType : Set :=
+| vtpmStatic : LTN -> vtpmStaticType.
 
-Fixpoint findLTN (l : List (vtpmEntryType nat nat nat nat)) : (Lift (vtpmEntryType nat nat nat nat))
+Eval simpl in (vtpmStatic 1).
+
+Inductive vtpmEntryType : Set :=
+| vtpmEntry : vtpmStaticType -> vtpmDynamicType -> vtpmEntryType.
+
+Inductive lift (T:Set) : Set :=
+| up : T -> lift T
+| bottom : lift T.
+
+Definition vtpmSet := list vtpmEntryType.
+
+Fixpoint find (p:vtpmEntryType->bool) (l:vtpmSet) : (lift vtpmEntryType)  :=
   match l with
-      | nil => bottom
-      | cons v l' => (up v)
+      | nil => bottom vtpmEntryType
+      | cons v l' => if p v then (up v) else find p l'
   end.
 
+Definition eqLTN : LTN -> vtpmEntryType -> Prop :=
+  fun (l:LTN) (v:vtpmEntryType) =>
+    match v with
+    | vtpmEntry s _ =>
+        match s with
+        | vtpmStatic l' => (l=l')
+        end
+    end.
+
+Eval simpl in eqLTN 1 (vtpmEntry (vtpmStatic 1) (vtpmDynamic 2 3 4 5 6)).
+
+Definition findLTN : LTN -> vtpmSet -> lift vtpmEntryType :=
+  fun (l:LTN) (s:vtpmSet) =>
+    find (fun (v:vtpmEntryType) => eqLTN l v) s.
