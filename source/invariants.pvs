@@ -31,7 +31,7 @@ invariants[HV:TYPE+] : THEORY
 
 BEGIN 
 
-  IMPORTING tpm[HV];
+  IMPORTING commands[HV];
 
   restore_unchanged: THEOREM
     FORALL (s:tpmAbsState,c:tpmAbsInput) :
@@ -293,7 +293,8 @@ BEGIN
       not(ABS_Startup?(c) OR ABS_Init?(c) OR 
 	  ABS_RevokeTrust?(c) OR
 	  ABS_ForceClear?(c) OR
-	  ABS_OwnerClear?(c)) =>
+	  ABS_OwnerClear?(c) OR
+	  ABS_TakeOwnership?(c)) =>
         s`permData`tpmProof = executeCom(s,c)`permData`tpmProof;
 
   %% TODO: MAKE SURE THIS ONE WORKS... was proving anything (i think it has something to do with nonces)

@@ -31,7 +31,7 @@
 lemmas[HV:TYPE+] : THEORY
   BEGIN
   
-  IMPORTING tpm[HV];
+  IMPORTING commands[HV];
 
   %% A predefined ek exists (in key.pvs). If the ek of the state is valid, 
   %%  it have at least the same key value as the predefined ek.

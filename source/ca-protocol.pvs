@@ -18,7 +18,7 @@ caProtocol[HV:TYPE+] : THEORY
 
 BEGIN
 
-  IMPORTING tpm[HV];
+  IMPORTING commands[HV];
 
   make_cert : THEOREM
    FORALL (state:(afterStartup?)

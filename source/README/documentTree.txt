@@ -1,0 +1,33 @@
+                                        attacker     tpmProofs
+                                           |             |
+                                           ---------------
+                                                     |
+       ca-protocol   migration     invariants      lemmas	
+           |            |               |            |
+           -------------------------------------------
+                                 |
+                              commands
+                                 |
+                                tpm
+                                 |
+            ------------------------------------------
+            |             |          |               |
+	stateMonad	memory	 returnCodes	startupData
+                                                     |
+                                                     |
+        -------------------------------------------------------------------------------
+       |              |             |               |                |                |
+PermanentFlags   PermanentData   StanyData       StanyFlags      StclearData     StclearFlags
+                      |             |               |                |
+                      ------------------------------------------------
+                                            |
+                                           key
+                                            |
+                                           data					    
+                                            |						    
+                      ------------------------------------------------
+                     |             |           |           |         |
+                  authdata       types      keydata       pcr       tag
+
+
+	

@@ -75,8 +75,6 @@
   (rewrap_TCC1-1 nil 3576843893 ("" (cases-tcc) nil nil) nil nil))
  (rewrap_TCC2 0
   (rewrap_TCC2-1 nil 3576843893 ("" (cases-tcc) nil nil) nil nil))
- (rewrap_TCC3 0
-  (rewrap_TCC3-1 nil 3590166798 ("" (subtype-tcc) nil nil) nil nil))
  (rewrap 0
   (rewrap-1 nil 3577022025 ("" (grind) nil nil)
    ((boolean nonempty-type-decl nil booleans nil)
@@ -100,29 +98,6 @@
     (real_ge_is_total_order name-judgement "(total_order?[real])"
      real_props nil)
     (rewrap const-decl "(tpmKey?)" key nil))
-   shostak))
- (no_encrypt_encrypted 0
-  (no_encrypt_encrypted-1 nil 3584367997
-   ("" (grind) (("" (postpone) nil nil)) nil)
-   ((boolean nonempty-type-decl nil booleans nil)
-    (bool nonempty-type-eq-decl nil booleans nil)
-    (NOT const-decl "[bool -> bool]" booleans nil)
-    (number nonempty-type-decl nil numbers nil)
-    (number_field_pred const-decl "[number -> boolean]" number_fields
-     nil)
-    (number_field nonempty-type-from-decl nil number_fields nil)
-    (real_pred const-decl "[number_field -> boolean]" reals nil)
-    (real nonempty-type-from-decl nil reals nil)
-    (>= const-decl "bool" reals nil)
-    (rational_pred const-decl "[real -> boolean]" rationals nil)
-    (rational nonempty-type-from-decl nil rationals nil)
-    (integer_pred const-decl "[rational -> boolean]" integers nil)
-    (int nonempty-type-eq-decl nil integers nil)
-    (KVAL type-eq-decl nil keydata nil)
-    (real_ge_is_total_order name-judgement "(total_order?[real])"
-     real_props nil)
-    (checkEncrypt? const-decl "bool" key nil)
-    (encrypt const-decl "tpmData" key nil))
    shostak))
  (no_double_encryption 0
   (no_double_encryption-1 nil 3588511247
@@ -160,9 +135,6 @@
     (minus_int_is_int application-judgement "int" integers nil)
     (noDoubleEncryption formula-decl nil key nil))
    shostak))
- (check_encrypt 0
-  (check_encrypt-1 nil 3584369068 ("" (grind) nil nil)
-   ((checkEncrypt? const-decl "bool" key nil)) shostak))
  (check_decrypt_TCC1 0
   (check_decrypt_TCC1-1 nil 3583589301 ("" (subtype-tcc) nil nil)
    ((member const-decl "bool" sets nil)
@@ -279,13 +251,10 @@
    shostak))
  (decrypt_encrypt_TCC1 0
   (decrypt_encrypt_TCC1-1 nil 3579889657 ("" (subtype-tcc) nil nil)
-   ((checkEncrypt? const-decl "bool" key nil)
-    (inverse const-decl "integer" keydata nil))
-   nil))
+   ((inverse const-decl "integer" keydata nil)) nil))
  (decrypt_encrypt_TCC2 0
   (decrypt_encrypt_TCC2-1 nil 3583087526 ("" (subtype-tcc) nil nil)
-   ((checkEncrypt? const-decl "bool" key nil)
-    (inverse const-decl "integer" keydata nil)
+   ((inverse const-decl "integer" keydata nil)
     (member const-decl "bool" sets nil)
     (encrypt const-decl "tpmData" key nil)
     (minus_int_is_int application-judgement "int" integers nil))
@@ -309,7 +278,6 @@
     (KVAL type-eq-decl nil keydata nil)
     (real_ge_is_total_order name-judgement "(total_order?[real])"
      real_props nil)
-    (checkEncrypt? const-decl "bool" key nil)
     (inverse const-decl "integer" keydata nil)
     (member const-decl "bool" sets nil)
     (encrypt const-decl "tpmData" key nil)
@@ -319,8 +287,7 @@
    shostak))
  (decrypt_equal_keys_TCC1 0
   (decrypt_equal_keys_TCC1-1 nil 3588444843 ("" (subtype-tcc) nil nil)
-   ((checkEncrypt? const-decl "bool" key nil)
-    (inverse const-decl "integer" keydata nil)
+   ((inverse const-decl "integer" keydata nil)
     (member const-decl "bool" sets nil)
     (minus_int_is_int application-judgement "int" integers nil))
    shostak))
@@ -343,7 +310,6 @@
     (KVAL type-eq-decl nil keydata nil)
     (real_ge_is_total_order name-judgement "(total_order?[real])"
      real_props nil)
-    (checkEncrypt? const-decl "bool" key nil)
     (inverse const-decl "integer" keydata nil)
     (member const-decl "bool" sets nil)
     (encrypt const-decl "tpmData" key nil)
@@ -354,8 +320,7 @@
  (no_decrypt_unequal_keys_TCC1 0
   (no_decrypt_unequal_keys_TCC1-1 nil 3588444843
    ("" (subtype-tcc) nil nil)
-   ((checkEncrypt? const-decl "bool" key nil)
-    (inverse const-decl "integer" keydata nil)
+   ((inverse const-decl "integer" keydata nil)
     (member const-decl "bool" sets nil)
     (/= const-decl "boolean" notequal nil)
     (minus_int_is_int application-judgement "int" integers nil))
@@ -379,7 +344,6 @@
     (KVAL type-eq-decl nil keydata nil)
     (real_ge_is_total_order name-judgement "(total_order?[real])"
      real_props nil)
-    (checkEncrypt? const-decl "bool" key nil)
     (inverse const-decl "integer" keydata nil)
     (member const-decl "bool" sets nil)
     (/= const-decl "boolean" notequal nil)
@@ -391,15 +355,13 @@
  (no_decrypt_uninstalled_TCC1 0
   (no_decrypt_uninstalled_TCC1-1 nil 3588444844
    ("" (subtype-tcc) nil nil)
-   ((checkEncrypt? const-decl "bool" key nil)
-    (member const-decl "bool" sets nil)
+   ((member const-decl "bool" sets nil)
     (inverse const-decl "integer" keydata nil))
    shostak))
  (no_decrypt_uninstalled_TCC2 0
   (no_decrypt_uninstalled_TCC2-1 nil 3588444844
    ("" (subtype-tcc) nil nil)
-   ((checkEncrypt? const-decl "bool" key nil)
-    (member const-decl "bool" sets nil)
+   ((member const-decl "bool" sets nil)
     (inverse const-decl "integer" keydata nil)
     (encrypt const-decl "tpmData" key nil))
    shostak))
@@ -420,7 +382,6 @@
     (integer_pred const-decl "[rational -> boolean]" integers nil)
     (integer nonempty-type-from-decl nil integers nil)
     (privKVAL type-eq-decl nil keydata nil)
-    (checkEncrypt? const-decl "bool" key nil)
     (member const-decl "bool" sets nil)
     (inverse const-decl "integer" keydata nil)
     (encrypt const-decl "tpmData" key nil)
@@ -428,9 +389,6 @@
     (decrypt const-decl "tpmData" key nil)
     (minus_int_is_int application-judgement "int" integers nil))
    shostak))
- (check_sig_TCC1 0
-  (check_sig_TCC1-1 nil 3588444844 ("" (subtype-tcc) nil nil)
-   ((inverse const-decl "integer" keydata nil)) shostak))
  (check_sig 0
   (check_sig-1 nil 3588509325 ("" (grind) nil nil)
    ((boolean nonempty-type-decl nil booleans nil)

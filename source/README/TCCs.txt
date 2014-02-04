@@ -1,0 +1,69 @@
+Proving TCCs:
+
+Due to the possibility that some fields (due to decryptions) could be bad data, which has no specific type, many tccs from tpm.pvs and commands.pvs are unprovable which is okay. 
+
+From tpm.pvs:
+ takeOwnershipState_TCC1...............unfinished          [shostak](3.75 s) takeOwnershipState_TCC4...............unfinished          [shostak](1.34 s) takeOwnershipOut_TCC1.................unfinished          [shostak](1.46 s) validateLoadKey2_TCC1.................unfinished          [shostak](0.47 s) validateLoadKey2_TCC2.................unfinished          [shostak](0.43 s) convertMigBlob?_TCC1..................unfinished          [shostak](1.60 s)
+ CMKCreateBlob?_TCC1...................unfinished          [shostak](0.51 s) CMKConvertMigration?_TCC1.............unfinished          [shostak](2.03 s) CMKConvertMigrationState_TCC1.........unfinished          [shostak](1.90 s) CMKConvertMigrationOut_TCC1...........unfinished          [shostak](3.97 s) CMKConvertMigrationOut_TCC8...........unfinished          [shostak](6.70 s) activateIdentityOut_TCC3..............unfinished          [shostak](0.66 s) activateIdentityOut_TCC4..............unfinished          [shostak](0.69 s) buildQuoteFromMemOut_TCC2.............unfinished          [shostak](0.30 s)
+
+From commands.pvs: gen_quote_TCC2......................unfinished          [shostak](  1.93 s) take_ownership_post_TCC1............unfinished          [shostak](  3.95 s) take_ownership_post_TCC4............unfinished          [shostak](  5.03 s) take_ownership_post_TCC5............unfinished          [shostak](  5.32 s) unseal_prev_post....................unfinished          [shostak](  5.88 s) cmk_convert_migration_post_TCC2.....unfinished          [shostak](  9.75 s) cmk_convert_migration_post2_TCC1....unfinished          [shostak](  5.24 s) activate_identity_post_TCC4.........unfinished          [shostak](  3.39 s) activate_identity_post_TCC5.........unfinished          [shostak](  2.95 s)However, some TCCs look similar to the ones listed above, but can be proved. For example, CMKConvertMigration?_TCC6 has a header that looks like this (recognizable with the tpmStoreAsymkey? OR tpmMigrateAsymkey? part):
+% Subtype TCC generated (at line 1847, column 19) for  encData(encDat(m))    % expected type  {x: tpmData[HV] |                   %          tpmStoreAsymkey?[HV](x) OR                   %           tpmMigrateAsymkey?[HV](x)}Most proofs like this can be proved using:
+(skosimp)
+(lemma keyEncDatStoreAsymkey) OR (lemma keyEncDatMigrateAsymkey)
+(grind)
+There is one that requires a little bit of finagling with the above strategy, but I can’t currently track that one down.
+
+
+Existence TCCs:
+A lot of TCCs generated are existence TCCs, proving that there are existing instances of some data types. I’ve kept track of the most frequent ones, and have listed them below in alphabetical order of the data type needed. 
+
+
+tpmAbsState:
+(inst 1 "(# restore := initSaveData,
+  memory := empty,
+  srk := srkVal,
+  ek := ekVal,
+  keyGenCnt := initKeyVal,
+  keys := (#vals:=emptyset,keys:=emptyset#),
+  pcrs := pcrsPower,
+  locality := 4,
+  permFlags := permFlagsDefault,
+  permData := permDataDefault,
+  stanyFlags := stanyFlagsDefault,
+  stanyData := stanyDataDefault,
+  stclearFlags := stclearFlagsDefault,
+  stclearData := stclearDataDefault,
+  outData := null,
+  randCnt := 0 #)")
+
+tpmKey:
+(inst 1 "tpmKey(0,bind,keyFlagsF,never,keyParms,
+  pcrInfoNull,storeAsymkeyDefault(0,0))")
+
+tpmPCRInfoLong:
+(inst 1 "tpmPCRInfoLong(0, 0, null, null, 
+  tpmCompositeHash(tpmPCRComposite(null,pcrsPower)),
+  tpmCompositeHash(tpmPCRComposite(null,pcrsPower)))")
+
+tpmRestoreStateData:  
+(inst 1 "(# valid? := FALSE,
+  keys := (#vals:=emptyset,keys:=emptyset#),
+  ek := ekInit,
+  srk := srkInit,
+  keyGenCnt := keyGenCntInit,
+  pcrs := pcrsPower,
+  permFlags := permFlagsDefault,
+  permData := permDataDefault,	
+  stanyFlags:= stanyFlagsDefault,
+  stanyData := stanyDataDefault,
+  stclearFlags:= stclearFlagsDefault,
+  stclearData := stclearDataDefault #)") 
+
+tpmSealedData: 
+(inst 1 "tpmSealedData(tpmSecret(1),
+  tpmSecret(0),tpmDigest(null,clear),tpmSessKey(1,clear),clear)")
+
+tpmStoreAsymkey:
+(inst 1 "tpmStoreAsymkey(tpmSecret(0),tpmSecret(0),
+  tpmDigest(null,clear), 0, clear)")
+

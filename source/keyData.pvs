@@ -21,9 +21,6 @@ keydata : THEORY
   KVAL : TYPE = nat;
   privKVAL : TYPE = {r:integer | r <= 0};
 
-%   %% A keyset is a set of key values
-%   KEYSET : TYPE = set[privKVAL];
-
   %% The inverse of a key its negation
 %  inverse(k:KVAL):privKVAL = -k;
    inverse(k:integer) : integer = -k;
@@ -34,9 +31,7 @@ keydata : THEORY
   goodkey?(key:KVAL) : bool =
     key/=badkey
 
-  %% Purpose for key
-
-  %%									(5.8)
+  %% TPM_KEY_USAGE							(5.8)
   KEY_USAGE : DATATYPE
   BEGIN
     signing : signing?
@@ -89,7 +84,6 @@ keydata : THEORY
       migrate 	 : none?(s)
     ENDCASES
 
-
   keyUsage : KEY_USAGE;
 
   %% Flags for defining key properties					(5.10)
@@ -102,7 +96,8 @@ keydata : THEORY
 
   keyFlags : KEY_FLAGS;
 
-  %% All key flags false
+  %% All key flags false  
+  % TODO: look up default?
   keyFlagsF : KEY_FLAGS = (#redirection:= FALSE
      	      		  , migratable := FALSE
 	     		  , isVolatile := FALSE
@@ -126,10 +121,12 @@ keydata : THEORY
     ALG_XOR : ALG_XOR?	% XOR using the rolling nonces
   END ALGO_ID;
 
+  %% TPM_KEY_PARMS							(10.1)
   KEY_PARMS : TYPE = [#algoId : ALGO_ID
 		     , encScheme : ENC_SCHEME
 		     , sigScheme : SIG_SCHEME
-% 		     , parms :
+% 		     , parms :% TPM_RSA_KEY_PARMS or TPM_SYMMETRIC_KEY_PATMS 
+		       	      % or no content, depending on algoId
   	      	     #];
   keyParmsDef : KEY_PARMS = (#algoId:=RSA
   	      		     ,encScheme:=none

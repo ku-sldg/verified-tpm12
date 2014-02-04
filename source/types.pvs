@@ -16,6 +16,8 @@
 
 types : THEORY
   BEGIN
+
+  %% TODO: THESE TYPES ARE NOT YET USED ANYWHERE... 
   
   resource : DATATYPE	% TPM_RESOURCE_TYPE				(4.1)
   BEGIN

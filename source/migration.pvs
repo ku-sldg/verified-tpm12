@@ -31,7 +31,7 @@ migration[HV:TYPE+] : THEORY
 
 BEGIN
 
-  IMPORTING tpm[HV];
+  IMPORTING commands[HV];
 
   %TODO: FIX THIS... not really what we want!
   makeKey(storeasym:tpmData) : (tpmKey?) = 
@@ -41,7 +41,7 @@ BEGIN
 					authDataUsage,keyParms,
 					pcrInfoLongDefault,storeasym)
          ELSE tpmKey(0,keyUsage,keyFlags,authDataUsage,keyParms,
-		pcrInfoLongDefault,encrypted(cryptoError(3),0))	%INVALID TYPE
+		pcrInfoLongDefault,encrypted(badData,0))	%INVALID TYPE
    	ENDCASES
    ELSE badData
    ENDCASES

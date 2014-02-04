@@ -1,0 +1,16 @@
+Commands: 
+
+tpm.pvs - the main file where all of the details of the TPM commands are done - out and state for each command. tpmAbsInput, tpmAbsOutput, and tpmAbsState are all defined within this file.
+
+commands.pvs - where all of the TPM commands (defined in TPM Main-Part 3 TPM Commands) are defined using PVS 
+
+
+Structures:
+data.pvs - where most of the TPM data (defined in TPM Main-Part 2 TPM Structures) is defined in the tpmData data structure.
+authdata.pvs - Basic authdata fieldstypes.pvs - definitions of types that aren’t yet used.tag.pvs - tag definition. not yet used.pcr.pvs - Basic definition of Platform Configuration Registers
+key.pvs - Declarations of important keys, as well as definitions of ecryption, encryption, signing.keyData.pvs - Basic definition of asymmetric keys and the data associated with them
+startupData.pvs - data necessary for running TPM_Startup command
+
+ReturnCodes.pvs - All commands have a return code. Successful commands return TPM_SUCCESS, various failure codes on error.The following files are for organizing data defined within tpmAbsState (defined in tpm.pvs): PermanentData.pvs PermanentFlags.pvs StanyData.pvs StanyFlags.pvs StclearData.pvs StclearFlags.pvsGeneral:memory.pvs - Memory is not part of PVS, but our method of getting and using an intermediate state for proofs.StateMonad.pvs - Generic state monad definitionLemmas:lemmas.pvs - File with general lemmas (some unprovable). (Note: Some lemmas are within other files… I was attempting to move them all to one location, but didn’t quite get it totally there.)Proofs and Protocols:tpm_proofs.pvs - General TPM proofsca-protocol.pvs - Proofs for CA Privacy Attestation Protocolattacker.pvs - Proofs for attack on CA-protocolmigration.pvs - Proofs for Migration Protocolsinvariants.pvs - Proofs about which commands are allowed to change state fields.VTPM Files:vtpm.pvsvtpmManager.pvs
+
+

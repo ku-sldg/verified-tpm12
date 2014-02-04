@@ -120,16 +120,8 @@ key[HV:TYPE+] : THEORY
 
   % Data Encryption
 
-  checkEncrypt?(d:tpmData) : bool =
-%    not(encrypted?(d)) 
-     TRUE
-
   encrypt(d:tpmData,k:KVAL) : tpmData = 
     encrypted(d,k)
-%     IF checkEncrypt?(d)
-%     THEN encrypted(d,k)
-%     ELSE badData
-%     ENDIF
 
 
   % Data decryption
@@ -148,11 +140,7 @@ key[HV:TYPE+] : THEORY
 
   % Lemmas on decryption and encryption
 
-  %% Encrypted data can not be encrypted TODO: Truly?
-  no_encrypt_encrypted : THEOREM FORALL (d:tpmData,k:KVAL,ks:KEYSET) : 
-    encrypted?(d) => cryptoError?(encrypt(d,k))
-
-  %% assuming: Data that is encrypted can't be encrypted again
+  %% Assuming: Data that is encrypted can't be encrypted again
   noDoubleEncryption : LEMMA 
     FORALL (d:(encrypted?)) : 
       not(encrypted?(encData(d)));
@@ -163,14 +151,9 @@ key[HV:TYPE+] : THEORY
     LET d1=decrypt(d,k0,ks) IN
     not encrypted?(badData) => not encrypted?(d1)
 
-  %% Definition of checkEncrypt?
-  check_encrypt : THEOREM FORALL (d:tpmData) : 
-    not(cryptoError?(d) OR encrypted?(d)) =>
-    	checkEncrypt?(d);
-
   %% Using checkDecrypt? with encrypted data
   check_decrypt : THEOREM FORALL (d:tpmData,k:privKVAL,ks:KEYSET) : 
-    not(encrypted?(d) OR cryptoError?(d)) AND
+    not(encrypted?(d)) AND
     member(k,vals(ks)) =>
     	checkDecrypt?(encrypt(d,inverse(k)),k,ks);
 
@@ -186,11 +169,10 @@ key[HV:TYPE+] : THEORY
     
   %% Definition of decrypt with checkEncrypt? and encrypt
   decrypt_encrypt : THEOREM FORALL (d:tpmData,k:KVAL,ks:KEYSET) : 
-    checkEncrypt?(d) AND member(inverse(k),vals(ks)) =>
+    member(inverse(k),vals(ks)) =>
     decrypt(encrypt(d,k),inverse(k),ks) = 
     	CASES d OF
 %	  encrypted(d0,k0) : encrypted(d0,k0),
-	  cryptoError(n) : badData,
 	  tpmEncAuth(a) : tpmSecret(a)
 	  ELSE d
 	ENDCASES;
@@ -198,10 +180,9 @@ key[HV:TYPE+] : THEORY
   %% If two keys are equal, should be able to decrypt(encryption of one) 
   %%  with the other
   decrypt_equal_keys: THEOREM FORALL (b:tpmData,k0,k1:KVAL,ks:KEYSET) :
-    checkEncrypt?(b) AND member(inverse(k0),vals(ks)) AND 
+    member(inverse(k0),vals(ks)) AND 
     k0=k1 IMPLIES decrypt(encrypt(b,k0),inverse(k1),ks) = 
     		     CASES b OF
-		     	encrypted(d,k) : cryptoError(1),
 			tpmEncAuth(a) : tpmSecret(a)
 			ELSE b
 		     ENDCASES;
@@ -209,12 +190,11 @@ key[HV:TYPE+] : THEORY
   %% If two keys are not equal, should not be able to decrypt(encryption of one)
   %%  with the other
   no_decrypt_unequal_keys: THEOREM FORALL (b:tpmData,k0,k1:KVAL,ks:KEYSET) :
-    checkEncrypt?(b) AND member(inverse(k0),vals(ks)) AND
+    member(inverse(k0),vals(ks)) AND
     k0/=k1 IMPLIES decrypt(encrypt(b,k0),inverse(k1),ks) = badData
 
   %% If a key is not installed, can not decrypt using it.
   no_decrypt_uninstalled: THEOREM FORALL (b:tpmData,k0:privKVAL,ks:KEYSET) :
-    checkEncrypt?(b) AND 
     not(member(k0,vals(ks))) IMPLIES 
     		decrypt(encrypt(b,inverse(k0)),k0,ks) = badData;
 
@@ -222,8 +202,8 @@ key[HV:TYPE+] : THEORY
   % Data signing
 
   sign(d:tpmData,k:privKVAL,ks:KEYSET) : tpmData = 
-    IF cryptoError?(d) OR not(member(k,vals(ks)))
-    THEN cryptoError(2)
+    IF not(member(k,vals(ks)))
+    THEN d %TODO: what should happen here?????
     ELSE signed(d,k)
     ENDIF
 
@@ -239,12 +219,12 @@ key[HV:TYPE+] : THEORY
   % Lemmas on data signing and signature checking
 
   check_sig : THEOREM FORALL (d:tpmData,k:KVAL,ks:KEYSET) : 
-    not cryptoError?(d) AND member(inverse(k),vals(ks)) =>
+    member(inverse(k),vals(ks)) =>
     	checkSig?(k,sign(d,inverse(k),ks));
 
   no_sign_uninstalled: THEOREM FORALL (b:tpmData,k0:privKVAL,ks:KEYSET) :
-    not(cryptoError?(b)) AND not(member(k0,vals(ks))) =>
-    	sign(b,k0,ks) = cryptoError(2);
+    not(member(k0,vals(ks))) =>
+    	sign(b,k0,ks) = b;
 
   
   %%%% Key sets, installation, and use

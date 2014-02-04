@@ -266,11 +266,12 @@ data[HV:TYPE+]  : THEORY
     tpmXOR(a:(OAEP?),b:(RNG?)) : tpmXOR?
     concat(f:tpmData,s:tpmData) : concat?
 
-    encrypted(encData:tpmData,ekey:KVAL) : encrypted?	% error = 1 
-    signed(signData:tpmData,sigkey:privKVAL) : signed?	% error = 2	%TODO!!!
-    cryptoError(n:nat) : cryptoError?	
+    encrypted(encData:tpmData,ekey:KVAL) : encrypted?
+    signed(signData:tpmData,sigkey:privKVAL) : signed?
   END tpmData;
 
+  %%%% Special cases of tpmData
+  %%% badData - eg. when a decryption fails, badData is returned
   badData : tpmData
 
   badData?(d:tpmData) : bool = 
@@ -278,20 +279,14 @@ data[HV:TYPE+]  : THEORY
     THEN TRUE
     ELSE FALSE
     ENDIF
- 
 
+  %% TODO: necessary??
   encryptable?(d:tpmData) : bool = 
-    not encrypted?(d) AND not cryptoError?(d)
+    not encrypted?(d)
 
-  SHA1(data:tpmData) : (tpmDigest?)
-  tpmChosenIDHash(digest:[tpmData]) : (tpmDigest?)
-  tpmDIRValue(digest:list[tpmData]) : (tpmDigest?)
-  tpmHMAC(data:tpmData,secret:(tpmSecret?)) : (tpmDigest?)
-%  tpmPCRValue(digest:list[tpmData]) : HV    %tpmPCRValue?
-  tpmPCRValue(digest:PCR) : (tpmDigest?)
-  tpmAuditDigest(digest:list[tpmData]) : (tpmDigest?)
-
-  unXOR(x:tpmData,r:(RNG?)) : tpmData = %(tpmXOR?)
+  %%% unXOR - since we're not working at the bit level, this function is
+  %%%  used to extract the data from the tpmXOR
+  unXOR(x:tpmData,r:(RNG?)) : tpmData = % x should be : (tpmXOR?)
     IF tpmXOR?(x) AND r=b(x) 
     THEN a(x) %:(OAEP?)
     ELSE badData
@@ -306,62 +301,64 @@ data[HV:TYPE+]  : THEORY
  	unXOR(tpmXOR(d,r1),r2)=badData AND
  	unXOR(tpmXOR(d,r1),r2)=badData;
 
-   
 
-%   tpmDig?(blob:tpmData) : bool = 
-%   CASES blob OF
-%     tpmChosenIDHash(d,c) : TRUE,
-%     tpmCompositeHash(d) : TRUE,
-%     tpmDIRValue(d,c) : TRUE,
-%     tpmHMAC(d,s) : TRUE,
-%     tpmPCRValue(d,c) : TRUE,
-%     tpmAuditDigest(d,c) : TRUE
-%     ELSE FALSE
-%   ENDCASES;
+   %%% Special cases of tpmDigest
+   SHA1(data:tpmData) : (tpmDigest?)
+   tpmChosenIDHash(digest:[tpmData]) : (tpmDigest?)
+   tpmDIRValue(digest:list[tpmData]) : (tpmDigest?)
+   tpmHMAC(data:tpmData,secret:(tpmSecret?)) : (tpmDigest?)
+%   tpmPCRValue(digest:list[tpmData]) : HV    %tpmPCRValue?
+   tpmPCRValue(digest:PCR) : (tpmDigest?)
+   tpmAuditDigest(digest:list[tpmData]) : (tpmDigest?)
 
-  encStoreAsymkey?(d:(encrypted?)) : bool = %TODO!
-    tpmStoreAsymkey?(encData(d));
 
-  encMigrateAsymkey?(d:(encrypted?)) : bool = %TODO!
-    tpmMigrateAsymkey?(encData(d));
+   %%% Special properties of tpmKey
+   encStoreAsymkey?(d:(encrypted?)) : bool = %TODO!
+     tpmStoreAsymkey?(encData(d));
 
-  encSealedData?(d:(encrypted?)) : bool = %TODO!
-    tpmSealedData?(encData(d));
+   %% assumed: The type of encDat of tpmKey is tpmStoreAsymkey 
+   keyEncDatStoreAsymkey : LEMMA 
+     FORALL (k:(tpmKey?)) : encStoreAsymkey?(encDat(k));
 
-  %% assumed: The type of encDat of tpmKey is tpmStoreAsymkey 
-  keyEncDatStoreAsymkey : LEMMA 
-    FORALL (k:(tpmKey?)) : encStoreAsymkey?(encDat(k));
+   encMigrateAsymkey?(d:(encrypted?)) : bool = %TODO!
+     tpmMigrateAsymkey?(encData(d));
 
-  %% assumed: The type of encDat of tpmKey is tpmStoreAsymkey 
-  keyEncDatMigrateAsymkey : LEMMA 
-    FORALL (k:(tpmKey?)) : encMigrateAsymkey?(encDat(k));
+   %% assumed: The type of encDat of tpmKey is tpmStoreAsymkey 
+   keyEncDatMigrateAsymkey : LEMMA 
+     FORALL (k:(tpmKey?)) : encMigrateAsymkey?(encDat(k));
 
-  %% blob must be tpmEKBlobAuth or tpmEKBlobActivate (assumed?)
-  validEKBlob : LEMMA
-    FORALL (e:(tpmEKBlob?)) : 
-      	   tpmEKBlobAuth?(blob(e)) OR tpmEKBlobActivate?(blob(e)) 
+   %% assumed: 
+   pubInversePriv : LEMMA
+     FORALL (k:(tpmKey?)) :
+    	    inverse(key(k))=privKey(encData(encDat(k)))
 
-  %% assumed: The type of encData of tpmStoredData is tpmSealedData 
-  storedDataEncDataSealedData : LEMMA 
-    FORALL (s:(tpmStoredData?),k:(tpmKey?)) : 
-    	   IF key(k)=inverse(ekey(encrData(s)))
-	   THEN encSealedData?(encrData(s))
-	   ELSE cryptoError?(encrData(s))
-	   ENDIF
+   %%% Special properties of tpmSealedData
+   encSealedData?(d:(encrypted?)) : bool = %TODO!
+     tpmSealedData?(encData(d));
 
-  % assumed: 
-  pubInversePriv : LEMMA
-    FORALL (k:(tpmKey?)) :
-    	   inverse(key(k))=privKey(encData(encDat(k)))
+   %% assumed: The type of encData of tpmStoredData is tpmSealedData 
+   storedDataEncDataSealedData : LEMMA 
+     FORALL (s:(tpmStoredData?),k:(tpmKey?)) : 
+    	key(k)=inverse(ekey(encrData(s))) =>
+	    encSealedData?(encrData(s))
+	    
 
-  %% blob must be tpmEKBlobAuth or tpmEKBlobActivate
-  validEKBlob(ekblob:(tpmEKBlob?)) : bool =
+  %%% EKBlob
+  %% By definition, ekblob must be tpmEKBlobAuth or tpmEKBlobActivate
+%   validEKBlob : LEMMA
+%     FORALL (e:(tpmEKBlob?)) : 
+%     tpmEKBlobAuth?(blob(e)) OR tpmEKBlobActivate?(blob(e)) 
+
+  %% By definition, ekblob must be tpmEKBlobAuth or tpmEKBlobActivate
+  validEKBlob?(ekblob:(tpmEKBlob?)) : bool =
     CASES blob(ekblob) OF
       tpmEKBlobAuth(a) : TRUE,
       tpmEKBlobActivate(s,d,p) : TRUE
       ELSE FALSE
     ENDCASES
 
+  %% TPM_ActivateIdentity contains a tpmEKBlob or tpmAsymCAContents
+  %%  used with ca-protocol.prf, invariants.prf
   activateIdentityBlob?(blob:tpmData) : bool =
   CASES blob OF
     tpmEKBlob(b) : TRUE,
@@ -369,6 +366,7 @@ data[HV:TYPE+]  : THEORY
     ELSE FALSE
   ENDCASES
 
+  %% AuthData is either a tpmSecret or tpmEncAuth
   tpmAuthData?(blob:tpmData) : bool =
   CASES blob OF
     tpmSecret(i) : TRUE,
@@ -389,16 +387,18 @@ data[HV:TYPE+]  : THEORY
 	      	  , resAuth : (tpmAuthData?)
 	      	 #];
 
-  tpmNull : (encrypted?)%(tpmSealedData?)
-  tpmNonceZero : (tpmNonce?)
-  tpmDigestZero : (tpmDigest?)
-  EVEN:(tpmNonce?)
-  ODD:(tpmNonce?)
-  pcrInfoLongDefault : (tpmPCRInfoLong?)
-  pcrInfoNull : (tpmPCRInfoLong?)
+  %% Initializaitons and specific instances of data
+  tpmNull : (encrypted?) % Used with TPM_Seal, TPM_Unseal
+  tpmNonceZero : (tpmNonce?) % Used with TPM_Startup
+  pcrInfoNull : (tpmPCRInfoLong?) % Used for TPM_CertifyKey
 
+  EVEN:(tpmNonce?) % Used for authOut, authIn
+  ODD:(tpmNonce?)  % Used for authOut, authIn
+
+  % Used to define ekVal, srkVal, caVal
+  pcrInfoLongDefault : (tpmPCRInfoLong?) 
   usageAuthDefault : (tpmSecret?)
-  migrationAuthDefault : (tpmSecret?)% (tpmDigest?)%
+  migrationAuthDefault : (tpmSecret?)% INCONSISTENT WITH SPEC: (tpmDigest?)
   pubDataDigestDefault : (tpmDigest?)
   storeAsymkeyDefault(k,p:KVAL) : (encrypted?) =
     encrypted(tpmStoreAsymkey(usageAuthDefault,
@@ -407,11 +407,11 @@ data[HV:TYPE+]  : THEORY
 		    inverse(k)),
 	      p);
 
-  tpmCMKDelegateDefault  : (tpmCMKDelegate?) = 
-    tpmCMKDelegate(false,false,false,false,false);
 
-  %PermData
+  %% PermData Defaults
   nonceInit:(tpmNonce?)
+  tpmCMKDelegateDefault  : (tpmCMKDelegate?) = 
+    tpmCMKDelegate(false,false,false,false,false); %TODO: Check default values
   INVALIDPROOF:nat
   INVALIDAUTH:nat
   invalidAuth?(s:(tpmSecret?)) : bool = 
@@ -420,7 +420,7 @@ data[HV:TYPE+]  : THEORY
   % Decrypting encAuth according to the ADIP indicated by authHandle
   % TODO: where is ADIP indicated by authHandle?
   % TPM_AUTHHANDLE is handle to an authorization session 4.1? 4.3? 5.6, 5.9, 
-  % Read Ryan's paper
+  % Read Mark Ryan's paper
   % has session type. hmac?
   decryptADIP(enc:(tpmEncAuth?),authHand:(tpmAuthData?)) : (tpmSecret?) =
     tpmSecret(authData(enc));
@@ -433,13 +433,13 @@ data[HV:TYPE+]  : THEORY
     tpmEncAuth(i); %TODO!
 
 
-  %% badData Lemmas and Theorems
+  %%% badData Lemmas and Theorems
   goodData : tpmData 
+
   goodDataNotBad : LEMMA not(badData?(goodData))
 
- 
   %% Recursively checks data to see if includes badData. TRUE if does.
-  checkBadData(d:tpmData) : INDUCTIVE bool = %RECURSIVE
+  checkBadData(d:tpmData) : INDUCTIVE bool = 
     IF badData?(d)
     THEN TRUE
     ELSE 
@@ -447,7 +447,7 @@ data[HV:TYPE+]  : THEORY
      	  tpmEKBlobActivate(s,i,p) : checkBadData(s) OR checkBadData(i) OR 
 	  		checkBadData(p),
 	  tpmEKBlobAuth(a) : checkBadData(a),
-    	  tpmDigest(d):checkBadData(car(d)) OR checkBadData(tpmDigest(cdr(d))),
+    	  tpmDigest(e):checkBadData(car(e)) OR checkBadData(tpmDigest(cdr(e))),
      	  tpmCompositeHash(d) : checkBadData(d),
     	  tpmMigKeyAuth(k,s,d) : checkBadData(k) OR checkBadData(s) OR
 	  		checkBadData(d),
@@ -491,13 +491,11 @@ data[HV:TYPE+]  : THEORY
     	  tpmCMKDelegate(s,t,b,l,m) : FALSE,
 	  tpmPCRComposite(s,p) : FALSE,
     	  tpmSessKey(s) : FALSE,
-    	  tpmPubkey(a,p) : FALSE,
-    	  cryptoError(n) : FALSE
+    	  tpmPubkey(a,p) : FALSE
          ENDCASES
     ENDIF
-%MEASURE d BY <<
 
-  % Essentially, if badData has a specific type, it can't be badData.
+  %% Essentially, if badData has a specific type, it can't be badData.
   typeBadData : LEMMA 
     not (RNG?(badData) OR tpmID?(badData) OR tpmMigScheme?(badData) OR 
     	 tpmEKBlobActivate?(badData) OR tpmEKBlobAuth?(badData) OR 
@@ -545,7 +543,7 @@ data[HV:TYPE+]  : THEORY
    FORALL (k:(tpmKey?)) :
     checkBadData(badEncryption(k))=TRUE;
   
-  %%Lists of data to test:
+  %% Lists of data to test:
   badDataList1(k:(tpmKey?)) : list[tpmData] = %CHECKS OUT
     cons(badEncryption(k),null);
 
@@ -574,15 +572,16 @@ data[HV:TYPE+]  : THEORY
   badDataListB : list[tpmData] = %CHECKS OUT
     cons(goodData,cons(badData,goodDataList0));
 
-  badDataList0 : list[tpmData] = 
+  badDataList0 : list[tpmData] = %CHECKS OUT
     cons(badQuote1,null);
 
   %% Should return TRUE if badData shows up anywhere in the set. 
   existsBadData(d:list[tpmData]) : INDUCTIVE bool = 
     checkBadData(car(d)) OR existsBadData(cdr(d))
- 
-  nullNotBad : LEMMA not(existsBadData(null))
 
+  %% To use with test_existsBadData. Null dataa is not badData
+  nullNotBad : LEMMA not(existsBadData(null))
+ 
   test_existsBadData : THEOREM
    FORALL(k:(tpmKey?)) : 
     existsBadData(goodDataList3(k)) = FALSE;
