@@ -1,4 +1,5 @@
 baseurl: http://ku-sldg.github.io/verified-tpm12/
+markdown: kramdown
 title: Verified TPM
 subtitle: Formal Specification of the TPM 1.2
 github: https://github.com/ku-sldg/verified-tpm12
