@@ -85,6 +85,11 @@ Inductive entity : Type :=	(* TPM_ENTITY_TYPE				(4.3) *)
   | ET_XOR : entity     (* XOR *)
   | AES128_CTR : entity.	 (* AES 128 bits in CTR mode *)
 
+Lemma entity_dec : forall x y:entity, {x=y}+{x<>y}.
+Proof.
+  decide equality.
+Defined.
+
 (** 
   %% Handles (4.4) in keys.pvs
   %% TPM_STARTUP_TYPE (4.5) in startupData.pvs
@@ -101,6 +106,11 @@ Inductive protocol : Type := (* % TPM_PROTOCOL_ID				(4.7) *)
 | DSAP : protocol 	(* The DSAP protocol *)
 | TRANSPORT : protocol. (* The transport protocol *)
 
+Lemma protocol_dec : forall x y:protocol, {x=y}+{x<>y}.
+Proof.
+  decide equality.
+Defined.
+
 Inductive physPres : Type :=	(* % TPM_PHYSICAL_PRESENCE				(4.9) *)
   | HW_DISABLE : physPres (* Sets the physicalPresenceHWEnable to FALSE *)
   | CMD_DISABLE : physPres (* Sets the physicalPresenceCMDEnable to FALSE *)
@@ -110,6 +120,11 @@ Inductive physPres : Type :=	(* % TPM_PHYSICAL_PRESENCE				(4.9) *)
   | NOTPRESENT : physPres (* Sets PhysicalPresence = FALSE *)
   | PRESENT : physPres (* Sets PhysicalPresence = TRUE *)
   | LOCK : physPres. (* Sets PhysicalPresenceLock = TRUE *)
+
+Lemma physPres_dec : forall x y:physPres, {x=y}+{x<>y}.
+Proof.
+  decide equality.
+Defined.
 
 Definition PHYSPRES : Type = Ensemble physPres.
 
