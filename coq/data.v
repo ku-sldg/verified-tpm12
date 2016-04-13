@@ -1,4 +1,4 @@
-%% ----
+(** ----
 %%
 %% Data Theory
 %%
@@ -15,28 +15,24 @@
 %% Todo: (key - => pending, + => done)
 %%
 %% ----
-data[HV:TYPE+]  : THEORY
+*)
 
-  BEGIN
+Require Export pcr.
+Require Export authdata.
+Require Export keyData.
+Require Export types.
+Require Import String.
 
-  IMPORTING pcr[HV];
-  IMPORTING authdata;
-  IMPORTING keydata;
-  IMPORTING types;
-
-%  RNG : TYPE = int;
-
-  %% Data items that the TPM is aware of
-  tpmData : DATATYPE
-  BEGIN
+(** %% Data items that the TPM is aware of *)
+Inducutive tpmData : Type :=
     %% RNG 
-    RNG(n:int) : RNG?
+  | RNG : nat -> tpmData
     
     %% Identifyier for naming things
-    tpmID(id:string) : tpmID?
+  | tpmID : string -> tpmData
     
     %% Stub for migrateScheme so can take digest - createMigBlob	(4.4)
-    tpmMigScheme(migScheme:migrateScheme) : tpmMigScheme?
+  | tpmMigScheme : migrateScheme -> tpmData
 
     %% EK type- indicates what type of information the EK's dealing with(4.11)
     tpmEKBlobActivate(sKey:(tpmSessKey?)

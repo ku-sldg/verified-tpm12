@@ -52,7 +52,7 @@ Inductive KEY_USAGE : Type :=
 | authChange : KEY_USAGE
 | bind : KEY_USAGE
 | legacy : KEY_USAGE
-| migrate : KEY_USAGE.
+| migration : KEY_USAGE.
 
 (** TPM_ENC_SCHEME							(5.8.1) *)
 Inductive ENC_SCHEME : Type :=
@@ -71,7 +71,8 @@ Defined.
 Inductive SIG_SCHEME : Type :=
 | SHA1 : SIG_SCHEME
 | DER : SIG_SCHEME
-| INFO : SIG_SCHEME.
+| INFO : SIG_SCHEME
+| SIG_NONE : SIG_SCHEME.
 
 Lemma sig_scheme_dec : forall x y:SIG_SCHEME, {x=y}+{x<>y}.
 Proof.

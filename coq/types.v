@@ -126,11 +126,6 @@ Proof.
   decide equality.
 Defined.
 
-Definition PHYSPRES : Type = Ensemble physPres.
+Definition PHYSPRES : Type := Ensemble physPres.
 
-(*
-  %% TPM_ALGORITHM_ID (4.8) in keyData.pvs
-  %% TPM_MIGRATE_SCHEME (4.10) in keyData.pvs
-  %% TPM_EK_TYPE (4.11) in data.pvs
-  %% TPM_PLATFORM_SPECIFIC (4.12) TODO?
-*)
+
