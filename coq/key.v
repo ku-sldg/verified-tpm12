@@ -18,10 +18,7 @@
 %% ----
  *)
 
-key[HV:TYPE+] : THEORY
-
-  BEGIN
-
+Require Export data.b
   IMPORTING data[HV];
 
   KEYSET: TYPE = [# vals: set[privKVAL]
