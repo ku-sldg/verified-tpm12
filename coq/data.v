@@ -1,0 +1,589 @@
+%% ----
+%%
+%% Data Theory
+%%
+%% Author: Brigid Halling
+%% Date: Fri Jan 11 11:11:11 CST 2013
+%%
+%% Description: 
+%% 
+%% Dependencies:
+%%  pcr.pvs
+%%  authdata.pvs
+%%  keyData.pvs
+%%
+%% Todo: (key - => pending, + => done)
+%%
+%% ----
+data[HV:TYPE+]  : THEORY
+
+  BEGIN
+
+  IMPORTING pcr[HV];
+  IMPORTING authdata;
+  IMPORTING keydata;
+  IMPORTING types;
+
+%  RNG : TYPE = int;
+
+  %% Data items that the TPM is aware of
+  tpmData : DATATYPE
+  BEGIN
+    %% RNG 
+    RNG(n:int) : RNG?
+    
+    %% Identifyier for naming things
+    tpmID(id:string) : tpmID?
+    
+    %% Stub for migrateScheme so can take digest - createMigBlob	(4.4)
+    tpmMigScheme(migScheme:migrateScheme) : tpmMigScheme?
+
+    %% EK type- indicates what type of information the EK's dealing with(4.11)
+    tpmEKBlobActivate(sKey:(tpmSessKey?)
+	, idDigest:(tpmDigest?)
+	, pcrInfo:(tpmPCRInfoShort?)
+	) : tpmEKBlobActivate?
+
+    %% EK type- indicates what type of information the EK's dealing with(4.11)
+    tpmEKBlobAuth(authValue:(tpmSecret?)) : tpmEKBlobAuth?
+    
+    %% Abitrarily long digest of arbitrary TPM data			(5.4)
+    tpmDigest(digest:list[tpmData]) : tpmDigest?
+    %  tpmDigest is the list of things concatenated and hashed to create the
+    %  digest value - #(d0++d1++...++dn).  
+    %  Note that this digest does not contain PCRs 
+
+    tpmCompositeHash(dig:(tpmPCRComposite?)) : tpmCompositeHash?
+    	%PCR_COMPOSITE : [#select:PCR_SELECTION,pcrValue:PCRVALUES#]
+
+    %% Random value that provides protection from replay.		(5.5)
+    tpmNonce(i:int) : tpmNonce?
+
+    %% Authdata - don't know what it is yet				(5.6)
+    tpmEncAuth(authData:int) : tpmEncAuth?
+
+    %% Authdata - don't know what it is yet				(5.6)
+    tpmSecret(i:int) : tpmSecret?
+ 
+    %% Provides proof that the associated public key has		(5.12)
+    %% TPM Owner AuthData to be a migration key
+    tpmMigKeyAuth(key:(tpmKey?)
+	, scheme:(tpmMigScheme?)
+	, digest:(tpmDigest?)
+	) : tpmMigKeyAuth?
+
+    %% Structure signed for certain commands (TPM_ReleaseTransportSigned)(5.14)
+%     tpmSignInfo(replay:(tpmNonce?),data:tpmData) : tpmSignInfo?
+    %% crs should be :(signed?) %%TODO
+
+    %% Contains an arbitrary number of digests of public keys belonging (5.15)
+    %%  to Migration Authorities. An instance is incorporated into the 
+    %%  migrationAuth value of a CMK, and any of the Mig Auths specified in 
+    %%  that instance is able to approve the migration of that CMK.
+    tpmMSAComposite(MSAlist:int	 	   % Number of migAuthDigests
+        , migAuthDigest:list[(tpmDigest?)] % Arbitrary num of digests of pubkeys
+	  				   % belonging to MAs.
+	) : tpmMSAComposite?
+
+    %% Ticket to prove that an entity with pub key "migAuth" has	(5.16)
+    %%  has apporved the public key "destination key" as a mig destination
+    %%  for the key with pub key "source key". Usu signed by priv "migAuth"
+    tpmCMKAuth(migAuth:(tpmDigest?) % Digest of pub key belonging to MA
+        , destKey:(tpmDigest?)	    % Digest of tpmPubkey struct approved 
+				    % dest key for priv key assoc with sourceKey
+        , sourceKey:(tpmDigest?)    % Digest of a tpmPubkey struct whose 
+	  			    % corresp priv key is approved by a MA to be
+				    % migrated as child to the destinationKey
+	) : tpmCMKAuth?
+
+    %% Flags that determine how TPM responds to delegated requests	(5.17)
+    %%  to manipulate a certified-migration-key...
+    tpmCMKDelegate(delegateSigning:bool
+	, delegateStorage:bool
+        , delegateBind:bool
+        , delegateLegacy:bool
+        , delegateMigrate:bool
+	) : tpmCMKDelegate?
+    
+    %% Structure to keep track of CMK migration authorization		(5.19)
+    tpmCMKMigAuth(msaDigest:(tpmDigest?) % Digest of a tpmMSAComposite struct 
+    					 % containing mig auth pubkey & params
+        , pubKeyDigest:(tpmDigest?) 	 % Hash of the associated public key
+	) : tpmCMKMigAuth? 
+
+    %% Structure to keep track of the CMK migraiton authorization	(5.20)
+    tpmCMKSigTicket(verKeyDigest:(tpmDigest?) % Hash of tpmPubkey struct 
+    					      % contining pub key and params of
+					      % key that can verify the ticket
+        , signedData:(tpmDigest?)	      % The ticket data
+	) : tpmCMKSigTicket?
+
+    %% Structure to keep track of CMK migration authorization		(5.21)
+    tpmCMKMAApproval(migAuthDig:(tpmDigest?) % Hash of a tpmMSAComposite struct 
+		%containing the hash of one or more migration authority public
+		%keys and params.
+	) : tpmCMKMAApproval?
+    
+    %% The composite structure provides the index and value of the PCR	(8.2)
+    %%  register to be used when creating the value that SEALS an entity to
+    %%  the composite.
+    tpmPCRComposite(
+	  select : PCR_SELECTION % The indication of which PCR values are active
+	, pcrValue : PCRVALUES		% Array of PCRVALUE structures. 
+	% The values come in the order specified by the select parameter
+	%  and are concatenated into a single blob.
+    ) : tpmPCRComposite?
+    
+    %% PCR Info								(8.4)
+    %% TODO: This is only a stub.
+    tpmPCRInfoLong(
+	  locAtCreation : LOCALITY %loc modifier when blob is created
+    	% Loc modifier req to reveal sealed data or use a key wrapped to PCRs
+	% Value must not be zero (0)
+	, locAtRelease  : LOCALITY
+	% Selection of PCRs active when blob is created
+	, creationPCRSelect : PCR_SELECTION
+	% Selection of PCRs to which the key or data is bound
+	, releasePCRSelect  : PCR_SELECTION
+	% Composite digest value of the PCR values, when the blob is created
+  	, digAtCreation : (tpmCompositeHash?)
+	% Digest of PCR indices and values to verify when revealing sealed data 
+	% or using a key that was wrapped to PCRs
+	, digAtRelease  : (tpmCompositeHash?)
+	) : tpmPCRInfoLong?
+% TODO: locAtRelease = locality or selection for infoLong and infoShort
+  tpmPCRInfoShort(
+	  pcrSelect : PCR_SELECTION 
+	% Selection of PCRs that specifies the digestAtRelease
+	, locAtRelease : LOCALITY_SELECTION    
+	% Locality modifier required to release information
+	% must not be zero (0)
+	, digAtRelease : (tpmCompositeHash?)
+	% Digest of PCR indices and PCR values to verify when revealing auth data
+	) : tpmPCRInfoShort?
+
+
+    %% Stored Data - necessary to ensure the enforcement of security
+    %% properties (9.2) Used by seal and unseal commands to identify
+    %% pcr index and values that must be present to properly unseal
+    %% data.
+    tpmStoredData(sealInfo:(tpmPCRInfoLong?)
+	, encrData:(encrypted?)%(tpmSealedData?) %TODO!
+	) : tpmStoredData?
+		  
+    %% Sealed Data - contains confidential info related to sealed data	(9.3)
+    tpmSealedData(authData:(tpmSecret?)
+	, tpmProof:(tpmSecret?)
+	, storedDigest:(tpmDigest?)
+	, sealedData:tpmData
+	) : tpmSealedData?
+    
+    %% Session keys are simply symetric keys				(9.4)
+    tpmSessKey(skey:KVAL) : tpmSessKey?
+    
+    %% Bound data							(9.5)
+    tpmBoundData(payloadData:tpmData) : tpmBoundData?
+
+    %% Assymetric keys used by the TPM - wrapped, signed, encrypted	(10.3)
+    tpmKey(key:KVAL
+	, keyUsage:KEY_USAGE
+	, keyFlags:KEY_FLAGS
+	, authDataUsage:AUTH_DATA_USAGE
+	, algoParms:KEY_PARMS
+	, PCRInfo:(tpmPCRInfoLong?)
+	, encDat:(encrypted?)%(tpmStoreAsymkey?) %TODO!
+	) : tpmKey?
+
+    %% Pub Key (used for ek, srk?)					(10.5)
+    tpmPubkey(algoParms:KEY_PARMS,pubKey:KVAL):tpmPubkey?
+
+    %% Store Asym Key [private key]					(10.6)
+    tpmStoreAsymkey(usageAuth:(tpmSecret?)
+	, migrationAuth:(tpmSecret?) % (tpmDigest?) %
+	, pubDataDigest:(tpmDigest?)
+	, privKey:privKVAL
+	) : tpmStoreAsymkey?
+
+    %% Migrate Asym Key							(10.8)
+    tpmMigrateAsymkey(usageAuth:(tpmSecret?)
+	, pubDataDigest:(tpmDigest?)
+	, partPrivKey:privKVAL
+	) : tpmMigrateAsymkey?
+
+    %% Key Control							(10.9)
+    %tpmKeyControl(tpmKeyControlOwnerEvict : bool) : tpmKeyControl?
+    % DOESN'T SAY WHEN/WHERE USED... 
+
+    %% Certified Key							(11.1)
+    tpmCertifyInfo(keyUsage:KEY_USAGE
+	, keyFlags:KEY_FLAGS
+	, authDataUsage:AUTH_DATA_USAGE
+	, algoParms:KEY_PARMS
+	, pubkeyDigest:(tpmDigest?)
+	, certInfoData:(tpmNonce?)
+	, parentPCRStatus:bool
+	, PCRInfo:(tpmPCRInfoLong?)
+	) : tpmCertifyInfo?
+    
+    %% Certified Key2							(11.2)
+    tpmCertifyInfo2(keyUsage:KEY_USAGE
+	, keyFlags:KEY_FLAGS
+	, authDataUsage:AUTH_DATA_USAGE
+	, algoParms:KEY_PARMS
+	, pubkeyDigest:(tpmDigest?)
+	, certInfo2Data:(tpmNonce?)
+	, parentPCRStatus:bool % tells if parent key was wrapped to PCR? TODO
+	, PCRInfo:(tpmPCRInfoLong?)
+	, migAuth:(tpmDigest?)
+	) : tpmCertifyInfo2?
+
+    %% Quote including a PCR digest and nonce.				(11.3)
+    tpmQuote(digest:(tpmCompositeHash?)
+	, externalData:(tpmNonce?)
+	) : tpmQuote?
+    %  PCRs are not current TPM data, so the digest is over PCR values.
+    
+    %% Quote the current values of a list of PCRs			(11.4)
+    tpmQuote2(infoShort:(tpmPCRInfoShort?)
+	, externalData:(tpmNonce?)
+	) : tpmQuote2?
+    
+    %% Provides wrapper to each type of structure that will be in use when(12.1)
+    %% EK is in use
+    tpmEKBlob(blob:tpmData) : tpmEKBlob?
+    %% blob must be tpmEKBlobAuth or tpmEKBlobActivate
+
+    %% Certification request sent to Privacy CA				(12.5)
+    tpmIdContents(digest:(tpmDigest?)
+	, aik:(tpmKey?)
+	) : tpmIdContents?
+    %  digest should be tpmChosenIDHash and contain CA public key, name, and AIK
+    
+    %% Contains symmetric key to encrypt the identity credential	(12.8)
+    tpmAsymCAContents(sessK:(tpmSessKey?)
+	, idDigest:(tpmDigest?)
+	) : tpmAsymCAContents?
+
+    OAEP(m:(tpmMigrateAsymkey?),pHash:tpmData,seed:privKVAL) : OAEP?
+    tpmXOR(a:(OAEP?),b:(RNG?)) : tpmXOR?
+    concat(f:tpmData,s:tpmData) : concat?
+
+    encrypted(encData:tpmData,ekey:KVAL) : encrypted?	% error = 1 
+    signed(signData:tpmData,sigkey:privKVAL) : signed?	% error = 2	%TODO!!!
+    cryptoError(n:nat) : cryptoError?	
+  END tpmData;
+
+  badData : tpmData
+
+  badData?(d:tpmData) : bool = 
+    IF d=badData
+    THEN TRUE
+    ELSE FALSE
+    ENDIF
+ 
+
+  encryptable?(d:tpmData) : bool = 
+    not encrypted?(d) AND not cryptoError?(d)
+
+  SHA1(data:tpmData) : (tpmDigest?)
+  tpmChosenIDHash(digest:[tpmData]) : (tpmDigest?)
+  tpmDIRValue(digest:list[tpmData]) : (tpmDigest?)
+  tpmHMAC(data:tpmData,secret:(tpmSecret?)) : (tpmDigest?)
+%  tpmPCRValue(digest:list[tpmData]) : HV    %tpmPCRValue?
+  tpmPCRValue(digest:PCR) : (tpmDigest?)
+  tpmAuditDigest(digest:list[tpmData]) : (tpmDigest?)
+
+  unXOR(x:tpmData,r:(RNG?)) : tpmData = %(tpmXOR?)
+    IF tpmXOR?(x) AND r=b(x) 
+    THEN a(x) %:(OAEP?)
+    ELSE badData
+    ENDIF
+
+  unXOR_tpmXOR: THEOREM FORALL (d:(OAEP?),r1,r2:(RNG?)) : 
+  	r1=r2=>
+  	unXOR(tpmXOR(d,r1),r2)=d;
+
+  NOTunXOR_tpmXOR: THEOREM FORALL (d:(OAEP?),r1,r2:(RNG?)) : 
+  	r1/=r2 AND d/=badData =>
+ 	unXOR(tpmXOR(d,r1),r2)=badData AND
+ 	unXOR(tpmXOR(d,r1),r2)=badData;
+
+   
+
+%   tpmDig?(blob:tpmData) : bool = 
+%   CASES blob OF
+%     tpmChosenIDHash(d,c) : TRUE,
+%     tpmCompositeHash(d) : TRUE,
+%     tpmDIRValue(d,c) : TRUE,
+%     tpmHMAC(d,s) : TRUE,
+%     tpmPCRValue(d,c) : TRUE,
+%     tpmAuditDigest(d,c) : TRUE
+%     ELSE FALSE
+%   ENDCASES;
+
+  encStoreAsymkey?(d:(encrypted?)) : bool = %TODO!
+    tpmStoreAsymkey?(encData(d));
+
+  encMigrateAsymkey?(d:(encrypted?)) : bool = %TODO!
+    tpmMigrateAsymkey?(encData(d));
+
+  encSealedData?(d:(encrypted?)) : bool = %TODO!
+    tpmSealedData?(encData(d));
+
+  %% assumed: The type of encDat of tpmKey is tpmStoreAsymkey 
+  keyEncDatStoreAsymkey : LEMMA 
+    FORALL (k:(tpmKey?)) : encStoreAsymkey?(encDat(k));
+
+  %% assumed: The type of encDat of tpmKey is tpmStoreAsymkey 
+  keyEncDatMigrateAsymkey : LEMMA 
+    FORALL (k:(tpmKey?)) : encMigrateAsymkey?(encDat(k));
+
+  %% blob must be tpmEKBlobAuth or tpmEKBlobActivate (assumed?)
+  validEKBlob : LEMMA
+    FORALL (e:(tpmEKBlob?)) : 
+      	   tpmEKBlobAuth?(blob(e)) OR tpmEKBlobActivate?(blob(e)) 
+
+  %% assumed: The type of encData of tpmStoredData is tpmSealedData 
+  storedDataEncDataSealedData : LEMMA 
+    FORALL (s:(tpmStoredData?),k:(tpmKey?)) : 
+    	   IF key(k)=inverse(ekey(encrData(s)))
+	   THEN encSealedData?(encrData(s))
+	   ELSE cryptoError?(encrData(s))
+	   ENDIF
+
+  % assumed: 
+  pubInversePriv : LEMMA
+    FORALL (k:(tpmKey?)) :
+    	   inverse(key(k))=privKey(encData(encDat(k)))
+
+  %% blob must be tpmEKBlobAuth or tpmEKBlobActivate
+  validEKBlob(ekblob:(tpmEKBlob?)) : bool =
+    CASES blob(ekblob) OF
+      tpmEKBlobAuth(a) : TRUE,
+      tpmEKBlobActivate(s,d,p) : TRUE
+      ELSE FALSE
+    ENDCASES
+
+  activateIdentityBlob?(blob:tpmData) : bool =
+  CASES blob OF
+    tpmEKBlob(b) : TRUE,
+    tpmAsymCAContents(k,d) : TRUE
+    ELSE FALSE
+  ENDCASES
+
+  tpmAuthData?(blob:tpmData) : bool =
+  CASES blob OF
+    tpmSecret(i) : TRUE,
+    tpmEncAuth(i) : TRUE
+    ELSE FALSE
+  ENDCASES
+  
+  authIn:TYPE = [# authHandle : (tpmAuthData?)
+  	      	 , authLastNonceEven : (tpmNonce?)
+	      	 , nonceOdd : (tpmNonce?)
+	      	 , contAuthSess : bool
+	      	 , ownerAuth : (tpmAuthData?) % aka parentAuth
+	      	#];
+
+  authOut:TYPE = [# nonceEven : (tpmNonce?)
+	      	  , nonceOdd : (tpmNonce?)
+	      	  , contAuthSess : bool
+	      	  , resAuth : (tpmAuthData?)
+	      	 #];
+
+  tpmNull : (encrypted?)%(tpmSealedData?)
+  tpmNonceZero : (tpmNonce?)
+  tpmDigestZero : (tpmDigest?)
+  EVEN:(tpmNonce?)
+  ODD:(tpmNonce?)
+  pcrInfoLongDefault : (tpmPCRInfoLong?)
+  pcrInfoNull : (tpmPCRInfoLong?)
+
+  usageAuthDefault : (tpmSecret?)
+  migrationAuthDefault : (tpmSecret?)% (tpmDigest?)%
+  pubDataDigestDefault : (tpmDigest?)
+  storeAsymkeyDefault(k,p:KVAL) : (encrypted?) =
+    encrypted(tpmStoreAsymkey(usageAuthDefault,
+		    migrationAuthDefault,
+		    pubDataDigestDefault,
+		    inverse(k)),
+	      p);
+
+  tpmCMKDelegateDefault  : (tpmCMKDelegate?) = 
+    tpmCMKDelegate(false,false,false,false,false);
+
+  %PermData
+  nonceInit:(tpmNonce?)
+  INVALIDPROOF:nat
+  INVALIDAUTH:nat
+  invalidAuth?(s:(tpmSecret?)) : bool = 
+    i(s)=INVALIDAUTH
+  
+  % Decrypting encAuth according to the ADIP indicated by authHandle
+  % TODO: where is ADIP indicated by authHandle?
+  % TPM_AUTHHANDLE is handle to an authorization session 4.1? 4.3? 5.6, 5.9, 
+  % Read Ryan's paper
+  % has session type. hmac?
+  decryptADIP(enc:(tpmEncAuth?),authHand:(tpmAuthData?)) : (tpmSecret?) =
+    tpmSecret(authData(enc));
+	
+  encryptADIP(auth:(tpmAuthData?)) : (tpmEncAuth?) = 
+    LET i=CASES auth OF
+    		tpmSecret(a) : a,
+		tpmEncAuth(a) : a 
+	  ENDCASES IN
+    tpmEncAuth(i); %TODO!
+
+
+  %% badData Lemmas and Theorems
+  goodData : tpmData 
+  goodDataNotBad : LEMMA not(badData?(goodData))
+ 
+  %% Recursively checks data to see if includes badData. TRUE if does.
+  checkBadData(d:tpmData) : INDUCTIVE bool = %RECURSIVE
+    IF badData?(d)
+    THEN TRUE
+    ELSE 
+       CASES d OF 
+     	  tpmEKBlobActivate(s,i,p) : checkBadData(s) OR checkBadData(i) OR 
+	  		checkBadData(p),
+	  tpmEKBlobAuth(a) : checkBadData(a),
+    	  tpmDigest(d):checkBadData(car(d)) OR checkBadData(tpmDigest(cdr(d))),
+     	  tpmCompositeHash(d) : checkBadData(d),
+    	  tpmMigKeyAuth(k,s,d) : checkBadData(k) OR checkBadData(s) OR
+	  		checkBadData(d),
+     	  tpmMSAComposite(l,d) : checkBadData(car(d)) OR 
+	  		checkBadData(tpmMSAComposite(l,cdr(d))),
+	  tpmCMKAuth(m,d,s) : checkBadData(m) OR checkBadData(d) OR 
+	  		checkBadData(s),
+	  tpmCMKMigAuth(m,p) : checkBadData(m) OR checkBadData(p),
+	  tpmCMKSigTicket(v,s) : checkBadData(v) OR checkBadData(s),
+	  tpmCMKMAApproval(m) : checkBadData(m),
+    	  tpmPCRInfoLong(c,r,s,t,dc,dr) : checkBadData(dc) OR checkBadData(dr),
+    	  tpmPCRInfoShort(p,l,d) : checkBadData(d),
+    	  tpmStoredData(s,e) : checkBadData(s) OR checkBadData(e),
+    	  tpmSealedData(a,p,s,d) : checkBadData(a) OR checkBadData(p) OR
+	  		checkBadData(s) OR checkBadData(d),
+	  tpmBoundData(p) : checkBadData(p),
+    	  tpmKey(k,u,f,a,p,i,e) : checkBadData(i) OR checkBadData(e),
+    	  tpmStoreAsymkey(u,m,p,k) : checkBadData(u) OR checkBadData(m) OR 
+	  		checkBadData(p),
+          tpmMigrateAsymkey(u,p,d) : checkBadData(u) OR checkBadData(p),
+	  tpmCertifyInfo(u,f,a,p,d,c,s,i) : checkBadData(d) OR checkBadData(c) 
+	  		OR checkBadData(i),
+          tpmCertifyInfo2(u,f,a,p,d,c,b,i,m) : checkBadData(d) OR 
+	  		checkBadData(c) OR checkBadData(i) OR checkBadData(m),
+          tpmQuote(d,e) : checkBadData(d) OR checkBadData(e),
+    	  tpmQuote2(i,e) : checkBadData(i) OR checkBadData(e),
+    	  tpmEKBlob(b) : checkBadData(b),
+	  tpmIdContents(d,a) : checkBadData(d) OR checkBadData(a),
+    	  tpmAsymCAContents(s,d) : checkBadData(s) OR checkBadData(d),
+    	  OAEP(m,p,s) : checkBadData(m) OR checkBadData(p),
+    	  tpmXOR(a,b) : checkBadData(a) OR checkBadData(b),
+    	  concat(f,s) : checkBadData(f) OR checkBadData(s),
+    	  encrypted(e,k) : checkBadData(e),
+    	  signed(s,k) : checkBadData(s),
+     	  RNG(n) : FALSE,
+     	  tpmID(id) : FALSE,
+     	  tpmMigScheme(migScheme) : FALSE,
+     	  tpmNonce(i) : FALSE,
+	  tpmEncAuth(a) : FALSE,
+    	  tpmSecret(i) : FALSE,
+    	  tpmCMKDelegate(s,t,b,l,m) : FALSE,
+	  tpmPCRComposite(s,p) : FALSE,
+    	  tpmSessKey(s) : FALSE,
+    	  tpmPubkey(a,p) : FALSE,
+    	  cryptoError(n) : FALSE
+         ENDCASES
+    ENDIF
+%MEASURE d BY <<
+
+  % Essentially, if badData has a specific type, it can't be badData.
+  typeBadData : LEMMA 
+    not (RNG?(badData) OR tpmID?(badData) OR tpmMigScheme?(badData) OR 
+    	 tpmEKBlobActivate?(badData) OR tpmEKBlobAuth?(badData) OR 
+	 tpmDigest?(badData) OR tpmCompositeHash?(badData) OR 
+	 tpmNonce?(badData) OR tpmEncAuth?(badData) OR tpmSecret?(badData) OR 
+	 tpmMigKeyAuth?(badData) OR tpmMSAComposite?(badData) OR 
+	 tpmCMKAuth?(badData) OR tpmCMKDelegate?(badData) OR 
+	 tpmCMKMigAuth?(badData) OR tpmCMKSigTicket?(badData) OR 
+	 tpmCMKMAApproval?(badData) OR tpmPCRComposite?(badData) OR
+	 tpmPCRInfoLong?(badData) OR tpmPCRInfoShort?(badData) OR 
+	 tpmStoredData?(badData) OR tpmSealedData?(badData) OR 
+	 tpmSessKey?(badData) OR tpmBoundData?(badData) OR tpmKey?(badData) OR 
+	 tpmPubkey?(badData) OR tpmStoreAsymkey?(badData) OR 
+	 tpmMigrateAsymkey?(badData) OR tpmCertifyInfo?(badData) OR 
+	 tpmCertifyInfo2?(badData) OR tpmQuote?(badData) OR 
+	 tpmQuote2?(badData) OR tpmEKBlob?(badData) OR 
+	 tpmIdContents?(badData) OR tpmAsymCAContents?(badData) OR 
+	 OAEP?(badData) OR tpmXOR?(badData) OR concat?(badData) OR 
+	 encrypted?(badData) OR signed?(badData))
+
+  %% Testing badData? predicate. Returns true only if badData
+  test_badData? : THEOREM
+    badData?(tpmQuote(tpmCompositeHash(
+	tpmPCRComposite(null,pcrsPower)),badData))=FALSE;
+
+  %% tpmData to test:
+
+  goodQuote : (tpmQuote?) = %CHECKS OUT
+    tpmQuote(tpmCompositeHash(tpmPCRComposite(null,pcrsPower)),tpmNonce(0));
+
+  badQuote1 : (tpmQuote?) = %CHECKS OUT
+    tpmQuote(badData,tpmNonce(0));
+
+  badQuote2 : (tpmQuote?) = %CHECKS OUT
+    tpmQuote(tpmCompositeHash(tpmPCRComposite(null,pcrsPower)),badData);
+
+  goodEncryption(k:(tpmKey?)) : (encrypted?) = %CHECKS OUT
+    encrypted(goodQuote,key(k));
+
+  badEncryption(k:(tpmKey?)) : (encrypted?) = %CHECKS OUT
+    encrypted(badQuote2,key(k));
+
+  %% Testing checkBadData predicate using above tpmData.
+  test_checkBadData : THEOREM  
+   FORALL (k:(tpmKey?)) :
+    checkBadData(badEncryption(k))=TRUE;
+  
+  %%Sets of data to test:
+  badDataSetA : set[tpmData] = %CHECKS OUT
+    add(badData,(empty?));
+
+  badDataSetB : set[tpmData] = %CHECKS OUT
+    add(goodData,add(badData,(empty?)));
+
+  badDataSet0 : set[tpmData] = 
+    add(badQuote1,(empty?));
+
+  badDataSet1(k:(tpmKey?)) : set[tpmData] = 
+    add(badEncryption(k),(empty?));
+
+  badDataSet2(k:(tpmKey?)) : set[tpmData] =
+    add(goodEncryption(k),(add(badEncryption(k),(empty?))))
+
+  badDataSet3(k:(tpmKey?)) : set[tpmData] =
+    add(badQuote1,add(badEncryption(k),(empty?)))
+
+  goodDataSet0 : set[tpmData] = %CHECKS OUT
+    add(goodQuote,add(tpmSecret(1),add(RNG(3),(empty?))))
+
+  goodDataSet1(k:(tpmKey?)) : set[tpmData] =
+    add(goodEncryption(k),(empty?))
+
+  goodDataSet2(k:(tpmKey?)) : set[tpmData] =
+    add(goodEncryption(k),add(tpmSecret(1),add(RNG(3),(empty?))))
+
+  goodDataSet3(k:(tpmKey?)) : set[tpmData] =
+    add(goodQuote,add(goodEncryption(k),add(tpmSecret(1),add(RNG(3),(empty?)))))
+
+  %% Should return TRUE if badData shows up anywhere in the set. 
+  existsBadData(d:set[tpmData]) : bool = 
+    some(checkBadData,d)
+  %MEASURE d BY <<
+
+  test_existsBadData : THEOREM
+    existsBadData(badDataSet0) = TRUE;
+
+
+END data
