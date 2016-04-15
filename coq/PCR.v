@@ -92,6 +92,7 @@ Definition locality4 : { x : nat | x <= 4}.
 
 (** Example locality sets. *)
 
+(*
 Definition all_locs : LOCALITY_SELECTION.
   refine (Add _
               (Add _
@@ -101,7 +102,7 @@ Definition all_locs : LOCALITY_SELECTION.
                    locality3)
           locality4).
 Defined.
-
+*)
 (*
 Definition pcrDebug : PCR_ATTRIBUTES.
 Definition pcrInit : PCR_ATTRIBUTES.
@@ -110,8 +111,10 @@ Definition pcrInit : PCR_ATTRIBUTES.
 (** PCR attributes are available on a per PCR basis. Differs by platform 
   configuration *)
 
+(*
 Definition allResetAccess : PCR_ATTRIBUTES :=
   (fun i:PCRINDEX => (pcr_attribute all_locs all_locs true)).
+ *)
 
 (** Following startup clear.  Nonresettable PCRs to 0 and resettable PCRs
   %% to -1 *)

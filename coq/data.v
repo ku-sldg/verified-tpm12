@@ -17,7 +17,7 @@
 %% ----
 *)
 
-Require Export pcr.
+(* Require Export pcr. *)
 Require Export authdata.
 Require Export keyData.
 Require Export types.
@@ -28,9 +28,18 @@ Inductive tpmDataType : Type :=
 | tpmIDT : tpmDataType
 | tpmMigSchemeT : tpmDataType
 | tpmSessKeyT : tpmDataType
+| tpmCompositeHashT : tpmDataType                        
+| tpmPCRCompositeT : tpmDataType                        
 | tpmDigestT : tpmDataType
 | tpmPCRInfoShortT : tpmDataType
-| tpmEKBlobActivateT : tpmDataType.
+| tpmEKBlobActivateT : tpmDataType
+| tpmEKBlobAuthT : tpmDataType
+| tpmEncAuthT : tpmDataType
+| tpmNonceT : tpmDataType
+| tpmMigKeyAuthT : tpmDataType
+| tpmSecretT : tpmDataType
+| tpmMSACompositeT : tpmDataType
+| tpmKeyT : tpmDataType.
 
 (** %% Data items that the TPM is aware of *)
 Inductive tpmData : tpmDataType -> Type :=
@@ -39,48 +48,47 @@ Inductive tpmData : tpmDataType -> Type :=
   | tpmMigScheme : migrateScheme -> (tpmData tpmMigSchemeT)
 
   (** EK type- indicates what type of information the EK's dealing with(4.11) *)
-  | tpmEKBlobActivate : (tpmData tpmSessKeyT) -> (tpmData tpmDigestT) -> (tpmData tpmPCRInfoShortT) -> (tpmData tpmEKBlobActivateT).
+  | tpmEKBlobActivate : (tpmData tpmSessKeyT) -> (tpmData tpmDigestT) -> (tpmData tpmPCRInfoShortT) -> (tpmData tpmEKBlobActivateT)
 
-    %% EK type- indicates what type of information the EK's dealing with(4.11)
-    tpmEKBlobAuth(authValue:(tpmSecret?)) : tpmEKBlobAuth?
+  (** EK type- indicates what type of information the EK's dealing with(4.11) *)
+  | tpmEKBlobAuth : (tpmData tpmSecretT) -> (tpmData tpmEKBlobAuthT)
     
-    %% Abitrarily long digest of arbitrary TPM data			(5.4)
-    tpmDigest(digest:list[tpmData]) : tpmDigest?
-    %  tpmDigest is the list of things concatenated and hashed to create the
+  (** Abitrarily long digest of arbitrary TPM data			(5.4) *)
+  | tpmDigest : (list (forall t, tpmData t)) ->  (tpmData tpmDigestT)
+  (** %  tpmDigest is the list of things concatenated and hashed to create the
     %  digest value - #(d0++d1++...++dn).  
-    %  Note that this digest does not contain PCRs 
+    %  Note that this digest does not contain PCRs *)
 
-    tpmCompositeHash(dig:(tpmPCRComposite?)) : tpmCompositeHash?
-    	%PCR_COMPOSITE : [#select:PCR_SELECTION,pcrValue:PCRVALUES#]
+  | tpmCompositeHash : (tpmData tpmPCRCompositeT) -> (tpmData tpmCompositeHashT)
+    (** Random value that provides protection from replay.		(5.5)*)
+  | tpmNonce: (nat -> (tpmData tpmNonceT))
 
-    %% Random value that provides protection from replay.		(5.5)
-    tpmNonce(i:int) : tpmNonce?
+    (** Authdata - don't know what it is yet				(5.6)*)
 
-    %% Authdata - don't know what it is yet				(5.6)
-    tpmEncAuth(authData:int) : tpmEncAuth?
+  | tpmEncAuth : nat -> (tpmData tpmEncAuthT)
 
-    %% Authdata - don't know what it is yet				(5.6)
-    tpmSecret(i:int) : tpmSecret?
+    (** %% Authdata - don't know what it is yet				(5.6)*)
+  | tpmSecret : nat -> (tpmData tpmSecretT)
  
-    %% Provides proof that the associated public key has		(5.12)
-    %% TPM Owner AuthData to be a migration key
-    tpmMigKeyAuth(key:(tpmKey?)
-	, scheme:(tpmMigScheme?)
-	, digest:(tpmDigest?)
-	) : tpmMigKeyAuth?
-
+    (** Provides proof that the associated public key has		(5.12)
+        TPM Owner AuthData to be a migration key *)
+  | tpmMigKeyAuth : (tpmData tpmKeyT) ->
+	(tpmData tpmMigSchemeT) ->
+	(tpmData tpmDigestT) ->
+	(tpmData tpmMigKeyAuthT)
+(*
     %% Structure signed for certain commands (TPM_ReleaseTransportSigned)(5.14)
 %     tpmSignInfo(replay:(tpmNonce?),data:tpmData) : tpmSignInfo?
     %% crs should be :(signed?) %%TODO
-
-    %% Contains an arbitrary number of digests of public keys belonging (5.15)
+*)
+    (** Contains an arbitrary number of digests of public keys belonging (5.15)
     %%  to Migration Authorities. An instance is incorporated into the 
     %%  migrationAuth value of a CMK, and any of the Mig Auths specified in 
-    %%  that instance is able to approve the migration of that CMK.
-    tpmMSAComposite(MSAlist:int	 	   % Number of migAuthDigests
-        , migAuthDigest:list[(tpmDigest?)] % Arbitrary num of digests of pubkeys
-	  				   % belonging to MAs.
-	) : tpmMSAComposite?
+    %%  that instance is able to approve the migration of that CMK. *)
+    | tpmMSAComposite : nat ->	 	   (* % Number of migAuthDigests *)
+        list (tpmData tpmDigestT) ->  (*% Arbitrary num of digests of pubkeys *)
+	  				   (* % belonging to MAs. *)
+	(tpmData tpmMSACompositeT).
 
     %% Ticket to prove that an entity with pub key "migAuth" has	(5.16)
     %%  has apporved the public key "destination key" as a mig destination
