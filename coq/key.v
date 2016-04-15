@@ -18,7 +18,7 @@
 %% ----
  *)
 
-Require Export data.b
+Require Export data.v
   IMPORTING data[HV];
 
   KEYSET: TYPE = [# vals: set[privKVAL]

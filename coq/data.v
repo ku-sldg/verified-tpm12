@@ -23,21 +23,20 @@ Require Export keyData.
 Require Export types.
 Require Import String.
 
+Inductive tpmDataType : Type :=
+| RNGT : tpmDataType
+| tpmIDT : tpmDataType
+| tpmMigSchemeT : tpmDataType
+| tpmSessKeyT : tpmDataType.
+
 (** %% Data items that the TPM is aware of *)
-Inducutive tpmData : Type :=
-    %% RNG 
-  | RNG : nat -> tpmData
-    
-    %% Identifyier for naming things
-  | tpmID : string -> tpmData
-    
-    %% Stub for migrateScheme so can take digest - createMigBlob	(4.4)
-  | tpmMigScheme : migrateScheme -> tpmData
+Inductive tpmData : tpmDataType -> Type :=
+  | RNG : nat -> (tpmData RNGT)
+  | tpmID : string -> (tpmData tpmIDT)
+  | tpmMigScheme : migrateScheme -> (tpmData tpmMigSchemeT).
 
     %% EK type- indicates what type of information the EK's dealing with(4.11)
-    tpmEKBlobActivate(sKey:(tpmSessKey?)
-	, idDigest:(tpmDigest?)
-	, pcrInfo:(tpmPCRInfoShort?)
+    | tpmEKBlobActivate(sKey:(tpmSessKey?) idDigest:(tpmDigest?) pcrInfo:(tpmPCRInfoShort?)
 	) : tpmEKBlobActivate?
 
     %% EK type- indicates what type of information the EK's dealing with(4.11)
@@ -174,7 +173,7 @@ Inducutive tpmData : Type :=
 	, sealedData:tpmData
 	) : tpmSealedData?
     
-    %% Session keys are simply symetric keys				(9.4)
+    %% Session keys are simply symetric keys			(9.4)
     tpmSessKey(skey:KVAL) : tpmSessKey?
     
     %% Bound data							(9.5)
