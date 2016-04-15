@@ -27,17 +27,19 @@ Inductive tpmDataType : Type :=
 | RNGT : tpmDataType
 | tpmIDT : tpmDataType
 | tpmMigSchemeT : tpmDataType
-| tpmSessKeyT : tpmDataType.
+| tpmSessKeyT : tpmDataType
+| tpmDigestT : tpmDataType
+| tpmPCRInfoShortT : tpmDataType
+| tpmEKBlobActivateT : tpmDataType.
 
 (** %% Data items that the TPM is aware of *)
 Inductive tpmData : tpmDataType -> Type :=
   | RNG : nat -> (tpmData RNGT)
   | tpmID : string -> (tpmData tpmIDT)
-  | tpmMigScheme : migrateScheme -> (tpmData tpmMigSchemeT).
+  | tpmMigScheme : migrateScheme -> (tpmData tpmMigSchemeT)
 
-    %% EK type- indicates what type of information the EK's dealing with(4.11)
-    | tpmEKBlobActivate(sKey:(tpmSessKey?) idDigest:(tpmDigest?) pcrInfo:(tpmPCRInfoShort?)
-	) : tpmEKBlobActivate?
+  (** EK type- indicates what type of information the EK's dealing with(4.11) *)
+  | tpmEKBlobActivate : (tpmData tpmSessKeyT) -> (tpmData tpmDigestT) -> (tpmData tpmPCRInfoShortT) -> (tpmData tpmEKBlobActivateT).
 
     %% EK type- indicates what type of information the EK's dealing with(4.11)
     tpmEKBlobAuth(authValue:(tpmSecret?)) : tpmEKBlobAuth?
