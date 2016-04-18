@@ -40,6 +40,9 @@ Inductive tpmDataType : Type :=
 | tpmSecretT : tpmDataType
 | tpmMSACompositeT : tpmDataType
 | tpmCMKAuthT : tpmDataType
+| tpmCMKDelegateT : tpmDataType
+| tpmCMKMigAuthT : tpmDataType
+| tpmCMKSigTicketT : tpmDataType
 | tpmKeyT : tpmDataType.
 
 (** %% Data items that the TPM is aware of *)
@@ -91,38 +94,40 @@ Inductive tpmData : tpmDataType -> Type :=
 	  				   (* % belonging to MAs. *)
 	(tpmData tpmMSACompositeT)
 
-    (** %% Ticket to prove that an entity with pub key "migAuth" has	(5.16)
+    (** Ticket to prove that an entity with pub key "migAuth" has	(5.16)
     %%  has apporved the public key "destination key" as a mig destination
     %%  for the key with pub key "source key". Usu signed by priv "migAuth" *)
-    | tpmCMKAuth:(tpmData tpmDigestT) (* Digest of pub key belonging to MA *)
-                 -> (tpmData tpmDigestT)	    (* Digest of tpmPubkey struct approved 
-				    % dest key for priv key assoc with sourceKey *)
-                 -> (tpmData tpmDigestT)    (*Digest of a tpmPubkey struct whose 
-	  			    % corresp priv key is approved by a MA to be
-				    % migrated as child to the destinationKey *)
-	         -> (tpmData tpmCMKAuthT).
+    | tpmCMKAuth :
 
-    %% Flags that determine how TPM responds to delegated requests	(5.17)
-    %%  to manipulate a certified-migration-key...
-    tpmCMKDelegate(delegateSigning:bool
-	, delegateStorage:bool
-        , delegateBind:bool
-        , delegateLegacy:bool
-        , delegateMigrate:bool
-	) : tpmCMKDelegate?
+        (tpmData tpmDigestT) -> (* Digest of pub key belonging to MA *)
+        (tpmData tpmDigestT) -> (* Digest of tpmPubkey struct approved 
+				   dest key for priv key assoc with sourceKey *)
+        (tpmData tpmDigestT) -> (* Digest of a tpmPubkey struct whose 
+	  			   corresp priv key is approved by a MA to be
+				   migrated as child to the destinationKey *)
+	(tpmData tpmCMKAuthT)
+
+    (** Flags that determine how TPM responds to delegated requests	(5.17)
+        to manipulate a certified-migration-key... *)
+    | tpmCMKDelegate : bool -> (* delegateSigning *)
+	               bool -> (* delegateStorage *)
+                       bool -> (* delegateBind *)
+                       bool -> (* delegateLegacy *)
+                       bool -> (* delegateMigrate *)
+	               (tpmData tpmCMKDelegateT)
     
-    %% Structure to keep track of CMK migration authorization		(5.19)
-    tpmCMKMigAuth(msaDigest:(tpmDigest?) % Digest of a tpmMSAComposite struct 
-    					 % containing mig auth pubkey & params
-        , pubKeyDigest:(tpmDigest?) 	 % Hash of the associated public key
-	) : tpmCMKMigAuth? 
+    (** %% Structure to keep track of CMK migration authorization (5.19) *)
+    | tpmCMKMigAuth : (tpmData tpmDigestT) -> (* Digest of a tpmMSAComposite struct 
+    					 % containing mig auth pubkey & params *)
+        (tpmData tpmDigestT) -> 	 (* Hash of the associated public key *)
+	(tpmData tpmCMKMigAuthT)
 
-    %% Structure to keep track of the CMK migraiton authorization	(5.20)
-    tpmCMKSigTicket(verKeyDigest:(tpmDigest?) % Hash of tpmPubkey struct 
+    (** %% Structure to keep track of the CMK migraiton authorization	(5.20) *)
+    | tpmCMKSigTicket : (tpmData tpmDigestT) -> (* Hash of tpmPubkey struct 
     					      % contining pub key and params of
-					      % key that can verify the ticket
-        , signedData:(tpmDigest?)	      % The ticket data
-	) : tpmCMKSigTicket?
+					      % key that can verify the ticket *)
+                        (tpmData tpmDigestT) -> (* % The ticket data *)
+                        (tpmData tpmCMKSigTicketT).
 
     %% Structure to keep track of CMK migration authorization		(5.21)
     tpmCMKMAApproval(migAuthDig:(tpmDigest?) % Hash of a tpmMSAComposite struct 
