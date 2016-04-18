@@ -17,7 +17,7 @@
 %% ----
 *)
 
-(* Require Export pcr. *)
+Require Export pcr.
 Require Export authdata.
 Require Export keyData.
 Require Export types.
@@ -39,6 +39,7 @@ Inductive tpmDataType : Type :=
 | tpmMigKeyAuthT : tpmDataType
 | tpmSecretT : tpmDataType
 | tpmMSACompositeT : tpmDataType
+| tpmCMKAuthT : tpmDataType
 | tpmKeyT : tpmDataType.
 
 (** %% Data items that the TPM is aware of *)
@@ -88,18 +89,18 @@ Inductive tpmData : tpmDataType -> Type :=
     | tpmMSAComposite : nat ->	 	   (* % Number of migAuthDigests *)
         list (tpmData tpmDigestT) ->  (*% Arbitrary num of digests of pubkeys *)
 	  				   (* % belonging to MAs. *)
-	(tpmData tpmMSACompositeT).
+	(tpmData tpmMSACompositeT)
 
-    %% Ticket to prove that an entity with pub key "migAuth" has	(5.16)
+    (** %% Ticket to prove that an entity with pub key "migAuth" has	(5.16)
     %%  has apporved the public key "destination key" as a mig destination
-    %%  for the key with pub key "source key". Usu signed by priv "migAuth"
-    tpmCMKAuth(migAuth:(tpmDigest?) % Digest of pub key belonging to MA
-        , destKey:(tpmDigest?)	    % Digest of tpmPubkey struct approved 
-				    % dest key for priv key assoc with sourceKey
-        , sourceKey:(tpmDigest?)    % Digest of a tpmPubkey struct whose 
+    %%  for the key with pub key "source key". Usu signed by priv "migAuth" *)
+    | tpmCMKAuth:(tpmData tpmDigestT) (* Digest of pub key belonging to MA *)
+                 -> (tpmData tpmDigestT)	    (* Digest of tpmPubkey struct approved 
+				    % dest key for priv key assoc with sourceKey *)
+                 -> (tpmData tpmDigestT)    (*Digest of a tpmPubkey struct whose 
 	  			    % corresp priv key is approved by a MA to be
-				    % migrated as child to the destinationKey
-	) : tpmCMKAuth?
+				    % migrated as child to the destinationKey *)
+	         -> (tpmData tpmCMKAuthT).
 
     %% Flags that determine how TPM responds to delegated requests	(5.17)
     %%  to manipulate a certified-migration-key...
