@@ -43,6 +43,7 @@ Inductive tpmDataType : Type :=
 | tpmCMKDelegateT : tpmDataType
 | tpmCMKMigAuthT : tpmDataType
 | tpmCMKSigTicketT : tpmDataType
+| tpmCMKMAApprovalT : tpmDataType
 | tpmKeyT : tpmDataType.
 
 (** %% Data items that the TPM is aware of *)
@@ -127,23 +128,23 @@ Inductive tpmData : tpmDataType -> Type :=
     					      % contining pub key and params of
 					      % key that can verify the ticket *)
                         (tpmData tpmDigestT) -> (* % The ticket data *)
-                        (tpmData tpmCMKSigTicketT).
+                        (tpmData tpmCMKSigTicketT)
 
-    %% Structure to keep track of CMK migration authorization		(5.21)
-    tpmCMKMAApproval(migAuthDig:(tpmDigest?) % Hash of a tpmMSAComposite struct 
+    (* %% Structure to keep track of CMK migration authorization		(5.21) *)
+    | tpmCMKMAApproval : (tpmData tpmDigestT) ->  (* Hash of a tpmMSAComposite struct 
 		%containing the hash of one or more migration authority public
-		%keys and params.
-	) : tpmCMKMAApproval?
+		%keys and params *)
+	(tpmData tpmCMKMAApprovalT)
     
-    %% The composite structure provides the index and value of the PCR	(8.2)
+    (* The composite structure provides the index and value of the PCR	(8.2)
     %%  register to be used when creating the value that SEALS an entity to
-    %%  the composite.
-    tpmPCRComposite(
-	  select : PCR_SELECTION % The indication of which PCR values are active
-	, pcrValue : PCRVALUES		% Array of PCRVALUE structures. 
+    %%  the composite. *)
+    | tpmPCRComposite: 
+	PCR_SELECTION -> (* % The indication of which PCR values are active*)
+	PCRVALUES ->     (* % Array of PCRVALUE structures. a
 	% The values come in the order specified by the select parameter
-	%  and are concatenated into a single blob.
-    ) : tpmPCRComposite?
+	%  and are concatenated into a single blob. *)
+        (tpmData tpmPCRCompositeT).
     
     %% PCR Info								(8.4)
     %% TODO: This is only a stub.
